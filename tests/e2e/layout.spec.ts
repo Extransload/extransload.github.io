@@ -36,20 +36,40 @@ test('splash toc keeps all chapters grouped and hides on downward mobile scroll'
   expect(await page.locator('.splash-toc').evaluate((element) => parseFloat(getComputedStyle(element).left))).toBeGreaterThan(
     await page.locator('.book-splash__filigree').evaluate((element) => parseFloat(getComputedStyle(element).left)),
   );
+  const readCoverVeil = () => page.evaluate(() => {
+    const face = document.querySelector<HTMLElement>('.book-splash__face');
+    if (!face) throw new Error('Splash cover is missing');
+    const veil = getComputedStyle(face, '::before');
+    return { rendered: veil.content !== 'none', opacity: Number(veil.opacity) };
+  });
+  expect(await readCoverVeil()).toEqual({ rendered: true, opacity: 1 });
   await expect(page.locator('.book-splash__crest')).toHaveCSS('opacity', '1');
   await page.evaluate(() => window.scrollTo(0, 120));
   await page.waitForTimeout(750);
   const stagedCoverOpacity = await page.evaluate(() => ['.book-splash__crest', '.book-splash__center', '.book-splash__tagline', '.book-splash__scroll']
     .map((selector) => Number(getComputedStyle(document.querySelector(selector)!).opacity)));
+  expect(stagedCoverOpacity[0]).toBeGreaterThan(0.8);
+  expect(stagedCoverOpacity[1]).toBeGreaterThan(0.9);
+  expect(stagedCoverOpacity[2]).toBeGreaterThan(0.95);
+  expect(stagedCoverOpacity[3]).toBeGreaterThan(0.95);
   expect(stagedCoverOpacity[0]).toBeLessThan(stagedCoverOpacity[1]);
   expect(stagedCoverOpacity[1]).toBeLessThan(stagedCoverOpacity[2]);
   expect(stagedCoverOpacity[2]).toBeLessThanOrEqual(stagedCoverOpacity[3]);
 
-  await page.evaluate(() => window.scrollTo(0, 600));
+  await page.evaluate(() => window.scrollTo(0, 700));
   await page.waitForTimeout(750);
   for (const selector of ['.book-splash__crest', '.book-splash__center', '.book-splash__tagline', '.book-splash__scroll']) {
     await expect(page.locator(selector)).toHaveCSS('opacity', '0');
   }
+  expect(await readCoverVeil()).toEqual({ rendered: true, opacity: 1 });
+  expect(await page.evaluate(() => ({
+    face: Number(getComputedStyle(document.querySelector('.book-splash__face')!).zIndex),
+    chapterCopy: Number(getComputedStyle(document.querySelector('#journal .splash-chapter__copy')!).zIndex),
+  }))).toEqual({ face: 3, chapterCopy: 2 });
+
+  await page.evaluate(() => window.scrollTo(0, 800));
+  await page.waitForTimeout(750);
+  expect(await readCoverVeil()).toEqual({ rendered: true, opacity: 0 });
 
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.waitForTimeout(750);
@@ -130,6 +150,99 @@ test('splash chapters keep their layout while scrolling', async ({ page }) => {
   expect(await readLayout()).toEqual(initial);
 });
 
+test('splash chapters reveal one visual page at a time in both directions', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+
+  const readChapterVisibility = () => page.evaluate(() => Object.fromEntries(['journal', 'works', 'playroom'].map((id) => {
+    const link = document.querySelector<HTMLAnchorElement>(`#${id} > a`);
+    if (!link) throw new Error(`Splash chapter is missing: ${id}`);
+    const style = getComputedStyle(link);
+    return [id, { opacity: Number(style.opacity), pointerEvents: style.pointerEvents }];
+  })));
+  const scrollAndRead = async (y: number) => {
+    await page.evaluate((scrollY) => window.scrollTo(0, scrollY), y);
+    await page.waitForTimeout(650);
+    return readChapterVisibility();
+  };
+
+  expect(await scrollAndRead(1200)).toEqual({
+    journal: { opacity: 1, pointerEvents: 'auto' },
+    works: { opacity: 0, pointerEvents: 'none' },
+    playroom: { opacity: 0, pointerEvents: 'none' },
+  });
+  expect(await scrollAndRead(1650)).toEqual({
+    journal: { opacity: 0, pointerEvents: 'none' },
+    works: { opacity: 1, pointerEvents: 'auto' },
+    playroom: { opacity: 0, pointerEvents: 'none' },
+  });
+
+  expect(await scrollAndRead(1200)).toEqual({
+    journal: { opacity: 0, pointerEvents: 'none' },
+    works: { opacity: 1, pointerEvents: 'auto' },
+    playroom: { opacity: 0, pointerEvents: 'none' },
+  });
+  expect(await scrollAndRead(1050)).toEqual({
+    journal: { opacity: 1, pointerEvents: 'auto' },
+    works: { opacity: 0, pointerEvents: 'none' },
+    playroom: { opacity: 0, pointerEvents: 'none' },
+  });
+});
+
+test('splash restores the full cover when returning above the first chapter', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+
+  const scrollAndReadCover = async (y: number) => {
+    await page.evaluate((scrollY) => window.scrollTo(0, scrollY), y);
+    await page.waitForTimeout(750);
+    return page.evaluate(() => ({
+      direction: document.querySelector('[data-splash]')?.getAttribute('data-scroll-direction'),
+      chapterOpacity: Number(getComputedStyle(document.querySelector('#journal > a')!).opacity),
+      coverOpacity: ['.book-splash__crest', '.book-splash__center', '.book-splash__tagline', '.book-splash__scroll']
+        .map((selector) => Number(getComputedStyle(document.querySelector(selector)!).opacity)),
+      veilOpacity: Number(getComputedStyle(document.querySelector('.book-splash__face')!, '::before').opacity),
+    }));
+  };
+
+  await scrollAndReadCover(1200);
+  const returnedCover = await scrollAndReadCover(400);
+
+  expect(returnedCover.direction).toBe('up');
+  expect(returnedCover.chapterOpacity).toBe(0);
+  expect(returnedCover.coverOpacity).toEqual([1, 1, 1, 1]);
+  expect(returnedCover.veilOpacity).toBe(1);
+});
+
+test('splash holds a hidden chapter visual still during the transition', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+
+  const readVisualState = (id: string) => page.evaluate((chapterId) => {
+    const link = document.querySelector<HTMLAnchorElement>(`#${chapterId} > a`);
+    const media = document.querySelector<HTMLElement>(`#${chapterId} .splash-chapter__media`);
+    if (!link || !media) throw new Error(`Splash chapter is missing: ${chapterId}`);
+    return { opacity: Number(getComputedStyle(link).opacity), mediaTop: media.getBoundingClientRect().top };
+  }, id);
+  const scrollAndRead = async (y: number, id: string) => {
+    await page.evaluate((scrollY) => window.scrollTo(0, scrollY), y);
+    await page.waitForTimeout(650);
+    return readVisualState(id);
+  };
+
+  const worksBefore = await scrollAndRead(1350, 'works');
+  const worksDuring = await scrollAndRead(1500, 'works');
+  expect(worksBefore.opacity).toBe(0);
+  expect(worksDuring).toEqual(worksBefore);
+  expect((await scrollAndRead(1650, 'works')).opacity).toBe(1);
+
+  const journalBefore = await scrollAndRead(1200, 'journal');
+  const journalDuring = await scrollAndRead(1150, 'journal');
+  expect(journalBefore.opacity).toBe(0);
+  expect(journalDuring).toEqual(journalBefore);
+  expect((await scrollAndRead(1050, 'journal')).opacity).toBe(1);
+});
+
 test('splash toc follows natural scrolling and anchor jumps', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -159,24 +272,28 @@ test('splash keeps its chapter motion enabled without a user toggle', async ({ p
   await expect(orbit).toHaveCSS('animation-play-state', 'running');
 });
 
-test('splash artwork keeps its motion while hovering', async ({ page }) => {
+test('splash artwork only enables its motion while hovering', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
 
   const link = page.locator('#journal > a');
   const object = page.locator('#journal .art-object');
   const drifter = page.locator('#journal .art-drifter');
-  await expect(object).toHaveCSS('animation-name', 'splash-art-object-hover');
-  await expect(object).toHaveCSS('animation-iteration-count', 'infinite');
-  await expect(drifter).toHaveCSS('animation-name', 'splash-art-drifter-hover');
+  const readAnimationNames = () => page.evaluate(() => ({
+    object: getComputedStyle(document.querySelector('#journal .art-object')!).animationName,
+    drifter: getComputedStyle(document.querySelector('#journal .art-drifter')!).animationName,
+    glow: getComputedStyle(document.querySelector('#journal .splash-chapter__media')!, '::before').animationName,
+  }));
+  expect(await readAnimationNames()).toEqual({ object: 'none', drifter: 'none', glow: 'none' });
 
   await link.hover();
   await expect(object).toHaveCSS('animation-name', 'splash-art-object-hover');
+  await expect(object).toHaveCSS('animation-iteration-count', 'infinite');
   await expect(drifter).toHaveCSS('animation-name', 'splash-art-drifter-hover');
+  expect(await readAnimationNames()).toEqual({ object: 'splash-art-object-hover', drifter: 'splash-art-drifter-hover', glow: 'splash-art-glow' });
 
   await page.mouse.move(1, 1);
-  await expect(object).toHaveCSS('animation-name', 'splash-art-object-hover');
-  await expect(drifter).toHaveCSS('animation-name', 'splash-art-drifter-hover');
+  expect(await readAnimationNames()).toEqual({ object: 'none', drifter: 'none', glow: 'none' });
 });
 
 test('splash chapter copy swaps its description for the invitation on hover', async ({ page }) => {

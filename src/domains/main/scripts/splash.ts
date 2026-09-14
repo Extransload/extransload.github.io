@@ -36,6 +36,28 @@ if (root) {
   // because a sticky element reports its restored scroll position after reload.
   const coverStart = 0;
   const coverElement = (selector: string) => root.querySelector<HTMLElement>(selector);
+  const chapterLocks = new Map<HTMLElement, number>();
+  const chapterVisuals = (chapter: HTMLElement) => [...chapter.querySelectorAll<HTMLElement>('.splash-chapter__copy, .splash-chapter__media')];
+  const chapterContentIsAboveViewport = (chapter: HTMLElement) => chapterVisuals(chapter)
+    .every((element) => element.getBoundingClientRect().bottom <= 0);
+  const chapterContentIsBelowViewport = (chapter: HTMLElement) => chapterVisuals(chapter)
+    .every((element) => element.getBoundingClientRect().top >= window.innerHeight);
+  const lockChapterVisual = (chapter: HTMLElement) => {
+    const link = chapter.querySelector<HTMLElement>('.splash-chapter__link');
+    if (!link) return;
+    link.style.removeProperty('--chapter-lock-offset');
+    const naturalTop = link.getBoundingClientRect().top;
+    if (!chapterLocks.has(chapter)) chapterLocks.set(chapter, naturalTop);
+    const lockedTop = chapterLocks.get(chapter)!;
+    link.style.setProperty('--chapter-lock-offset', `${(lockedTop - naturalTop).toFixed(2)}px`);
+    chapter.dataset.chapterLocked = 'true';
+  };
+  const unlockChapterVisual = (chapter: HTMLElement) => {
+    if (chapter.dataset.chapterLocked !== 'true') return;
+    chapterLocks.delete(chapter);
+    chapter.dataset.chapterLocked = 'false';
+    chapter.querySelector<HTMLElement>('.splash-chapter__link')?.style.removeProperty('--chapter-lock-offset');
+  };
   const setCoverElementProgress = (element: HTMLElement | null, progress: number, exitOffset: number, exitScale = 1) => {
     if (!element) return;
     element.style.setProperty('--cover-opacity', progress.toFixed(3));
@@ -43,15 +65,19 @@ if (root) {
     element.style.setProperty('--cover-scale', (1 - (1 - progress) * (1 - exitScale)).toFixed(3));
   };
   const coverStage = (progress: number, start: number, end: number) => easeOutCubic(clamp((progress - start) / (end - start)));
-  const setCoverProgress = () => {
+  const setCoverProgress = (showFullCover = false) => {
     if (!cover) return;
-    const travel = Math.max(window.innerHeight * 0.48, 1);
-    const progress = clamp(1 - Math.max(0, window.scrollY - coverStart) / travel);
-    setCoverElementProgress(coverElement('.book-splash__crest'), coverStage(progress, 0.84, 1), -2.5, 0.88);
-    setCoverElementProgress(coverElement('.book-splash__center'), coverStage(progress, 0.6, 0.95), -1.25, 0.94);
-    setCoverElementProgress(coverElement('.book-splash__tagline'), coverStage(progress, 0.38, 0.78), 1.5);
-    setCoverElementProgress(coverElement('.book-splash__scroll'), coverStage(progress, 0.16, 0.58), 2.5, 0.86);
-    setCoverElementProgress(coverElement('.book-splash__admin'), coverStage(progress, 0.7, 0.95), 1, 0.96);
+    // Let the cover settle into the first chapter gradually; short touch drags
+    // should not make the crest and title disappear immediately.
+    const travel = Math.max(window.innerHeight * 0.82, 1);
+    const progress = showFullCover ? 1 : clamp(1 - Math.max(0, window.scrollY - coverStart) / travel);
+    // Keep the chapter fully covered until the cover's scroll distance is complete.
+    cover.style.setProperty('--cover-veil-opacity', progress > 0 ? '1' : '0');
+    setCoverElementProgress(coverElement('.book-splash__crest'), coverStage(progress, 0.48, 1), -2.5, 0.88);
+    setCoverElementProgress(coverElement('.book-splash__center'), coverStage(progress, 0.34, 0.9), -1.25, 0.94);
+    setCoverElementProgress(coverElement('.book-splash__tagline'), coverStage(progress, 0.28, 0.72), 1.5);
+    setCoverElementProgress(coverElement('.book-splash__scroll'), coverStage(progress, 0.2, 0.52), 2.5, 0.86);
+    setCoverElementProgress(coverElement('.book-splash__admin'), coverStage(progress, 0.4, 0.9), 1, 0.96);
   };
   const update = () => {
     frame = 0;
@@ -59,7 +85,6 @@ if (root) {
     if (scrollY <= 4 || scrollY < lastScrollY - 1) root.dataset.scrollDirection = 'up';
     else if (scrollY > lastScrollY + 1) root.dataset.scrollDirection = 'down';
     lastScrollY = scrollY;
-    setCoverProgress();
     for (const chapter of chapters) {
       const box = chapter.getBoundingClientRect();
       const chapterCenter = box.top + box.height / 2;
@@ -74,7 +99,27 @@ if (root) {
       return box.top <= readingLine && box.bottom > readingLine;
     });
     const atEnd = window.scrollY > 0 && window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2;
-    const nextId = (atEnd ? chapters.at(-1)?.id : current?.id) ?? '';
+    const currentIndex = atEnd ? chapters.length - 1 : (current ? chapters.indexOf(current) : -1);
+    setCoverProgress(root.dataset.scrollDirection === 'up' && currentIndex < 0);
+    let visibleIndex = currentIndex;
+    if (currentIndex >= 0 && root.dataset.scrollDirection === 'down' && currentIndex > 0) {
+      if (!chapterContentIsAboveViewport(chapters[currentIndex - 1])) visibleIndex = currentIndex - 1;
+    } else if (currentIndex >= 0 && root.dataset.scrollDirection === 'up' && currentIndex < chapters.length - 1) {
+      if (!chapterContentIsBelowViewport(chapters[currentIndex + 1])) visibleIndex = currentIndex + 1;
+    }
+    const lockIndex = currentIndex < 0
+      ? -1
+      : visibleIndex !== currentIndex
+        ? currentIndex
+        : root.dataset.scrollDirection === 'down'
+          ? currentIndex + 1
+          : Math.max(currentIndex - 1, 0);
+    for (const [index, chapter] of chapters.entries()) {
+      chapter.dataset.chapterVisible = String(index === visibleIndex);
+      if (index === lockIndex && index !== visibleIndex) lockChapterVisual(chapter);
+      else unlockChapterVisual(chapter);
+    }
+    const nextId = (currentIndex >= 0 ? chapters[currentIndex]?.id : undefined) ?? '';
     if (nextId === activeId) return;
     activeId = nextId;
     for (const link of links) {
