@@ -11,15 +11,17 @@ describe('blog routes', () => {
       'src/pages/blog/posts/[...slug].astro',
       'src/pages/blog/categories/index.astro',
       'src/pages/blog/search.astro',
-      'src/pages/portfolio.astro',
       'src/pages/games.astro',
-      'src/pages/works.astro',
+      'src/pages/works/index.astro',
+      'src/pages/works/[slug].astro',
       'src/pages/playroom.astro',
       'src/pages/about.astro',
       'src/pages/guestbook.astro',
     ]) {
       expect(existsSync(path)).toBe(true);
     }
+
+    expect(existsSync('src/pages/portfolio.astro')).toBe(false);
   });
 
   it('gives independent spaces their own layout without the blog sidebar', () => {
@@ -31,14 +33,14 @@ describe('blog routes', () => {
     expect(layout).toContain('splash-leather-cover-texture.webp');
     expect(styles).toContain("url('/splash-leather-cover-texture.webp')");
 
-    for (const path of [
-      'src/domains/main/routes/works.astro',
-      'src/domains/main/routes/playroom.astro',
-      'src/domains/main/routes/about.astro',
-    ]) {
+    for (const path of ['src/domains/main/routes/playroom.astro', 'src/domains/main/routes/about.astro']) {
       expect(readFileSync(path, 'utf8')).toContain('class="main-space-page"');
     }
-    expect(readFileSync('src/pages/works.astro', 'utf8')).toContain("domains/main/routes/works.astro");
+    expect(readFileSync('src/domains/main/routes/works.astro', 'utf8')).toContain('class="main-space-page works-page"');
+    expect(readFileSync('src/domains/main/routes/works.astro', 'utf8')).toContain("import '../styles/works.css'");
+    expect(readFileSync('src/pages/works/index.astro', 'utf8')).toContain("domains/main/routes/works.astro");
+    expect(readFileSync('src/pages/works/[slug].astro', 'utf8')).toContain("domains/main/routes/work-detail.astro");
+    expect(existsSync('src/pages/works.astro')).toBe(false);
     expect(readFileSync('src/pages/playroom.astro', 'utf8')).toContain("domains/main/routes/playroom.astro");
     expect(readFileSync('src/pages/about.astro', 'utf8')).toContain("domains/main/routes/about.astro");
   });

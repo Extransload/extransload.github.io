@@ -127,6 +127,202 @@ test('splash sections link to each independent space', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Works', exact: true })).toBeVisible();
 });
 
+test('works presents a scannable contents page for every folio', async ({ page }) => {
+  await page.goto('/works/');
+
+  const folios = page.locator('.works-index__item');
+  await expect(folios).toHaveCount(3);
+  await expect(page.locator('.works-index__name')).toHaveText(['CiteWell', 'DANCHU', '데구르르']);
+  await expect(folios.first()).toContainText('2023.12.11 — 현재');
+  await expect(page.locator('.works-index__link').first()).toHaveAttribute('href', '/works/citewell/');
+
+  await expect(page.locator('.works-patents__item')).toHaveCount(2);
+
+  const removedRoute = await page.request.get('/portfolio/');
+  expect(removedRoute.status()).toBe(404);
+});
+
+test('works opens a dedicated folio for each project', async ({ page }) => {
+  await page.goto('/works/');
+  await page.locator('.works-index__link').first().click();
+
+  await expect(page).toHaveURL(/\/works\/citewell\/$/);
+  await expect(page.getByRole('heading', { name: 'CiteWell', exact: true, level: 1 })).toBeVisible();
+  await expect(page.locator('.work-chapter')).toHaveCount(6);
+  await expect(page.locator('.work-diagram__svg')).toBeVisible();
+  await expect(page.locator('.work-chapter').first()).toContainText('문제');
+  await expect(page.locator('.work-chapter').first()).toContainText('달라진 것');
+
+  await page.locator('.work-nav__link--next').click();
+  await expect(page).toHaveURL(/\/works\/danchu\/$/);
+
+  await page.locator('.works-return').click();
+  await expect(page).toHaveURL(/\/works\/$/);
+});
+
+test('folios with captured screens render them without broken images', async ({ page }) => {
+  await page.goto('/works/degureure/');
+
+  const shots = page.locator('.work-shot img');
+  await expect(shots).toHaveCount(3);
+
+  for (const shot of await shots.all()) {
+    await expect(shot).toHaveJSProperty('complete', true);
+    expect(await shot.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
+    expect(await shot.getAttribute('alt')).toBeTruthy();
+  }
+
+  await expect(page.locator('.work-shot figcaption').first()).not.toBeEmpty();
+});
+
+test('works keeps its project ledger readable on a manuscript surface in both themes', async ({ page }) => {
+  await page.goto('/works/');
+
+  const readSurface = () => page.locator('.works-leaf').evaluate((element) => {
+    const surface = getComputedStyle(element);
+    const texture = getComputedStyle(element, '::before');
+    return {
+      color: surface.color,
+      background: surface.backgroundColor,
+      texture: texture.backgroundImage,
+      textureOpacity: Number(texture.opacity),
+    };
+  });
+
+  const darkSurface = await readSurface();
+  expect(darkSurface.texture).toContain('article-manuscript-paper-texture.webp');
+  expect(darkSurface.textureOpacity).toBeGreaterThan(0);
+
+  await page.locator('html').evaluate((element) => element.setAttribute('data-theme', 'light'));
+  const lightSurface = await readSurface();
+  expect(lightSurface.background).not.toBe(darkSurface.background);
+  expect(lightSurface.color).not.toBe(darkSurface.color);
+  expect(lightSurface.texture).toContain('article-manuscript-paper-texture.webp');
+  expect(lightSurface.textureOpacity).toBeGreaterThan(0);
+});
+
+test('works keeps the leather backdrop at a fixed texture scale', async ({ page }) => {
+  await page.goto('/works/');
+
+  const backdrop = await page.locator('.works-page').evaluate((element) => {
+    const style = getComputedStyle(element, '::before');
+    return { image: style.backgroundImage, size: style.backgroundSize };
+  });
+
+  expect(backdrop.image).toContain('works-leather-texture-v2.webp');
+  expect(backdrop.size).not.toBe('cover');
+});
+
+test('works keeps the manuscript texture beneath the dark reading surface', async ({ page }) => {
+  await page.goto('/works/');
+
+  const textureOpacity = await page.locator('.works-leaf').evaluate((element) => (
+    Number(getComputedStyle(element, '::before').opacity)
+  ));
+
+  expect(textureOpacity).toBeLessThanOrEqual(0.1);
+});
+
+test('works keeps small ledger text legible on the light manuscript', async ({ page }) => {
+  await page.goto('/works/');
+  await page.locator('html').evaluate((element) => element.setAttribute('data-theme', 'light'));
+
+  const contrastRatios = await page.evaluate(() => {
+    const rgb = (value: string) => value.match(/\d+(?:\.\d+)?/g)!.slice(0, 3).map(Number);
+    const luminance = (value: string) => rgb(value)
+      .map((channel) => channel / 255)
+      .map((channel) => channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4)
+      .reduce((sum, channel, index) => sum + channel * [0.2126, 0.7152, 0.0722][index], 0);
+    const paper = getComputedStyle(document.querySelector('.works-leaf')!).backgroundColor;
+
+    return ['.works-kicker', '.works-index__folio', '.works-index__period', '.works-index__role', '.works-colophon']
+      .map((selector) => {
+        const foreground = getComputedStyle(document.querySelector(selector)!).color;
+        const [lighter, darker] = [luminance(foreground), luminance(paper)].sort((a, b) => b - a);
+        return (lighter + 0.05) / (darker + 0.05);
+      });
+  });
+
+  for (const ratio of contrastRatios) expect(ratio).toBeGreaterThanOrEqual(4.5);
+});
+
+test('works manuscript stays inside narrow mobile viewports', async ({ page }) => {
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto('/works/');
+
+    const dimensions = await page.evaluate(() => ({
+      viewport: document.documentElement.clientWidth,
+      page: document.documentElement.scrollWidth,
+      leaf: document.querySelector('.works-leaf')?.getBoundingClientRect().width,
+    }));
+
+    expect(dimensions.page).toBe(dimensions.viewport);
+    expect(dimensions.leaf).toBeLessThanOrEqual(dimensions.viewport);
+  }
+});
+
+test('works marks the chapter resting on the reading line', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/works/citewell/');
+
+  const archive = page.locator('[data-works-scroll]');
+  await expect(archive).toHaveAttribute('data-works-chapter', 'cover');
+
+  // rest the chapter's middle on the reading line so the straddle is unambiguous
+  await page.evaluate(() => {
+    const target = document.querySelector('.work-chapter:nth-child(3)');
+    if (!target) throw new Error('CiteWell chapter is missing');
+    const box = target.getBoundingClientRect();
+    window.scrollTo({ top: box.top + box.height / 2 + window.scrollY - window.innerHeight * 0.42 });
+  });
+  await page.waitForTimeout(600);
+
+  const activeChapter = page.locator('.work-chapter[data-active="true"]');
+  await expect(activeChapter).toHaveCount(1);
+  expect(await activeChapter.evaluate((element) => {
+    const box = element.getBoundingClientRect();
+    const readingLine = window.innerHeight * 0.42;
+    return box.top <= readingLine && box.bottom > readingLine;
+  })).toBe(true);
+});
+
+test('works preserves the full archive when motion is reduced', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/works/');
+
+  await expect(page.locator('[data-works-scroll]')).toHaveAttribute('data-works-motion', 'reduced');
+  await expect(page.locator('.works-index__item').first()).toHaveAttribute('data-revealed', 'true');
+
+  await page.goto('/works/citewell/');
+  await expect(page.locator('.work-chapter').last()).toHaveAttribute('data-revealed', 'true');
+});
+
+test('works unveils a CiteWell chapter at the reading line', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/works/citewell/');
+
+  const masthead = page.locator('[data-works-cover]');
+  const chapter = page.locator('.work-chapter').nth(4);
+  await expect(chapter).toHaveCSS('opacity', '0');
+
+  await page.evaluate(() => {
+    const target = document.querySelector('.work-chapter:nth-child(5)');
+    if (!target) throw new Error('CiteWell chapter is missing');
+    window.scrollTo({ top: target.getBoundingClientRect().top + window.scrollY - window.innerHeight * 0.42 });
+  });
+
+  await expect(chapter).toHaveCSS('opacity', '1');
+  expect(await masthead.evaluate((element) => getComputedStyle(element).transform)).not.toBe('none');
+});
+
+test('works holds a chapter date on the reading rail on desktop', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/works/citewell/');
+
+  await expect(page.locator('.work-chapter > .works-period').first()).toHaveCSS('position', 'sticky');
+});
+
 test('splash chapters keep their layout while scrolling', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
@@ -344,7 +540,7 @@ test('sidebar reading icons show collapse-style tooltips on hover and focus', as
 });
 
 test('independent spaces show a standalone coming soon page', async ({ page }) => {
-  for (const route of ['/works/', '/playroom/', '/about/']) {
+  for (const route of ['/playroom/', '/about/']) {
     await page.goto(route);
     await expect(page.locator('.main-space-page')).toBeVisible();
     await expect(page.locator('.main-space-page')).toContainText('Coming soon');

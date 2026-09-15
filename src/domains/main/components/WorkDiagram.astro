@@ -1,0 +1,91 @@
+---
+interface Props {
+  kind: 'citewell' | 'danchu' | 'degureure';
+}
+
+const { kind } = Astro.props;
+
+const flows: Record<'citewell' | 'danchu', { caption: string; steps: { label: string; detail: string }[] }> = {
+  citewell: {
+    caption: '참고문헌이 입력에서 산출물이 되기까지',
+    steps: [
+      { label: '입력', detail: 'Text · RIS · NBIB · PDF · DOCX' },
+      { label: '추출', detail: '본문과 참고문헌부 분리 · 이미지 PDF는 OCR로 우회' },
+      { label: '검증', detail: 'PubMed · Crossref 병렬 조회 후 성공 / 부분 / 실패 분류' },
+      { label: '변환', detail: 'Reference Template의 요소별 표현과 배치 규칙 적용' },
+      { label: '산출', detail: '작업 화면 · Verification Report · Public API' },
+    ],
+  },
+  danchu: {
+    caption: '뉴스가 오늘의 문제가 되기까지',
+    steps: [
+      { label: '수집', detail: '스케줄러가 지난 24시간의 기사를 크롤링' },
+      { label: '추출', detail: '본문에서 명사만 추출하고 고유명사는 제외' },
+      { label: '집계', detail: '분산 처리로 단어 출현 횟수 계산' },
+      { label: '출제', detail: '상위 단어 가운데 그날의 문제를 선정' },
+      { label: '결과', detail: '정답 확인 후 관련 기사 추천으로 연결' },
+    ],
+  },
+};
+
+const flow = kind === 'degureure' ? null : flows[kind];
+const stepHeight = 92;
+const flowHeight = flow ? flow.steps.length * stepHeight + 16 : 0;
+---
+
+<figure class="work-diagram">
+  {flow && (
+    <svg viewBox={`0 0 560 ${flowHeight}`} role="img" aria-label={flow.caption} class="work-diagram__svg">
+      {flow.steps.map((step, index) => {
+        const y = index * stepHeight + 8;
+        return (
+          <g>
+            {index > 0 && <line x1="40" y1={y - 20} x2="40" y2={y} class="work-diagram__link" marker-end="url(#work-arrow)" />}
+            <circle cx="40" cy={y + 26} r="15" class="work-diagram__node" />
+            <text x="40" y={y + 31} text-anchor="middle" class="work-diagram__index">{index + 1}</text>
+            <text x="74" y={y + 20} class="work-diagram__label">{step.label}</text>
+            <text x="74" y={y + 42} class="work-diagram__detail">{step.detail}</text>
+          </g>
+        );
+      })}
+      <defs>
+        <marker id="work-arrow" viewBox="0 0 8 8" refX="4" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+          <path d="M0 0 L8 4 L0 8 z" class="work-diagram__arrow" />
+        </marker>
+      </defs>
+    </svg>
+  )}
+
+  {kind === 'degureure' && (
+    <svg viewBox="0 0 560 320" role="img" aria-label="데구르르에서 내가 맡은 서버 간 통신 경로" class="work-diagram__svg">
+      <rect x="150" y="12" width="260" height="62" rx="6" class="work-diagram__box" />
+      <text x="280" y="38" text-anchor="middle" class="work-diagram__label">React 클라이언트</text>
+      <text x="280" y="58" text-anchor="middle" class="work-diagram__detail">대기 · 매칭 · 플레이 화면</text>
+
+      <rect x="150" y="128" width="260" height="66" rx="6" class="work-diagram__box" />
+      <text x="280" y="154" text-anchor="middle" class="work-diagram__label">Java 메인 서버</text>
+      <text x="280" y="174" text-anchor="middle" class="work-diagram__detail">게임 로직 · 세션 · ELO 매칭</text>
+
+      <rect x="150" y="246" width="260" height="66" rx="6" class="work-diagram__box work-diagram__box--accent" />
+      <text x="280" y="272" text-anchor="middle" class="work-diagram__label">Python FastAPI 모델 서버</text>
+      <text x="280" y="292" text-anchor="middle" class="work-diagram__detail">얼굴 인식 · 표정 분석 · 별도 클라우드</text>
+
+      <line x1="280" y1="74" x2="280" y2="128" class="work-diagram__link" marker-end="url(#work-arrow)" />
+      <text x="292" y="106" class="work-diagram__edge">STOMP · 실시간 진행 상황</text>
+
+      <line x1="280" y1="194" x2="280" y2="246" class="work-diagram__link" marker-end="url(#work-arrow)" />
+      <text x="292" y="226" class="work-diagram__edge">WebSocket · 이미지 프레임</text>
+
+      <path d="M150 43 L54 43 L54 279 L150 279" class="work-diagram__link work-diagram__link--dashed" marker-end="url(#work-arrow)" fill="none" />
+      <text x="10" y="168" class="work-diagram__edge">직접 전송 경로</text>
+
+      <defs>
+        <marker id="work-arrow" viewBox="0 0 8 8" refX="4" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+          <path d="M0 0 L8 4 L0 8 z" class="work-diagram__arrow" />
+        </marker>
+      </defs>
+    </svg>
+  )}
+
+  <figcaption class="work-diagram__caption">{flow ? flow.caption : '이 가운데 내가 맡은 구간 — 모델 서버와 실시간 통신 경로'}</figcaption>
+</figure>

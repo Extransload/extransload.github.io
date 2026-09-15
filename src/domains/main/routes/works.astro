@@ -1,14 +1,78 @@
 ---
 import MainSpaceLayout from '../layouts/MainSpaceLayout.astro';
+import WorkIcon from '../components/WorkIcon.astro';
+import { works, patents } from '../data/work-archive';
+import '../styles/works.css';
 ---
 
-<MainSpaceLayout title="Works — Extransload" description="Extransload의 작업을 모으는 공간" canonicalPath="/works/">
-  <main class="main-space-page" aria-labelledby="works-title">
-    <section class="main-space-page__frame">
-      <span class="main-space-page__mark">The Works</span>
-      <h1 id="works-title">Works</h1>
-      <p class="main-space-page__message">Coming soon</p>
-      <a class="main-space-page__back" href="/">Return to the entrance</a>
-    </section>
+<MainSpaceLayout title="Works — Extransload" description="문제를 제품으로 바꾸며 쌓아 온 Extransload의 작업 기록" canonicalPath="/works/">
+  <main class="main-space-page works-page" aria-labelledby="works-title" data-works-scroll data-works-view="index">
+    <a class="works-return" href="/">입구로 돌아가기</a>
+
+    <article class="works-leaf">
+      <header class="works-masthead" data-works-cover>
+        <p class="works-kicker">Liber II · A record of making</p>
+        <h1 id="works-title">Works</h1>
+        <p class="works-deck">문제를 읽고, 구조를 세우고, 실제로 작동하는 제품이 될 때까지. 세 편의 기록을 남깁니다.</p>
+        <dl class="works-ledger" aria-label="작업 기록 개요">
+          <div><dt>Current work</dt><dd>CiteWell</dd></div>
+          <div><dt>Since</dt><dd>11 Dec. 2023</dd></div>
+          <div><dt>Discipline</dt><dd>Backend · Product · Operations</dd></div>
+        </dl>
+      </header>
+
+      <section class="works-contents" aria-labelledby="works-contents-title">
+        <h2 id="works-contents-title" class="works-contents__title">목차</h2>
+
+        <ol class="works-index">
+          {works.map((project) => (
+            <li class="works-index__item" data-works-card>
+              <a class="works-index__link" href={`/works/${project.slug}/`} aria-labelledby={`folio-${project.slug}`}>
+                <span class="works-index__mark">
+                  <WorkIcon name={project.diagram} />
+                  <span class="works-index__folio">{project.folio}</span>
+                </span>
+                <span class="works-index__body">
+                  <span class="works-index__heading">
+                    <span class="works-index__name" id={`folio-${project.slug}`}>{project.title}</span>
+                    <span class="works-index__period">{project.period}</span>
+                  </span>
+                  <span class="works-index__subtitle">{project.subtitle}</span>
+                  <span class="works-index__role">{project.context} · {project.role}</span>
+                  <span class="works-index__metrics">
+                    {project.metrics.map((metric) => (
+                      <span class="works-index__metric"><span class="works-index__metric-label">{metric.label}</span><b>{metric.value}</b></span>
+                    ))}
+                  </span>
+                </span>
+                <span class="works-index__enter" aria-hidden="true">자세히 보기 →</span>
+              </a>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <section class="works-patents" aria-labelledby="works-patents-title">
+        <h2 id="works-patents-title" class="works-contents__title">출원 특허</h2>
+        <p class="works-patents__note">국내에 같은 기능의 제품이 없어, 두 프로그램을 각각 별도 출원했습니다.</p>
+        <ul class="works-patents__list">
+          {patents.map((patent) => (
+            <li class="works-patents__item">
+              <p class="works-patents__scope"><WorkIcon name="patent" />{patent.scope}</p>
+              <p class="works-patents__title">{patent.title}</p>
+              <p class="works-patents__detail">{patent.note}</p>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <p class="works-colophon">프로젝트 기간은 업무 기록을 따르고, 기능 연대기는 백엔드·프론트엔드 저장소에 남은 본인 작성 커밋에서 재구성했습니다.</p>
+    </article>
   </main>
 </MainSpaceLayout>
+
+<script>
+  import { initWorksScroll } from '../scripts/works';
+
+  initWorksScroll();
+</script>

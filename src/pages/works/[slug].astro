@@ -1,0 +1,15 @@
+---
+import WorkDetail from '../../domains/main/routes/work-detail.astro';
+import { works } from '../../domains/main/data/work-archive';
+
+export function getStaticPaths() {
+  return works.map((project) => ({
+    params: { slug: project.slug },
+    props: { project },
+  }));
+}
+
+const { project } = Astro.props;
+---
+
+<WorkDetail project={project} />

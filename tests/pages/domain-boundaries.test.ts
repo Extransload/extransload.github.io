@@ -6,7 +6,6 @@ describe('domain boundaries', () => {
     for (const path of [
       'src/domains/main',
       'src/domains/blog',
-      'src/domains/portfolio',
       'src/domains/games',
       'src/shared',
     ]) {
@@ -36,6 +35,11 @@ describe('domain boundaries', () => {
     for (const path of [
       'src/domains/main/layouts/SplashLayout.astro',
       'src/domains/main/routes/about.astro',
+      'src/domains/main/routes/works.astro',
+      'src/domains/main/routes/work-detail.astro',
+      'src/domains/main/components/WorkDiagram.astro',
+      'src/domains/main/data/work-archive.ts',
+      'src/domains/main/styles/works.css',
       'src/domains/main/styles/splash.css',
       'src/shared/layouts/SiteLayout.astro',
       'src/shared/components/Header.astro',
@@ -50,22 +54,18 @@ describe('domain boundaries', () => {
     expect(source).not.toMatch(/PostCard|PostLayout|CodeShellEnhancer|GiscusComments|Pagefind|astro:content/);
   });
 
-  it('keeps portfolio and games in independent domain modules', () => {
+  it('keeps games independent and removes the retired portfolio domain', () => {
     for (const path of [
-      'src/domains/portfolio/layouts/PortfolioLayout.astro',
-      'src/domains/portfolio/routes/index.astro',
       'src/domains/games/layouts/GamesLayout.astro',
       'src/domains/games/routes/index.astro',
     ]) {
       expect(existsSync(path)).toBe(true);
     }
+    expect(existsSync('src/domains/portfolio')).toBe(false);
   });
 
   it('does not leak blog-only implementation into independent spaces', () => {
-    for (const path of [
-      'src/domains/portfolio',
-      'src/domains/games',
-    ]) {
+    for (const path of ['src/domains/games']) {
       const source = readFileSync(`${path}/routes/index.astro`, 'utf8');
       expect(source).not.toMatch(/PostCard|PostLayout|CodeShellEnhancer|GiscusComments|Pagefind|astro:content/);
     }
