@@ -806,6 +806,11 @@ export const works: WorkProject[] = [
         caption: '방 코드 입장과 ELO 기반 랜덤 매칭을 함께 배치',
       },
       {
+        src: '/images/works/degureure-result.webp',
+        alt: '대결 결과 화면이 움직이는 장면. LOSS 표시 아래 레이팅이 1443으로 17점 내려가고 티어 진행 막대가 채워진다.',
+        caption: '대결 직후 결과 화면. 레이팅 증감과 티어 진행도가 함께 움직인다 — 우측 상단 하이라이트는 인물이 담겨 가림 처리',
+      },
+      {
         src: '/images/works/degureure-tiers.webp',
         alt: '티어 엠블럼 일곱 개가 나란히 놓인 이미지. 등급이 올라갈수록 장식이 화려해진다.',
         caption: '레이팅 구간을 티어로 표현해 실력대를 시각적으로 구분',

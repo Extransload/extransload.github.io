@@ -174,7 +174,7 @@ test('folios with captured screens render them without broken images', async ({ 
   await page.goto('/works/degureure/');
 
   const shots = page.locator('.work-doc__shots img');
-  await expect(shots).toHaveCount(5);
+  await expect(shots).toHaveCount(6);
 
   for (const shot of await shots.all()) {
     await expect(shot).toHaveJSProperty('complete', true);
