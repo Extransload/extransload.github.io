@@ -67,6 +67,24 @@ export interface WorkProject {
   milestones: WorkMilestone[];
 }
 
+const CITEWELL_START = new Date(Date.UTC(2023, 11, 11));
+
+/** 시작일부터 기준일까지를 '2년 9개월' 형태로. 빌드 시점에 계산된다. */
+export const formatTenure = (from: Date, to: Date = new Date()): string => {
+  let months =
+    (to.getUTCFullYear() - from.getUTCFullYear()) * 12 + (to.getUTCMonth() - from.getUTCMonth());
+  if (to.getUTCDate() < from.getUTCDate()) months -= 1;
+  months = Math.max(months, 0);
+
+  const years = Math.floor(months / 12);
+  const rest = months % 12;
+  if (years && rest) return `${years}년 ${rest}개월`;
+  if (years) return `${years}년`;
+  return `${rest}개월`;
+};
+
+const citewellTenure = formatTenure(CITEWELL_START);
+
 export const works: WorkProject[] = [
   {
     slug: 'citewell',
@@ -79,10 +97,10 @@ export const works: WorkProject[] = [
     context: 'Research Factory',
     summary:
       '서버 구조를 정리하는 일에서 시작해 논문 변환과 참고문헌 변환 두 프로그램을 개발. ' +
-      '제품이 참고문헌 검증으로 방향을 튼 뒤에는 구독·크레딧 체계와 검증 보고서 설계까지 담당. ' +
-      '기반을 세우는 작업과 그 위에 올린 기능을 함께 맡아 온 2년 9개월.',
+      '이후 제품의 범위가 참고문헌 검증 한 축으로 좁혀지면서 구독·크레딧 체계와 검증 보고서 설계를 담당. ' +
+      `기반을 세우는 작업과 그 위에 올린 기능을 함께 맡아 온 ${citewellTenure}.`,
     metrics: [
-      { label: '기간', value: '2년 9개월' },
+      { label: '기간', value: citewellTenure },
       { label: '역할', value: '풀스택' },
       { label: '특허 출원', value: '2건' },
     ],
