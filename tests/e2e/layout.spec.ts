@@ -136,6 +136,13 @@ test('works presents a scannable contents page for every folio', async ({ page }
   await expect(folios.first()).toContainText('2023.12.11 — 현재');
   await expect(page.locator('.works-index__link').first()).toHaveAttribute('href', '/works/citewell/');
 
+  const logos = page.locator('.works-index__logo');
+  await expect(logos).toHaveCount(3);
+  for (const logo of await logos.all()) {
+    expect(await logo.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
+    expect(await logo.getAttribute('alt')).toBeTruthy();
+  }
+
   await expect(page.locator('.works-patents__item')).toHaveCount(2);
 
   const removedRoute = await page.request.get('/portfolio/');

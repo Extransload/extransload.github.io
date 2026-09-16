@@ -3,11 +3,6 @@ import MainSpaceLayout from '../layouts/MainSpaceLayout.astro';
 import WorkIcon from '../components/WorkIcon.astro';
 import { works, patents } from '../data/work-archive';
 
-const iconFor: Record<string, 'citewell' | 'danchu' | 'degureure'> = {
-  citewell: 'citewell',
-  danchu: 'danchu',
-  degureure: 'degureure',
-};
 import '../styles/works.css';
 ---
 
@@ -35,7 +30,7 @@ import '../styles/works.css';
             <li class="works-index__item" data-works-card>
               <a class="works-index__link" href={`/works/${project.slug}/`} aria-labelledby={`folio-${project.slug}`}>
                 <span class="works-index__mark">
-                  <WorkIcon name={iconFor[project.slug] ?? 'citewell'} />
+                  <img class="works-index__logo" src={project.logo.src} alt={project.logo.alt} loading="lazy" decoding="async" width="900" height="506" />
                   <span class="works-index__folio">{project.folio}</span>
                 </span>
                 <span class="works-index__body">

@@ -44,8 +44,14 @@ export interface WorkMilestone {
   body: string;
 }
 
+export interface WorkLogo {
+  src: string;
+  alt: string;
+}
+
 export interface WorkProject {
   slug: string;
+  logo: WorkLogo;
   folio: string;
   title: string;
   subtitle: string;
@@ -64,6 +70,7 @@ export interface WorkProject {
 export const works: WorkProject[] = [
   {
     slug: 'citewell',
+    logo: { src: '/images/works/logo-citewell.webp', alt: 'CiteWell 로고' },
     folio: 'Folio 01',
     title: 'CiteWell',
     subtitle: '의학 논문의 참고문헌을 검증하고 저널 형식으로 바꾸는 제품',
@@ -650,6 +657,7 @@ export const works: WorkProject[] = [
   },
   {
     slug: 'danchu',
+    logo: { src: '/images/works/logo-danchu.webp', alt: 'DANCHU 로고' },
     folio: 'Folio 02',
     title: 'DANCHU',
     subtitle: '지난 24시간의 뉴스를 단어 추측 게임으로 바꾸는 서비스',
@@ -742,6 +750,7 @@ export const works: WorkProject[] = [
   },
   {
     slug: 'degureure',
+    logo: { src: '/images/works/logo-degureure.webp', alt: '데구르르 로고' },
     folio: 'Folio 03',
     title: '데구르르',
     subtitle: '1:1 웃음 참기 화상 대결',
