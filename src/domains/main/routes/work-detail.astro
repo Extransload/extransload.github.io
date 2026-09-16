@@ -1,9 +1,7 @@
 ---
 import MainSpaceLayout from '../layouts/MainSpaceLayout.astro';
-import WorkDiagram from '../components/WorkDiagram.astro';
-import WorkIcon from '../components/WorkIcon.astro';
 import { works, patents, type WorkProject } from '../data/work-archive';
-import '../styles/works.css';
+import '../styles/work-doc.css';
 
 interface Props {
   project: WorkProject;
@@ -13,6 +11,7 @@ const { project } = Astro.props;
 const position = works.findIndex((entry) => entry.slug === project.slug);
 const previous = position > 0 ? works[position - 1] : null;
 const next = position < works.length - 1 ? works[position + 1] : null;
+const milestoneFor = (n: string) => project.milestones.find((m) => m.after === n);
 ---
 
 <MainSpaceLayout
@@ -20,120 +19,148 @@ const next = position < works.length - 1 ? works[position + 1] : null;
   description={project.subtitle}
   canonicalPath={`/works/${project.slug}/`}
 >
-  <main class="main-space-page works-page" aria-labelledby="work-title" data-works-scroll data-works-view="detail">
-    <a class="works-return" href="/works/">목차로 돌아가기</a>
-
-    <article class="works-leaf">
-      <header class="works-masthead works-masthead--detail" data-works-cover>
-        <p class="works-kicker"><WorkIcon name={project.diagram} />{project.folio} · {project.context}</p>
-        <h1 id="work-title">{project.title}</h1>
-        <p class="works-deck">{project.subtitle}</p>
-        <dl class="works-ledger" aria-label={`${project.title} 개요`}>
-          <div><dt>Period</dt><dd>{project.period}</dd></div>
-          <div><dt>Role</dt><dd>{project.role}</dd></div>
-          {project.metrics.slice(1).map((metric) => (
-            <div><dt>{metric.label}</dt><dd>{metric.value}</dd></div>
-          ))}
-        </dl>
-      </header>
-
-      <section class="work-overview" aria-label="개요">
-        <p class="work-overview__summary">{project.summary}</p>
-        <p class="works-tools">{project.stack}</p>
-        {project.links.length > 0 && (
-          <p class="work-overview__links">
-            {project.links.map((link) => (
-              <a class="works-project__link" href={link.href} target="_blank" rel="noreferrer">{link.label} ↗</a>
-            ))}
-          </p>
-        )}
-      </section>
-
-      <WorkDiagram kind={project.diagram} />
-
-      {project.gallery.length > 0 && (
-        <section class="work-gallery" aria-label={`${project.title} 화면`}>
-          {project.gallery.map((shot) => (
-            <figure class="work-shot">
-              <img src={shot.src} alt={shot.alt} loading="lazy" decoding="async" />
-              <figcaption>{shot.caption}</figcaption>
-            </figure>
-          ))}
-        </section>
-      )}
-
-      <ol class="work-chapters">
+  <main class="work-doc" aria-labelledby="work-title" data-work-doc>
+    <div class="work-doc__shell">
+      <nav class="work-doc__rail" aria-label="장 목차">
+        <a class="work-doc__back" href="/works/">← 목차로 돌아가기</a>
+        <b>이 문서</b>
         {project.chapters.map((chapter) => (
-          <li class="work-chapter" data-works-entry>
-            <p class="works-period">{chapter.period}</p>
-            <div class="work-chapter__body">
-              <p class="work-chapter__number">Chapter {chapter.number}</p>
-              <h2 class="work-chapter__title">{chapter.title}</h2>
+          <a href={`#ch-${chapter.n}`} data-rail-link={`ch-${chapter.n}`}>
+            <i>{chapter.n}</i><span>{chapter.title}</span>
+          </a>
+        ))}
+      </nav>
 
-              <div class="work-chapter__block">
-                <h3 class="work-chapter__label"><WorkIcon name="problem" />문제</h3>
-                <p>{chapter.problem}</p>
-              </div>
+      <article>
+        <header>
+          <p class="work-doc__eyebrow">{project.folio} · {project.context}</p>
+          <h1 id="work-title">{project.title}</h1>
+          <p class="work-doc__sub">{project.subtitle}</p>
 
-              <div class="work-chapter__block">
-                <h3 class="work-chapter__label"><WorkIcon name="work" />한 일</h3>
-                <ul>
-                  {chapter.work.map((item) => <li>{item}</li>)}
-                </ul>
-              </div>
+          <dl class="work-doc__facts">
+            <div><dt>기간</dt><dd>{project.period}</dd></div>
+            <div><dt>역할</dt><dd>{project.role}</dd></div>
+            {project.metrics.slice(2).map((metric) => (
+              <div><dt>{metric.label}</dt><dd>{metric.value}</dd></div>
+            ))}
+          </dl>
 
-              {chapter.decision && (
-                <div class="work-chapter__block work-chapter__block--decision">
-                  <h3 class="work-chapter__label"><WorkIcon name="decision" />결정</h3>
-                  <p>{chapter.decision}</p>
-                  {chapter.unverified && <p class="work-chapter__caveat">이 판단의 의도는 코드와 커밋에서 추정한 것으로, 당시 근거가 문서로 남아 있지 않습니다.</p>}
-                </div>
+          <p class="work-doc__summary">{project.summary}</p>
+          <p class="work-doc__stack">{project.stack}</p>
+          {project.links.length > 0 && (
+            <p class="work-doc__links">
+              {project.links.map((link) => (
+                <a href={link.href} target="_blank" rel="noreferrer">{link.label} ↗</a>
+              ))}
+            </p>
+          )}
+        </header>
+
+        {project.gallery.length > 0 && (
+          <section class="work-doc__shots" aria-label={`${project.title} 화면`}>
+            {project.gallery.map((shot) => (
+              <figure>
+                <img src={shot.src} alt={shot.alt} loading="lazy" decoding="async" />
+                <figcaption>{shot.caption}</figcaption>
+              </figure>
+            ))}
+          </section>
+        )}
+
+        {project.chapters.map((chapter) => (
+          <>
+            <section aria-labelledby={`ch-${chapter.n}`} data-chapter={chapter.n}>
+              <h2 id={`ch-${chapter.n}`}>
+                <span class="work-doc__n">{chapter.n}</span>{chapter.title}
+                <small>{chapter.period}</small>
+              </h2>
+
+              <p class="work-doc__lede">{chapter.lede}</p>
+
+              <h3>요구사항</h3>
+              <dl class="work-req">
+                {chapter.requirements.map((req) => (
+                  <div><dt>{req.label}</dt><dd>{req.value}</dd></div>
+                ))}
+              </dl>
+
+              <h3>구현</h3>
+              <ol class="work-build">
+                {chapter.build.map((step) => (
+                  <li>
+                    <h4>
+                      {step.head}
+                      {step.decision && <span class="work-build__tag">설계 판단</span>}
+                    </h4>
+                    <ul>
+                      {step.body.map((line) => <li>{line}</li>)}
+                    </ul>
+                  </li>
+                ))}
+              </ol>
+
+              {chapter.hard.length > 0 && (
+                <>
+                  <h3>까다로웠던 지점</h3>
+                  {chapter.hard.map((item) => (
+                    <div class="work-friction">
+                      <h4>{item.head}</h4>
+                      <p>{item.body}</p>
+                      <p class="work-friction__fix"><b>해결</b>{item.resolved}</p>
+                    </div>
+                  ))}
+                </>
               )}
 
-              <div class="work-chapter__block work-chapter__block--outcome">
-                <h3 class="work-chapter__label"><WorkIcon name="outcome" />달라진 것</h3>
-                <p>{chapter.outcome}</p>
-              </div>
-            </div>
-          </li>
+              <h3>남긴 것</h3>
+              <ul class="work-outcome">
+                {chapter.outcome.map((line) => <li>{line}</li>)}
+              </ul>
+            </section>
+
+            {milestoneFor(chapter.n) && (
+              <aside class="work-milestone">
+                <h3>{milestoneFor(chapter.n)!.label}</h3>
+                <p>{milestoneFor(chapter.n)!.body}</p>
+              </aside>
+            )}
+          </>
         ))}
-      </ol>
 
-      {project.slug === 'citewell' && (
-        <section class="works-patents" aria-labelledby="detail-patents-title">
-          <h2 id="detail-patents-title" class="works-contents__title">출원 특허</h2>
-          <ul class="works-patents__list">
-            {patents.map((patent) => (
-              <li class="works-patents__item">
-                <p class="works-patents__scope"><WorkIcon name="patent" />{patent.scope}</p>
-                <p class="works-patents__title">{patent.title}</p>
-                <p class="works-patents__detail">{patent.note}</p>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+        {project.slug === 'citewell' && (
+          <section aria-labelledby="patents-title">
+            <h2 id="patents-title">출원 특허</h2>
+            <ul class="work-patents">
+              {patents.map((patent) => (
+                <li>
+                  <p class="work-patents__scope">{patent.scope}</p>
+                  <p class="work-patents__title">{patent.title}</p>
+                  <p class="work-patents__note">{patent.note}</p>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
-      <nav class="work-nav" aria-label="다른 작업">
-        {previous ? (
-          <a class="work-nav__link work-nav__link--prev" href={`/works/${previous.slug}/`}>
-            <span class="work-nav__direction">← 이전 기록</span>
-            <span class="work-nav__name">{previous.title}</span>
-          </a>
-        ) : <span class="work-nav__spacer"></span>}
-        {next ? (
-          <a class="work-nav__link work-nav__link--next" href={`/works/${next.slug}/`}>
-            <span class="work-nav__direction">다음 기록 →</span>
-            <span class="work-nav__name">{next.title}</span>
-          </a>
-        ) : <span class="work-nav__spacer"></span>}
-      </nav>
-    </article>
+        <nav class="work-doc__nav" aria-label="다른 작업">
+          {previous ? (
+            <a href={`/works/${previous.slug}/`}>
+              <span>← 이전 기록</span><b>{previous.title}</b>
+            </a>
+          ) : <span></span>}
+          {next ? (
+            <a href={`/works/${next.slug}/`}>
+              <span>다음 기록 →</span><b>{next.title}</b>
+            </a>
+          ) : <span></span>}
+        </nav>
+      </article>
+    </div>
   </main>
 </MainSpaceLayout>
 
 <script>
-  import { initWorksScroll } from '../scripts/works';
+  import { initWorkDoc } from '../scripts/work-doc';
 
-  initWorksScroll();
+  initWorkDoc();
 </script>

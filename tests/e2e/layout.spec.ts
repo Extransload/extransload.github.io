@@ -148,22 +148,25 @@ test('works opens a dedicated folio for each project', async ({ page }) => {
 
   await expect(page).toHaveURL(/\/works\/citewell\/$/);
   await expect(page.getByRole('heading', { name: 'CiteWell', exact: true, level: 1 })).toBeVisible();
-  await expect(page.locator('.work-chapter')).toHaveCount(6);
-  await expect(page.locator('.work-diagram__svg')).toBeVisible();
-  await expect(page.locator('.work-chapter').first()).toContainText('문제');
-  await expect(page.locator('.work-chapter').first()).toContainText('달라진 것');
 
-  await page.locator('.work-nav__link--next').click();
+  const chapters = page.locator('section[data-chapter]');
+  await expect(chapters).toHaveCount(8);
+  await expect(chapters.first()).toContainText('요구사항');
+  await expect(chapters.first()).toContainText('구현');
+  await expect(chapters.first()).toContainText('남긴 것');
+  await expect(page.locator('.work-doc__rail a[data-rail-link]')).toHaveCount(8);
+
+  await page.locator('.work-doc__nav a').last().click();
   await expect(page).toHaveURL(/\/works\/danchu\/$/);
 
-  await page.locator('.works-return').click();
+  await page.locator('.work-doc__back').click();
   await expect(page).toHaveURL(/\/works\/$/);
 });
 
 test('folios with captured screens render them without broken images', async ({ page }) => {
   await page.goto('/works/degureure/');
 
-  const shots = page.locator('.work-shot img');
+  const shots = page.locator('.work-doc__shots img');
   await expect(shots).toHaveCount(3);
 
   for (const shot of await shots.all()) {
@@ -172,7 +175,7 @@ test('folios with captured screens render them without broken images', async ({ 
     expect(await shot.getAttribute('alt')).toBeTruthy();
   }
 
-  await expect(page.locator('.work-shot figcaption').first()).not.toBeEmpty();
+  await expect(page.locator('.work-doc__shots figcaption').first()).not.toBeEmpty();
 });
 
 test('works keeps its project ledger readable on a manuscript surface in both themes', async ({ page }) => {
@@ -262,29 +265,24 @@ test('works manuscript stays inside narrow mobile viewports', async ({ page }) =
   }
 });
 
-test('works marks the chapter resting on the reading line', async ({ page }) => {
+test('works tracks the chapter being read in the folio rail', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/works/citewell/');
 
-  const archive = page.locator('[data-works-scroll]');
-  await expect(archive).toHaveAttribute('data-works-chapter', 'cover');
+  const rail = page.locator('.work-doc__rail a[data-rail-link]');
+  await expect(rail.first()).toHaveAttribute('aria-current', 'true');
 
-  // rest the chapter's middle on the reading line so the straddle is unambiguous
+  // 05장 제목을 추적선(뷰포트 30%) 위로 확실히 올린다
   await page.evaluate(() => {
-    const target = document.querySelector('.work-chapter:nth-child(3)');
-    if (!target) throw new Error('CiteWell chapter is missing');
-    const box = target.getBoundingClientRect();
-    window.scrollTo({ top: box.top + box.height / 2 + window.scrollY - window.innerHeight * 0.42 });
+    const heading = document.querySelector('#ch-05');
+    if (!heading) throw new Error('chapter 05 heading is missing');
+    window.scrollTo({ top: heading.getBoundingClientRect().top + window.scrollY - window.innerHeight * 0.1 });
   });
-  await page.waitForTimeout(600);
+  await page.waitForTimeout(400);
 
-  const activeChapter = page.locator('.work-chapter[data-active="true"]');
-  await expect(activeChapter).toHaveCount(1);
-  expect(await activeChapter.evaluate((element) => {
-    const box = element.getBoundingClientRect();
-    const readingLine = window.innerHeight * 0.42;
-    return box.top <= readingLine && box.bottom > readingLine;
-  })).toBe(true);
+  const active = page.locator('.work-doc__rail a[aria-current="true"]');
+  await expect(active).toHaveCount(1);
+  await expect(active).toHaveAttribute('data-rail-link', 'ch-05');
 });
 
 test('works preserves the full archive when motion is reduced', async ({ page }) => {
@@ -294,33 +292,26 @@ test('works preserves the full archive when motion is reduced', async ({ page })
   await expect(page.locator('[data-works-scroll]')).toHaveAttribute('data-works-motion', 'reduced');
   await expect(page.locator('.works-index__item').first()).toHaveAttribute('data-revealed', 'true');
 
+  // 상세 폴리오는 등장 애니메이션 없이 처음부터 전부 보인다
   await page.goto('/works/citewell/');
-  await expect(page.locator('.work-chapter').last()).toHaveAttribute('data-revealed', 'true');
+  await expect(page.locator('section[data-chapter]').last()).toHaveCSS('opacity', '1');
 });
 
-test('works unveils a CiteWell chapter at the reading line', async ({ page }) => {
+test('the folio keeps every chapter visible without entrance motion', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/works/citewell/');
 
-  const masthead = page.locator('[data-works-cover]');
-  const chapter = page.locator('.work-chapter').nth(4);
-  await expect(chapter).toHaveCSS('opacity', '0');
-
-  await page.evaluate(() => {
-    const target = document.querySelector('.work-chapter:nth-child(5)');
-    if (!target) throw new Error('CiteWell chapter is missing');
-    window.scrollTo({ top: target.getBoundingClientRect().top + window.scrollY - window.innerHeight * 0.42 });
-  });
-
-  await expect(chapter).toHaveCSS('opacity', '1');
-  expect(await masthead.evaluate((element) => getComputedStyle(element).transform)).not.toBe('none');
+  const opacities = await page.locator('section[data-chapter]').evaluateAll((nodes) => (
+    nodes.map((node) => getComputedStyle(node).opacity)
+  ));
+  expect(opacities.every((value) => value === '1')).toBe(true);
 });
 
-test('works holds a chapter date on the reading rail on desktop', async ({ page }) => {
+test('the folio rail stays in view on desktop', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/works/citewell/');
 
-  await expect(page.locator('.work-chapter > .works-period').first()).toHaveCSS('position', 'sticky');
+  await expect(page.locator('.work-doc__rail')).toHaveCSS('position', 'sticky');
 });
 
 test('splash chapters keep their layout while scrolling', async ({ page }) => {
