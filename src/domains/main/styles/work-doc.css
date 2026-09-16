@@ -472,8 +472,12 @@
 
 .work-doc__shots img {
   display: block;
-  width: 100%;
+  width: auto;
+  max-width: 100%;
+  /* 세로로 긴 화면 캡처가 전폭으로 늘어나 뭉개지지 않도록 높이로 제한 */
+  max-height: 30rem;
   height: auto;
+  margin-inline: auto;
   border: 1px solid var(--doc-line);
   border-radius: 6px;
 }

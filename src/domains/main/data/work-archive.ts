@@ -806,9 +806,19 @@ export const works: WorkProject[] = [
         caption: '방 코드 입장과 ELO 기반 랜덤 매칭을 함께 배치',
       },
       {
+        src: '/images/works/degureure-match.webp',
+        alt: '매칭 성사 화면. 두 참가자의 프로필이 VS 표시를 사이에 두고 위아래로 놓여 있고, 한쪽 프로필 사진은 모자이크 처리되어 있다.',
+        caption: '매칭이 성사되면 양쪽의 닉네임과 상태 메시지를 맞붙여 표시 — 참가자 사진은 모자이크',
+      },
+      {
         src: '/images/works/degureure-result.webp',
-        alt: '대결 결과 화면이 움직이는 장면. LOSS 표시 아래 레이팅이 1443으로 17점 내려가고 티어 진행 막대가 채워진다.',
-        caption: '대결 직후 결과 화면. 레이팅 증감과 티어 진행도가 함께 움직인다 — 우측 상단 하이라이트는 인물이 담겨 가림 처리',
+        alt: '대결 결과 화면. LOSS 표시 아래 레이팅 1443과 17점 하락이 적혀 있고, 티어 진행 막대와 상대 정보가 있다. 우측 상단 하이라이트는 모자이크 처리되어 있다.',
+        caption: '대결 직후 레이팅 증감과 티어 진행도를 함께 노출 — 하이라이트 썸네일은 모자이크',
+      },
+      {
+        src: '/images/works/degureure-ranking.webp',
+        alt: '시즌 랭킹 목록. 순위별로 메달, 프로필, 닉네임, 레이팅이 나열되어 있고 실제 인물 사진 한 건은 모자이크 처리되어 있다.',
+        caption: '시즌별 랭킹으로 상위권을 확인 — 인물 사진은 모자이크',
       },
       {
         src: '/images/works/degureure-tiers.webp',
