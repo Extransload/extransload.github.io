@@ -670,10 +670,10 @@ export const works: WorkProject[] = [
     metrics: [
       { label: '기간', value: '7주' },
       { label: '역할', value: '설계 주도' },
-      { label: '팀', value: 'SSAFY 자율 프로젝트' },
+      { label: '배포 후 10일', value: '새 사용자 165명' },
     ],
     stack: 'Python · React · 분산 처리 · 크롤링 스케줄러',
-    links: [],
+    links: [{ label: 'github.com/team-hca/danchu', href: 'https://github.com/team-hca/danchu' }],
     gallery: [
       {
         src: '/images/works/danchu-play.webp',
@@ -689,6 +689,11 @@ export const works: WorkProject[] = [
         src: '/images/works/danchu-scheduler.webp',
         alt: '수집 스케줄러를 제어하는 API 목록 화면. scheduling과 collection 그룹으로 나뉜 엔드포인트가 나열되어 있다.',
         caption: '수집 파이프라인을 직접 제어할 수 있도록 스케줄러 API를 별도 구성',
+      },
+      {
+        src: '/images/works/danchu-users.webp',
+        alt: '배포 후 사용자 추이 그래프. 새 사용자 165명, 재사용자 31명으로 표시되어 있다.',
+        caption: '배포 후 약 10일간 새 사용자 165명, 재사용자 31명',
       },
     ],
     milestones: [],
@@ -744,6 +749,7 @@ export const works: WorkProject[] = [
         outcome: [
           '수집부터 출제까지 사람 손이 닿지 않는 하루 단위 자동 흐름 완성',
           '게임과 시사 정보가 결과 화면에서 이어지는 구조 확보',
+          '배포 후 약 10일간 새 사용자 165명, 그중 31명이 재방문',
         ],
       },
     ],
@@ -763,10 +769,14 @@ export const works: WorkProject[] = [
     metrics: [
       { label: '기간', value: '12주 · 2개 차수' },
       { label: '역할', value: '백엔드 · 프론트 · 인프라' },
-      { label: '팀', value: 'SSAFY 공통 프로젝트' },
+      { label: '배포 후 5일', value: '사용자 410명' },
     ],
-    stack: 'Python · FastAPI · Java · STOMP · WebSocket · React · Docker · Jenkins',
-    links: [],
+    stack: 'Python · FastAPI · Java · STOMP · WebSocket · React · OpenVidu · Docker · Jenkins',
+    links: [
+      { label: 'github.com/TEAM-DGRR', href: 'https://github.com/TEAM-DGRR' },
+      { label: 'UCC 1차', href: 'https://www.youtube.com/watch?v=PGguXQPKS0c' },
+      { label: 'UCC 2차', href: 'https://www.youtube.com/watch?v=zh_8nalaMYE' },
+    ],
     gallery: [
       {
         src: '/images/works/degureure-architecture.webp',
@@ -782,6 +792,16 @@ export const works: WorkProject[] = [
         src: '/images/works/degureure-lobby.webp',
         alt: '데구르르 로비 화면. 방 만들기, 방 찾기, 랜덤 매칭 세 개의 버튼이 있다.',
         caption: '방 코드 입장과 ELO 기반 랜덤 매칭을 함께 배치',
+      },
+      {
+        src: '/images/works/degureure-tiers.webp',
+        alt: '티어 엠블럼 일곱 개가 나란히 놓인 이미지. 등급이 올라갈수록 장식이 화려해진다.',
+        caption: '레이팅 구간을 티어로 표현해 실력대를 시각적으로 구분',
+      },
+      {
+        src: '/images/works/degureure-users.webp',
+        alt: '배포 후 사용자 추이 그래프. 총 사용자 410명, 새 사용자 409명, 이벤트 1만 건으로 표시되어 있다.',
+        caption: '1차 배포 후 5일간 사용자 410명, 이벤트 1만 건',
       },
     ],
     milestones: [],
@@ -840,6 +860,69 @@ export const works: WorkProject[] = [
       },
       {
         n: '02',
+        period: '2023.08 — 2023.11',
+        title: '대결을 서비스로 묶기',
+        lede:
+          '판정이 동작해도 그것만으로는 게임이 아님. ' +
+          '상대를 만나고, 결과가 기록으로 남고, 다시 들어올 이유가 생겨야 서비스로 성립.',
+        requirements: [
+          { label: '상대 연결', value: '지인과 붙는 경로와 모르는 상대를 만나는 경로를 모두 제공' },
+          { label: '실력 균형', value: '비슷한 수준끼리 매칭되어 대결이 일방적으로 끝나지 않을 것' },
+          { label: '재방문 동기', value: '한 판으로 끝나지 않고 다시 들어올 이유를 남길 것' },
+          { label: '진입 장벽', value: '가입 절차가 게임 시작을 가로막지 않을 것' },
+        ],
+        build: [
+          {
+            head: '두 갈래 입장 경로',
+            body: [
+              '방 코드를 입력해 지인과 만나는 경로 구현',
+              'ELO 기반 랜덤 매칭으로 모르는 상대와 연결되는 경로 구현',
+              '대기와 매칭 상태를 실시간으로 표시해 연결 과정을 드러냄',
+            ],
+          },
+          {
+            head: '레이팅과 티어',
+            body: [
+              '대결 결과에 따라 레이팅이 오르내리는 ELO 방식 채택',
+              '레이팅 구간을 티어로 묶어 실력대를 시각적으로 구분',
+              '시즌별 랭킹 조회를 두어 상위권을 확인 가능하도록 구성',
+            ],
+          },
+          {
+            head: '결과를 남기는 장치',
+            decision: true,
+            body: [
+              '패배자의 웃는 순간을 이미지로 포착해 결과 화면에 노출',
+              '점수만 남기면 한 판으로 끝나지만 장면이 남으면 공유와 재대결로 이어진다는 판단',
+              '마이페이지에 최근 전적과 하이라이트를 모아 다시 볼 수 있게 구성',
+            ],
+          },
+          {
+            head: '가입 마찰 축소',
+            body: [
+              '카카오 로그인을 도입해 별도 가입 절차 없이 진입 가능하도록 처리',
+            ],
+          },
+        ],
+        hard: [
+          {
+            head: '초기 사용자가 없으면 매칭도 없음',
+            body:
+              '실력 기반 매칭은 대기열에 사람이 충분할 때 동작하는 구조. ' +
+              '배포 초기에는 동시 접속자가 적어 비슷한 레이팅의 상대를 찾지 못하고 대기만 길어지는 상황.',
+            resolved:
+              '방 코드 입장을 랜덤 매칭과 동등한 위치에 배치. ' +
+              '아는 사람끼리 먼저 플레이해 대기열을 채우는 경로를 열어 초기 공백을 우회',
+          },
+        ],
+        outcome: [
+          '1차 배포 후 5일간 사용자 410명, 이벤트 약 1만 건 기록',
+          '대결 결과가 레이팅·티어·하이라이트로 남아 재대결 동기를 형성',
+          '2차 차수에서 이 구조 위에 통계와 랭킹 화면을 확장',
+        ],
+      },
+      {
+        n: '03',
         period: '2023.10 — 2023.11',
         title: '이탈한 자리 대응',
         lede:

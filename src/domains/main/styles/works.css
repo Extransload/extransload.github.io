@@ -613,7 +613,7 @@
   padding: 0.7rem;
   border: 1px solid rgb(201 172 102 / 26%);
   border-radius: 4px;
-  background: #f4f1ea;
+  background: #fff;
   box-shadow: 0 0.35rem 1rem rgb(0 0 0 / 34%);
   transition: border-color 180ms ease, box-shadow 180ms ease;
 }
