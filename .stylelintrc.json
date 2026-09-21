@@ -1,0 +1,19 @@
+{
+  "extends": "stylelint-config-standard",
+  "ignoreFiles": ["dist/**", "node_modules/**", "admin/dist/**", "admin/node_modules/**", ".worktrees/**"],
+  "rules": {
+    "selector-class-pattern": null,
+    "rule-empty-line-before": null,
+    "at-rule-empty-line-before": null,
+    "declaration-empty-line-before": null,
+    "custom-property-empty-line-before": null,
+    "comment-empty-line-before": null,
+    "media-feature-range-notation": null,
+    "selector-not-notation": null,
+    "property-no-vendor-prefix": null,
+    "declaration-block-no-redundant-longhand-properties": null,
+    "no-descending-specificity": [true, { "severity": "warning" }],
+    "no-duplicate-selectors": [true, { "severity": "warning" }],
+    "property-no-deprecated": [true, { "severity": "warning" }]
+  }
+}

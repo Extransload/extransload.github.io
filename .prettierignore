@@ -1,0 +1,20 @@
+dist/
+.astro/
+node_modules/
+admin/dist/
+admin/node_modules/
+admin/.wrangler/
+.worktrees/
+public/
+test-results/
+playwright-report/
+package-lock.json
+admin/package-lock.json
+
+# Published prose: reformatting Markdown can change what readers see.
+*.md
+
+# Astro components: prettier-plugin-astro reflows template whitespace, which
+# changes what inline elements render (e.g. <span>01</span> -> <span> 01 </span>).
+# Formatting them is opt-in until that is safe.
+*.astro

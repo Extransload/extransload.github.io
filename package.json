@@ -7,7 +7,15 @@
     "dev": "astro dev",
     "build": "astro build && pagefind --site dist",
     "preview": "astro preview",
+    "typecheck": "astro check",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint:css": "stylelint \"**/*.css\"",
+    "lint:css:fix": "stylelint \"**/*.css\" --fix",
+    "lint": "npm run format:check && npm run lint:css && npm run typecheck",
     "test": "vitest",
+    "test:run": "vitest run",
+    "test:dist": "npm run build && vitest run --config vitest.built.config.ts",
     "test:e2e": "playwright test"
   },
   "dependencies": {
@@ -27,11 +35,16 @@
     "unified": "^11.0.5"
   },
   "devDependencies": {
+    "@astrojs/check": "^0.9.10",
     "@pagefind/default-ui": "^1.5.2",
     "@playwright/test": "^1.55.0",
     "@types/node": "^24.3.0",
     "pagefind": "^1.5.2",
     "parse5": "^7.3.0",
+    "prettier": "^3.9.8",
+    "prettier-plugin-astro": "^1.0.1",
+    "stylelint": "^17.15.0",
+    "stylelint-config-standard": "^40.0.0",
     "typescript": "^5.9.2",
     "vitest": "^3.2.4",
     "yaml": "^2.9.0"
