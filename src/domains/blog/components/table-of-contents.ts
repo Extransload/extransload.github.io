@@ -17,9 +17,7 @@ export function initializeTableOfContents(scope: ParentNode = document) {
     const currentIndex = headings.findIndex((heading) => heading.id === id);
     const activeIds = new Set([id]);
     if (currentIndex >= 0 && headings[currentIndex].tagName === 'H3') {
-      const parent = [...headings.slice(0, currentIndex)]
-        .reverse()
-        .find((heading) => heading.tagName === 'H2');
+      const parent = [...headings.slice(0, currentIndex)].reverse().find((heading) => heading.tagName === 'H2');
       if (parent) activeIds.add(parent.id);
     }
     links.forEach((link) => {
@@ -34,12 +32,16 @@ export function initializeTableOfContents(scope: ParentNode = document) {
     }
   };
   const updateActiveHeading = (syncHash = hasObservedScroll) => {
-    const current = headings.reduce<HTMLElement>((active, heading) => (
-      heading.getBoundingClientRect().top <= 48 ? heading : active
-    ), headings[0]);
+    const current = headings.reduce<HTMLElement>(
+      (active, heading) => (heading.getBoundingClientRect().top <= 48 ? heading : active),
+      headings[0],
+    );
     setActiveLink(current.id, syncHash);
   };
-  const onScroll = () => { hasObservedScroll = true; updateActiveHeading(true); };
+  const onScroll = () => {
+    hasObservedScroll = true;
+    updateActiveHeading(true);
+  };
   const onResize = () => updateActiveHeading();
   const onLinkClick = (event: Event) => {
     const link = event.currentTarget as HTMLAnchorElement;
@@ -50,9 +52,10 @@ export function initializeTableOfContents(scope: ParentNode = document) {
     target.scrollIntoView({ behavior: 'auto', block: 'start' });
     window.history.replaceState(window.history.state, '', `#${encodeURIComponent(id)}`);
     link.closest('details')?.removeAttribute('open');
-    const shell = scope instanceof HTMLElement && scope.matches('.article-shell')
-      ? scope
-      : scope.querySelector<HTMLElement>('.article-shell');
+    const shell =
+      scope instanceof HTMLElement && scope.matches('.article-shell')
+        ? scope
+        : scope.querySelector<HTMLElement>('.article-shell');
     shell?.removeAttribute('data-toc-top-open');
     scope.querySelector<HTMLButtonElement>('[data-toc-top-toggle]')?.setAttribute('aria-expanded', 'false');
   };
@@ -67,7 +70,10 @@ export function initializeTableOfContents(scope: ParentNode = document) {
     const toc = event.currentTarget as HTMLElement;
     toc.toggleAttribute('data-toc-scrolling', true);
     window.clearTimeout(timers.get(toc));
-    timers.set(toc, window.setTimeout(() => toc.removeAttribute('data-toc-scrolling'), 800));
+    timers.set(
+      toc,
+      window.setTimeout(() => toc.removeAttribute('data-toc-scrolling'), 800),
+    );
   };
   tocSurfaces.forEach((toc) => toc.addEventListener('scroll', onTocScroll, { passive: true }));
   cleanups.set(key, () => {

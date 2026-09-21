@@ -3,8 +3,9 @@ import { getCollection } from 'astro:content';
 import { getPostSlug } from '../domains/blog/content/post-slug';
 
 export async function GET(context: { site: URL | undefined }) {
-  const posts = (await getCollection('posts', ({ data }) => !data.draft))
-    .sort((left, right) => right.data.pubDate.valueOf() - left.data.pubDate.valueOf());
+  const posts = (await getCollection('posts', ({ data }) => !data.draft)).sort(
+    (left, right) => right.data.pubDate.valueOf() - left.data.pubDate.valueOf(),
+  );
 
   return rss({
     title: 'Extransload',

@@ -18,7 +18,10 @@ if (root) {
     const shouldPlay = root.dataset.motion === 'on' && !document.hidden && section?.dataset.inView === 'true';
     const isHovered = link?.matches(':hover, :focus-within') ?? false;
     video.playbackRate = isHovered ? 1.12 : 1;
-    if (!shouldPlay) { video.pause(); return; }
+    if (!shouldPlay) {
+      video.pause();
+      return;
+    }
     const source = video.querySelector('source');
     if (source?.dataset.src) {
       source.src = source.dataset.src;
@@ -37,11 +40,13 @@ if (root) {
   const coverStart = 0;
   const coverElement = (selector: string) => root.querySelector<HTMLElement>(selector);
   const chapterLocks = new Map<HTMLElement, number>();
-  const chapterVisuals = (chapter: HTMLElement) => [...chapter.querySelectorAll<HTMLElement>('.splash-chapter__copy, .splash-chapter__media')];
-  const chapterContentIsAboveViewport = (chapter: HTMLElement) => chapterVisuals(chapter)
-    .every((element) => element.getBoundingClientRect().bottom <= 0);
-  const chapterContentIsBelowViewport = (chapter: HTMLElement) => chapterVisuals(chapter)
-    .every((element) => element.getBoundingClientRect().top >= window.innerHeight);
+  const chapterVisuals = (chapter: HTMLElement) => [
+    ...chapter.querySelectorAll<HTMLElement>('.splash-chapter__copy, .splash-chapter__media'),
+  ];
+  const chapterContentIsAboveViewport = (chapter: HTMLElement) =>
+    chapterVisuals(chapter).every((element) => element.getBoundingClientRect().bottom <= 0);
+  const chapterContentIsBelowViewport = (chapter: HTMLElement) =>
+    chapterVisuals(chapter).every((element) => element.getBoundingClientRect().top >= window.innerHeight);
   const lockChapterVisual = (chapter: HTMLElement) => {
     const link = chapter.querySelector<HTMLElement>('.splash-chapter__link');
     if (!link) return;
@@ -58,13 +63,19 @@ if (root) {
     chapter.dataset.chapterLocked = 'false';
     chapter.querySelector<HTMLElement>('.splash-chapter__link')?.style.removeProperty('--chapter-lock-offset');
   };
-  const setCoverElementProgress = (element: HTMLElement | null, progress: number, exitOffset: number, exitScale = 1) => {
+  const setCoverElementProgress = (
+    element: HTMLElement | null,
+    progress: number,
+    exitOffset: number,
+    exitScale = 1,
+  ) => {
     if (!element) return;
     element.style.setProperty('--cover-opacity', progress.toFixed(3));
     element.style.setProperty('--cover-offset', `${((1 - progress) * exitOffset).toFixed(2)}rem`);
     element.style.setProperty('--cover-scale', (1 - (1 - progress) * (1 - exitScale)).toFixed(3));
   };
-  const coverStage = (progress: number, start: number, end: number) => easeOutCubic(clamp((progress - start) / (end - start)));
+  const coverStage = (progress: number, start: number, end: number) =>
+    easeOutCubic(clamp((progress - start) / (end - start)));
   const setCoverProgress = (showFullCover = false) => {
     if (!cover) return;
     // Let the cover settle into the first chapter gradually; short touch drags
@@ -98,8 +109,9 @@ if (root) {
       const box = chapter.getBoundingClientRect();
       return box.top <= readingLine && box.bottom > readingLine;
     });
-    const atEnd = window.scrollY > 0 && window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2;
-    const currentIndex = atEnd ? chapters.length - 1 : (current ? chapters.indexOf(current) : -1);
+    const atEnd =
+      window.scrollY > 0 && window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2;
+    const currentIndex = atEnd ? chapters.length - 1 : current ? chapters.indexOf(current) : -1;
     setCoverProgress(root.dataset.scrollDirection === 'up' && currentIndex < 0);
     let visibleIndex = currentIndex;
     if (currentIndex >= 0 && root.dataset.scrollDirection === 'down' && currentIndex > 0) {
@@ -107,13 +119,14 @@ if (root) {
     } else if (currentIndex >= 0 && root.dataset.scrollDirection === 'up' && currentIndex < chapters.length - 1) {
       if (!chapterContentIsBelowViewport(chapters[currentIndex + 1])) visibleIndex = currentIndex + 1;
     }
-    const lockIndex = currentIndex < 0
-      ? -1
-      : visibleIndex !== currentIndex
-        ? currentIndex
-        : root.dataset.scrollDirection === 'down'
-          ? currentIndex + 1
-          : Math.max(currentIndex - 1, 0);
+    const lockIndex =
+      currentIndex < 0
+        ? -1
+        : visibleIndex !== currentIndex
+          ? currentIndex
+          : root.dataset.scrollDirection === 'down'
+            ? currentIndex + 1
+            : Math.max(currentIndex - 1, 0);
     for (const [index, chapter] of chapters.entries()) {
       chapter.dataset.chapterVisible = String(index === visibleIndex);
       if (index === lockIndex && index !== visibleIndex) lockChapterVisual(chapter);
@@ -134,14 +147,17 @@ if (root) {
   };
 
   // Enhance only after the initial HTML is visible; links and artwork also work without JS.
-  const observer = new IntersectionObserver((entries) => {
-    for (const entry of entries) {
-      const chapter = entry.target as HTMLElement;
-      chapter.dataset.inView = String(entry.isIntersecting);
-      if (entry.isIntersecting) chapter.dataset.revealed = 'true';
-      chapter.querySelectorAll<HTMLVideoElement>('video').forEach(syncVideo);
-    }
-  }, { threshold: 0 });
+  const observer = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        const chapter = entry.target as HTMLElement;
+        chapter.dataset.inView = String(entry.isIntersecting);
+        if (entry.isIntersecting) chapter.dataset.revealed = 'true';
+        chapter.querySelectorAll<HTMLVideoElement>('video').forEach(syncVideo);
+      }
+    },
+    { threshold: 0 },
+  );
   for (const chapter of chapters) {
     if (chapter.getBoundingClientRect().top < window.innerHeight) chapter.dataset.revealed = 'true';
     observer.observe(chapter);
@@ -177,7 +193,9 @@ if (root) {
   };
   window.addEventListener('pageshow', resyncAfterScrollRestoration);
   window.addEventListener('load', resyncAfterScrollRestoration);
-  window.setTimeout(() => { root.dataset.coverReady = 'true'; }, 240);
+  window.setTimeout(() => {
+    root.dataset.coverReady = 'true';
+  }, 240);
   document.addEventListener('visibilitychange', () => videos.forEach(syncVideo));
   videos.forEach(syncVideo);
   update();

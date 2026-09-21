@@ -8,46 +8,74 @@ test('splash cover and chapter navigation remain readable on narrow screens', as
     await expect(page.getByRole('heading', { name: 'Extransload', exact: true })).toBeVisible();
     await expect(toc.locator('.splash-toc__cover')).toHaveCount(0);
     await expect(page.getByRole('link', { name: '아래로 이동' })).toBeInViewport();
-    await expect(page.locator('.book-splash__tagline')).toHaveText('기록과 작업, 취향과 놀이를 보관하는 한 권의 개인 장서');
+    await expect(page.locator('.book-splash__tagline')).toHaveText(
+      '기록과 작업, 취향과 놀이를 보관하는 한 권의 개인 장서',
+    );
     await expect(page.getByText('아래로, 한 장씩', { exact: true })).toHaveCount(0);
     await expect(toc.locator('ol a')).toHaveCount(5);
     for (const link of await toc.locator('ol a').all()) {
       await expect(link).toBeInViewport();
-      expect(await link.evaluate((element) => parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(15);
+      expect(await link.evaluate((element) => parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(
+        15,
+      );
     }
     const guestbookCopy = page.locator('#guestbook .splash-chapter__copy');
     expect(await guestbookCopy.evaluate((element) => getComputedStyle(element).textAlign)).toBe('center');
-    expect(await page.locator('#guestbook .splash-chapter__media').evaluate((element) => parseFloat(getComputedStyle(element).width))).toBeLessThanOrEqual(392);
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+    expect(
+      await page
+        .locator('#guestbook .splash-chapter__media')
+        .evaluate((element) => parseFloat(getComputedStyle(element).width)),
+    ).toBeLessThanOrEqual(392);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth),
+    ).toBe(true);
   }
 });
 
 test('splash toc keeps all chapters grouped and hides on downward mobile scroll', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
-  expect(await page.locator('.splash-toc li:nth-child(4)').evaluate((element) => getComputedStyle(element).marginTop)).toBe('0px');
-  expect(await page.locator('.book-splash__filigree').evaluate((element) => {
-    const filigree = getComputedStyle(element);
-    const toc = getComputedStyle(document.querySelector('.splash-toc')!);
-    return { filigreePosition: filigree.position, tocLeft: parseFloat(toc.left), filigreeLeft: parseFloat(filigree.left) };
-  })).toMatchObject({ filigreePosition: 'fixed' });
-  expect(await page.locator('.book-splash__frame-mask').evaluate((element) => getComputedStyle(element).position)).toBe('fixed');
-  expect(await page.locator('.book-splash__face').evaluate((element) => getComputedStyle(element).position)).toBe('sticky');
-  expect(await page.locator('.splash-toc').evaluate((element) => parseFloat(getComputedStyle(element).left))).toBeGreaterThan(
+  expect(
+    await page.locator('.splash-toc li:nth-child(4)').evaluate((element) => getComputedStyle(element).marginTop),
+  ).toBe('0px');
+  expect(
+    await page.locator('.book-splash__filigree').evaluate((element) => {
+      const filigree = getComputedStyle(element);
+      const toc = getComputedStyle(document.querySelector('.splash-toc')!);
+      return {
+        filigreePosition: filigree.position,
+        tocLeft: parseFloat(toc.left),
+        filigreeLeft: parseFloat(filigree.left),
+      };
+    }),
+  ).toMatchObject({ filigreePosition: 'fixed' });
+  expect(await page.locator('.book-splash__frame-mask').evaluate((element) => getComputedStyle(element).position)).toBe(
+    'fixed',
+  );
+  expect(await page.locator('.book-splash__face').evaluate((element) => getComputedStyle(element).position)).toBe(
+    'sticky',
+  );
+  expect(
+    await page.locator('.splash-toc').evaluate((element) => parseFloat(getComputedStyle(element).left)),
+  ).toBeGreaterThan(
     await page.locator('.book-splash__filigree').evaluate((element) => parseFloat(getComputedStyle(element).left)),
   );
-  const readCoverVeil = () => page.evaluate(() => {
-    const face = document.querySelector<HTMLElement>('.book-splash__face');
-    if (!face) throw new Error('Splash cover is missing');
-    const veil = getComputedStyle(face, '::before');
-    return { rendered: veil.content !== 'none', opacity: Number(veil.opacity) };
-  });
+  const readCoverVeil = () =>
+    page.evaluate(() => {
+      const face = document.querySelector<HTMLElement>('.book-splash__face');
+      if (!face) throw new Error('Splash cover is missing');
+      const veil = getComputedStyle(face, '::before');
+      return { rendered: veil.content !== 'none', opacity: Number(veil.opacity) };
+    });
   expect(await readCoverVeil()).toEqual({ rendered: true, opacity: 1 });
   await expect(page.locator('.book-splash__crest')).toHaveCSS('opacity', '1');
   await page.evaluate(() => window.scrollTo(0, 120));
   await page.waitForTimeout(750);
-  const stagedCoverOpacity = await page.evaluate(() => ['.book-splash__crest', '.book-splash__center', '.book-splash__tagline', '.book-splash__scroll']
-    .map((selector) => Number(getComputedStyle(document.querySelector(selector)!).opacity)));
+  const stagedCoverOpacity = await page.evaluate(() =>
+    ['.book-splash__crest', '.book-splash__center', '.book-splash__tagline', '.book-splash__scroll'].map((selector) =>
+      Number(getComputedStyle(document.querySelector(selector)!).opacity),
+    ),
+  );
   expect(stagedCoverOpacity[0]).toBeGreaterThan(0.8);
   expect(stagedCoverOpacity[1]).toBeGreaterThan(0.9);
   expect(stagedCoverOpacity[2]).toBeGreaterThan(0.95);
@@ -58,14 +86,21 @@ test('splash toc keeps all chapters grouped and hides on downward mobile scroll'
 
   await page.evaluate(() => window.scrollTo(0, 700));
   await page.waitForTimeout(750);
-  for (const selector of ['.book-splash__crest', '.book-splash__center', '.book-splash__tagline', '.book-splash__scroll']) {
+  for (const selector of [
+    '.book-splash__crest',
+    '.book-splash__center',
+    '.book-splash__tagline',
+    '.book-splash__scroll',
+  ]) {
     await expect(page.locator(selector)).toHaveCSS('opacity', '0');
   }
   expect(await readCoverVeil()).toEqual({ rendered: true, opacity: 1 });
-  expect(await page.evaluate(() => ({
-    face: Number(getComputedStyle(document.querySelector('.book-splash__face')!).zIndex),
-    chapterCopy: Number(getComputedStyle(document.querySelector('#journal .splash-chapter__copy')!).zIndex),
-  }))).toEqual({ face: 3, chapterCopy: 2 });
+  expect(
+    await page.evaluate(() => ({
+      face: Number(getComputedStyle(document.querySelector('.book-splash__face')!).zIndex),
+      chapterCopy: Number(getComputedStyle(document.querySelector('#journal .splash-chapter__copy')!).zIndex),
+    })),
+  ).toEqual({ face: 3, chapterCopy: 2 });
 
   await page.evaluate(() => window.scrollTo(0, 800));
   await page.waitForTimeout(750);
@@ -73,7 +108,12 @@ test('splash toc keeps all chapters grouped and hides on downward mobile scroll'
 
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.waitForTimeout(750);
-  for (const selector of ['.book-splash__crest', '.book-splash__center', '.book-splash__tagline', '.book-splash__scroll']) {
+  for (const selector of [
+    '.book-splash__crest',
+    '.book-splash__center',
+    '.book-splash__tagline',
+    '.book-splash__scroll',
+  ]) {
     await expect(page.locator(selector)).toHaveCSS('opacity', '1');
   }
 
@@ -81,10 +121,12 @@ test('splash toc keeps all chapters grouped and hides on downward mobile scroll'
   await page.goto('/');
   const toc = page.locator('.splash-toc');
   await expect(toc).toBeInViewport();
-  expect(await toc.evaluate((element) => {
-    const style = getComputedStyle(element);
-    return { position: style.position, top: style.top, rectTop: element.getBoundingClientRect().top };
-  })).toEqual({ position: 'fixed', top: '0px', rectTop: 0 });
+  expect(
+    await toc.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return { position: style.position, top: style.top, rectTop: element.getBoundingClientRect().top };
+    }),
+  ).toEqual({ position: 'fixed', top: '0px', rectTop: 0 });
 
   await page.evaluate(() => window.scrollTo(0, 520));
   await expect(page.locator('[data-splash]')).toHaveAttribute('data-scroll-direction', 'down');
@@ -117,9 +159,18 @@ test('splash chapter spacing follows the viewport height', async ({ page }) => {
 
 test('splash sections link to each independent space', async ({ page }) => {
   await page.goto('/');
-  for (const [id, href, label] of [['journal', '/blog/', 'Journal'], ['works', '/works/', 'Works'], ['playroom', '/playroom/', 'Playroom'], ['about', '/about/', 'About'], ['guestbook', '/guestbook/', 'Guestbook']]) {
+  for (const [id, href, label] of [
+    ['journal', '/blog/', 'Journal'],
+    ['works', '/works/', 'Works'],
+    ['playroom', '/playroom/', 'Playroom'],
+    ['about', '/about/', 'About'],
+    ['guestbook', '/guestbook/', 'Guestbook'],
+  ]) {
     await expect(page.locator('#' + id + ' > a')).toHaveAttribute('href', href);
-    await expect(page.locator(`#${id} .splash-chapter__title .splash-chapter__wordmark`)).toHaveAttribute('src', `/images/splash-${id}-embroidered.webp`);
+    await expect(page.locator(`#${id} .splash-chapter__title .splash-chapter__wordmark`)).toHaveAttribute(
+      'src',
+      `/images/splash-${id}-embroidered.webp`,
+    );
     await expect(page.locator(`#${id} .splash-sr-only`)).toHaveText(label);
   }
   await page.locator('#works > a').click();
@@ -188,16 +239,17 @@ test('folios with captured screens render them without broken images', async ({ 
 test('works keeps its project ledger readable on a manuscript surface in both themes', async ({ page }) => {
   await page.goto('/works/');
 
-  const readSurface = () => page.locator('.works-leaf').evaluate((element) => {
-    const surface = getComputedStyle(element);
-    const texture = getComputedStyle(element, '::before');
-    return {
-      color: surface.color,
-      background: surface.backgroundColor,
-      texture: texture.backgroundImage,
-      textureOpacity: Number(texture.opacity),
-    };
-  });
+  const readSurface = () =>
+    page.locator('.works-leaf').evaluate((element) => {
+      const surface = getComputedStyle(element);
+      const texture = getComputedStyle(element, '::before');
+      return {
+        color: surface.color,
+        background: surface.backgroundColor,
+        texture: texture.backgroundImage,
+        textureOpacity: Number(texture.opacity),
+      };
+    });
 
   const darkSurface = await readSurface();
   expect(darkSurface.texture).toContain('article-manuscript-paper-texture.webp');
@@ -226,9 +278,9 @@ test('works keeps the leather backdrop at a fixed texture scale', async ({ page 
 test('works keeps the manuscript texture beneath the dark reading surface', async ({ page }) => {
   await page.goto('/works/');
 
-  const textureOpacity = await page.locator('.works-leaf').evaluate((element) => (
-    Number(getComputedStyle(element, '::before').opacity)
-  ));
+  const textureOpacity = await page
+    .locator('.works-leaf')
+    .evaluate((element) => Number(getComputedStyle(element, '::before').opacity));
 
   expect(textureOpacity).toBeLessThanOrEqual(0.1);
 });
@@ -238,19 +290,29 @@ test('works keeps small ledger text legible on the light manuscript', async ({ p
   await page.locator('html').evaluate((element) => element.setAttribute('data-theme', 'light'));
 
   const contrastRatios = await page.evaluate(() => {
-    const rgb = (value: string) => value.match(/\d+(?:\.\d+)?/g)!.slice(0, 3).map(Number);
-    const luminance = (value: string) => rgb(value)
-      .map((channel) => channel / 255)
-      .map((channel) => channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4)
-      .reduce((sum, channel, index) => sum + channel * [0.2126, 0.7152, 0.0722][index], 0);
+    const rgb = (value: string) =>
+      value
+        .match(/\d+(?:\.\d+)?/g)!
+        .slice(0, 3)
+        .map(Number);
+    const luminance = (value: string) =>
+      rgb(value)
+        .map((channel) => channel / 255)
+        .map((channel) => (channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4))
+        .reduce((sum, channel, index) => sum + channel * [0.2126, 0.7152, 0.0722][index], 0);
     const paper = getComputedStyle(document.querySelector('.works-leaf')!).backgroundColor;
 
-    return ['.works-kicker', '.works-index__folio', '.works-index__period', '.works-index__role', '.works-colophon']
-      .map((selector) => {
-        const foreground = getComputedStyle(document.querySelector(selector)!).color;
-        const [lighter, darker] = [luminance(foreground), luminance(paper)].sort((a, b) => b - a);
-        return (lighter + 0.05) / (darker + 0.05);
-      });
+    return [
+      '.works-kicker',
+      '.works-index__folio',
+      '.works-index__period',
+      '.works-index__role',
+      '.works-colophon',
+    ].map((selector) => {
+      const foreground = getComputedStyle(document.querySelector(selector)!).color;
+      const [lighter, darker] = [luminance(foreground), luminance(paper)].sort((a, b) => b - a);
+      return (lighter + 0.05) / (darker + 0.05);
+    });
   });
 
   for (const ratio of contrastRatios) expect(ratio).toBeGreaterThanOrEqual(4.5);
@@ -308,9 +370,9 @@ test('the folio keeps every chapter visible without entrance motion', async ({ p
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/works/citewell/');
 
-  const opacities = await page.locator('section[data-chapter]').evaluateAll((nodes) => (
-    nodes.map((node) => getComputedStyle(node).opacity)
-  ));
+  const opacities = await page
+    .locator('section[data-chapter]')
+    .evaluateAll((nodes) => nodes.map((node) => getComputedStyle(node).opacity));
   expect(opacities.every((value) => value === '1')).toBe(true);
 });
 
@@ -326,20 +388,23 @@ test('splash chapters keep their layout while scrolling', async ({ page }) => {
   await page.goto('/');
   const journal = page.locator('#journal');
 
-  const readLayout = () => journal.evaluate((chapter) => ({
-    mediaTransform: getComputedStyle(chapter.querySelector('.splash-chapter__media')!).transform,
-    copyTransform: getComputedStyle(chapter.querySelector('.splash-chapter__copy')!).transform,
-    detailTransform: getComputedStyle(chapter.querySelector('.splash-chapter__detail')!).transform,
-    mediaOpacity: getComputedStyle(chapter.querySelector('.splash-chapter__media')!).opacity,
-    copyOpacity: getComputedStyle(chapter.querySelector('.splash-chapter__copy')!).opacity,
-    detailOpacity: getComputedStyle(chapter.querySelector('.splash-chapter__detail')!).opacity,
-  }));
+  const readLayout = () =>
+    journal.evaluate((chapter) => ({
+      mediaTransform: getComputedStyle(chapter.querySelector('.splash-chapter__media')!).transform,
+      copyTransform: getComputedStyle(chapter.querySelector('.splash-chapter__copy')!).transform,
+      detailTransform: getComputedStyle(chapter.querySelector('.splash-chapter__detail')!).transform,
+      mediaOpacity: getComputedStyle(chapter.querySelector('.splash-chapter__media')!).opacity,
+      copyOpacity: getComputedStyle(chapter.querySelector('.splash-chapter__copy')!).opacity,
+      detailOpacity: getComputedStyle(chapter.querySelector('.splash-chapter__detail')!).opacity,
+    }));
   const initial = await readLayout();
   expect(initial.mediaOpacity).toBe('1');
   expect(initial.copyOpacity).toBe('1');
   expect(initial.detailOpacity).toBe('1');
 
-  await page.evaluate(() => document.getElementById('journal')?.scrollIntoView({ block: 'center', behavior: 'instant' }));
+  await page.evaluate(() =>
+    document.getElementById('journal')?.scrollIntoView({ block: 'center', behavior: 'instant' }),
+  );
   await page.waitForTimeout(100);
   expect(await readLayout()).toEqual(initial);
 });
@@ -348,12 +413,17 @@ test('splash chapters reveal one visual page at a time in both directions', asyn
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
 
-  const readChapterVisibility = () => page.evaluate(() => Object.fromEntries(['journal', 'works', 'playroom'].map((id) => {
-    const link = document.querySelector<HTMLAnchorElement>(`#${id} > a`);
-    if (!link) throw new Error(`Splash chapter is missing: ${id}`);
-    const style = getComputedStyle(link);
-    return [id, { opacity: Number(style.opacity), pointerEvents: style.pointerEvents }];
-  })));
+  const readChapterVisibility = () =>
+    page.evaluate(() =>
+      Object.fromEntries(
+        ['journal', 'works', 'playroom'].map((id) => {
+          const link = document.querySelector<HTMLAnchorElement>(`#${id} > a`);
+          if (!link) throw new Error(`Splash chapter is missing: ${id}`);
+          const style = getComputedStyle(link);
+          return [id, { opacity: Number(style.opacity), pointerEvents: style.pointerEvents }];
+        }),
+      ),
+    );
   const scrollAndRead = async (y: number) => {
     await page.evaluate((scrollY) => window.scrollTo(0, scrollY), y);
     await page.waitForTimeout(650);
@@ -393,8 +463,12 @@ test('splash restores the full cover when returning above the first chapter', as
     return page.evaluate(() => ({
       direction: document.querySelector('[data-splash]')?.getAttribute('data-scroll-direction'),
       chapterOpacity: Number(getComputedStyle(document.querySelector('#journal > a')!).opacity),
-      coverOpacity: ['.book-splash__crest', '.book-splash__center', '.book-splash__tagline', '.book-splash__scroll']
-        .map((selector) => Number(getComputedStyle(document.querySelector(selector)!).opacity)),
+      coverOpacity: [
+        '.book-splash__crest',
+        '.book-splash__center',
+        '.book-splash__tagline',
+        '.book-splash__scroll',
+      ].map((selector) => Number(getComputedStyle(document.querySelector(selector)!).opacity)),
       veilOpacity: Number(getComputedStyle(document.querySelector('.book-splash__face')!, '::before').opacity),
     }));
   };
@@ -412,12 +486,13 @@ test('splash holds a hidden chapter visual still during the transition', async (
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
 
-  const readVisualState = (id: string) => page.evaluate((chapterId) => {
-    const link = document.querySelector<HTMLAnchorElement>(`#${chapterId} > a`);
-    const media = document.querySelector<HTMLElement>(`#${chapterId} .splash-chapter__media`);
-    if (!link || !media) throw new Error(`Splash chapter is missing: ${chapterId}`);
-    return { opacity: Number(getComputedStyle(link).opacity), mediaTop: media.getBoundingClientRect().top };
-  }, id);
+  const readVisualState = (id: string) =>
+    page.evaluate((chapterId) => {
+      const link = document.querySelector<HTMLAnchorElement>(`#${chapterId} > a`);
+      const media = document.querySelector<HTMLElement>(`#${chapterId} .splash-chapter__media`);
+      if (!link || !media) throw new Error(`Splash chapter is missing: ${chapterId}`);
+      return { opacity: Number(getComputedStyle(link).opacity), mediaTop: media.getBoundingClientRect().top };
+    }, id);
   const scrollAndRead = async (y: number, id: string) => {
     await page.evaluate((scrollY) => window.scrollTo(0, scrollY), y);
     await page.waitForTimeout(650);
@@ -473,18 +548,23 @@ test('splash artwork only enables its motion while hovering', async ({ page }) =
   const link = page.locator('#journal > a');
   const object = page.locator('#journal .art-object');
   const drifter = page.locator('#journal .art-drifter');
-  const readAnimationNames = () => page.evaluate(() => ({
-    object: getComputedStyle(document.querySelector('#journal .art-object')!).animationName,
-    drifter: getComputedStyle(document.querySelector('#journal .art-drifter')!).animationName,
-    glow: getComputedStyle(document.querySelector('#journal .splash-chapter__media')!, '::before').animationName,
-  }));
+  const readAnimationNames = () =>
+    page.evaluate(() => ({
+      object: getComputedStyle(document.querySelector('#journal .art-object')!).animationName,
+      drifter: getComputedStyle(document.querySelector('#journal .art-drifter')!).animationName,
+      glow: getComputedStyle(document.querySelector('#journal .splash-chapter__media')!, '::before').animationName,
+    }));
   expect(await readAnimationNames()).toEqual({ object: 'none', drifter: 'none', glow: 'none' });
 
   await link.hover();
   await expect(object).toHaveCSS('animation-name', 'splash-art-object-hover');
   await expect(object).toHaveCSS('animation-iteration-count', 'infinite');
   await expect(drifter).toHaveCSS('animation-name', 'splash-art-drifter-hover');
-  expect(await readAnimationNames()).toEqual({ object: 'splash-art-object-hover', drifter: 'splash-art-drifter-hover', glow: 'splash-art-glow' });
+  expect(await readAnimationNames()).toEqual({
+    object: 'splash-art-object-hover',
+    drifter: 'splash-art-drifter-hover',
+    glow: 'splash-art-glow',
+  });
 
   await page.mouse.move(1, 1);
   expect(await readAnimationNames()).toEqual({ object: 'none', drifter: 'none', glow: 'none' });
@@ -501,7 +581,9 @@ test('splash chapter copy swaps its description for the invitation on hover', as
   await expect(invitation).toHaveText('기록 펼치기↗');
   await expect(invitation).toHaveCSS('opacity', '0');
 
-  await page.evaluate(() => document.getElementById('journal')?.scrollIntoView({ block: 'center', behavior: 'instant' }));
+  await page.evaluate(() =>
+    document.getElementById('journal')?.scrollIntoView({ block: 'center', behavior: 'instant' }),
+  );
   await page.waitForTimeout(100);
   await copy.hover();
   await expect(description).toHaveCSS('opacity', '0');
@@ -528,10 +610,12 @@ test('sidebar reading icons show collapse-style tooltips on hover and focus', as
   await themeToggle.hover();
   await expect(themeToggle.locator('.site-header__control-hint')).toBeVisible();
   expect(await themeToggle.evaluate((element) => getComputedStyle(element).filter)).toBe('none');
-  expect(await themeToggle.locator('.site-header__control-hint').evaluate((element) => {
-    const style = getComputedStyle(element);
-    return { filter: style.filter, textShadow: style.textShadow };
-  })).toEqual({ filter: 'none', textShadow: 'none' });
+  expect(
+    await themeToggle.locator('.site-header__control-hint').evaluate((element) => {
+      const style = getComputedStyle(element);
+      return { filter: style.filter, textShadow: style.textShadow };
+    }),
+  ).toEqual({ filter: 'none', textShadow: 'none' });
   await focusToggle.focus();
   await expect(focusToggle.locator('.site-header__control-hint')).toBeVisible();
   expect(await focusToggle.evaluate((element) => getComputedStyle(element).filter)).toBe('none');
@@ -640,9 +724,11 @@ test('category lists over ten posts are paginated too', async ({ page }) => {
 test('short pages fill at least the viewport height', async ({ page }) => {
   for (const route of ['/about/', '/blog/categories/', '/guestbook/', '/blog/posts/3/']) {
     await page.goto(route);
-    expect(await page.locator('.site-content').evaluate((element) => (
-      element.getBoundingClientRect().height >= window.innerHeight
-    ))).toBe(true);
+    expect(
+      await page
+        .locator('.site-content')
+        .evaluate((element) => element.getBoundingClientRect().height >= window.innerHeight),
+    ).toBe(true);
   }
 });
 
@@ -670,10 +756,7 @@ test('sidebar keeps tools and reading controls in their intended locations', asy
   await expect(focusToggle.locator('.site-header__control-hint')).toHaveText('집중해서 보기');
   await expect(controls).toHaveCSS('justify-content', 'space-between');
 
-  const [sidebarBottom, controlsBottom] = await Promise.all([
-    sidebar.boundingBox(),
-    controls.boundingBox(),
-  ]);
+  const [sidebarBottom, controlsBottom] = await Promise.all([sidebar.boundingBox(), controls.boundingBox()]);
   expect(sidebarBottom).not.toBeNull();
   expect(controlsBottom).not.toBeNull();
   expect(controlsBottom!.y + controlsBottom!.height).toBeGreaterThan(sidebarBottom!.y + sidebarBottom!.height - 120);
@@ -696,12 +779,22 @@ test('sidebar keeps tools and reading controls in their intended locations', asy
   await expect(page.locator('[data-feature-panel] [data-theme-toggle]')).toHaveCount(0);
   await expect(page.locator('[data-feature-panel] [data-focus-mode]')).toHaveCount(0);
   await expect(themeToggle.locator('img[data-theme-icon="sun"]')).toHaveAttribute('src', '/images/theme-sun.png');
-  await expect(themeToggle.locator('img[data-theme-icon="moon"]')).toHaveAttribute('src', '/images/theme-moon-dark.png');
-  expect(await themeToggle.locator('img[data-theme-icon="moon"]').evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true);
+  await expect(themeToggle.locator('img[data-theme-icon="moon"]')).toHaveAttribute(
+    'src',
+    '/images/theme-moon-dark.png',
+  );
+  expect(
+    await themeToggle
+      .locator('img[data-theme-icon="moon"]')
+      .evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0),
+  ).toBe(true);
   await expect(themeToggle.locator('[data-theme-icon="moon"]')).toBeHidden();
   await expect(themeToggle.locator('[data-theme-icon="sun"]')).toBeVisible();
   await expect(themeToggle.locator('[data-theme-icon="moon"]')).toHaveCSS('width', '28px');
-  await expect(searchButton.locator('[data-search-icon="dark"]')).toHaveAttribute('src', '/images/search-eye-dark-embroidered.png');
+  await expect(searchButton.locator('[data-search-icon="dark"]')).toHaveAttribute(
+    'src',
+    '/images/search-eye-dark-embroidered.png',
+  );
 
   await searchButton.click();
   await expect(page.locator('[data-search-modal]')).toBeVisible();
@@ -818,9 +911,7 @@ test('desktop TOC aligns to the right edge of the content viewport', async ({ pa
   expect(content).not.toBeNull();
   expect(toc!.x + toc!.width).toBe(content!.x + content!.width - 16);
   const tocBreathingGap = 32;
-  expect(Math.abs(
-    (article!.x + (article!.width / 2)) - ((content!.x + toc!.x - tocBreathingGap) / 2),
-  )).toBeLessThan(1);
+  expect(Math.abs(article!.x + article!.width / 2 - (content!.x + toc!.x - tocBreathingGap) / 2)).toBeLessThan(1);
 });
 
 test('desktop article and TOC keep a breathing gap near the layout breakpoint', async ({ page }) => {
@@ -848,13 +939,16 @@ test('desktop TOC starts as a rail and expands on hover', async ({ page }) => {
     await expect(toc).toBeVisible();
     await expect(toc.locator('.table-of-contents__collapsed-preview')).toBeVisible();
     await expect(toc.locator('[data-toc-preview]')).toHaveCount(
-      await page.locator('.article__desktop-toc a').evaluateAll(
-        (links) => new Set(
-          links
-            .filter((link) => link.closest('li')?.className.includes('depth-2'))
-            .map((link) => link.getAttribute('href')),
-        ).size,
-      ),
+      await page
+        .locator('.article__desktop-toc a')
+        .evaluateAll(
+          (links) =>
+            new Set(
+              links
+                .filter((link) => link.closest('li')?.className.includes('depth-2'))
+                .map((link) => link.getAttribute('href')),
+            ).size,
+        ),
     );
     await expect(tocList).toBeHidden();
 
@@ -925,10 +1019,10 @@ test('desktop TOC updates its active color and URL hash as headings pass', async
   await expect(activeLink).toHaveAttribute('aria-current', 'location');
   await expect(parentLink).toHaveAttribute('aria-current', 'location');
   await expect.poll(() => page.evaluate(() => decodeURIComponent(window.location.hash))).toBe('#특징');
-  expect(await activeLink.evaluate((link) => getComputedStyle(link).color))
-    .not.toBe(await inactiveLink.evaluate((link) => getComputedStyle(link).color));
-  await expect(page.locator('.article__desktop-toc [data-toc-preview="git-reset"]'))
-    .toHaveAttribute('data-active');
+  expect(await activeLink.evaluate((link) => getComputedStyle(link).color)).not.toBe(
+    await inactiveLink.evaluate((link) => getComputedStyle(link).color),
+  );
+  await expect(page.locator('.article__desktop-toc [data-toc-preview="git-reset"]')).toHaveAttribute('data-active');
   await expect(page.locator('.article__desktop-toc [data-toc-preview="특징"]')).toHaveCount(0);
 });
 
@@ -938,10 +1032,13 @@ test('clicking a heading keeps that heading active until the next heading passes
 
   await page.locator('.article__desktop-toc nav a[href="#5-recovery-mode에서-sip-부분-해제하기"]').click();
 
-  await expect(page.locator('.article__desktop-toc nav a[href="#5-recovery-mode에서-sip-부분-해제하기"]'))
-    .toHaveAttribute('aria-current', 'location');
-  await expect(page.locator('.article__desktop-toc nav a[href="#왜-필요한가"]'))
-    .not.toHaveAttribute('aria-current', 'location');
+  await expect(
+    page.locator('.article__desktop-toc nav a[href="#5-recovery-mode에서-sip-부분-해제하기"]'),
+  ).toHaveAttribute('aria-current', 'location');
+  await expect(page.locator('.article__desktop-toc nav a[href="#왜-필요한가"]')).not.toHaveAttribute(
+    'aria-current',
+    'location',
+  );
 });
 
 test('article metadata keeps the publication date in Asia/Seoul', async ({ page }) => {
@@ -959,9 +1056,7 @@ test('narrow articles do not create document-level horizontal scrolling', async 
     'python-django-aws-ec-github',
   ]) {
     await page.goto(`/blog/posts/${slug}/`);
-    expect(await page.locator('html').evaluate(
-      (element) => element.scrollWidth === element.clientWidth,
-    )).toBe(true);
+    expect(await page.locator('html').evaluate((element) => element.scrollWidth === element.clientWidth)).toBe(true);
   }
 
   const codeBlock = page.locator('pre').first();
@@ -989,9 +1084,9 @@ test('long code stays horizontally scrollable inside its shell', async ({ page }
   await page.keyboard.press('End');
 
   await expect(customThumb).toHaveAttribute('aria-valuenow', '100');
-  expect(await codePanel.evaluate(
-    (element) => Math.round(element.scrollLeft + element.clientWidth) === element.scrollWidth,
-  )).toBe(true);
+  expect(
+    await codePanel.evaluate((element) => Math.round(element.scrollLeft + element.clientWidth) === element.scrollWidth),
+  ).toBe(true);
 
   await page.keyboard.press('Home');
   const thumbBox = await customThumb.boundingBox();
@@ -999,15 +1094,13 @@ test('long code stays horizontally scrollable inside its shell', async ({ page }
   expect(thumbBox).not.toBeNull();
   expect(trackBox).not.toBeNull();
 
-  await page.mouse.move(thumbBox!.x + (thumbBox!.width / 2), thumbBox!.y + (thumbBox!.height / 2));
+  await page.mouse.move(thumbBox!.x + thumbBox!.width / 2, thumbBox!.y + thumbBox!.height / 2);
   await page.mouse.down();
-  await page.mouse.move(trackBox!.x + trackBox!.width - 2, thumbBox!.y + (thumbBox!.height / 2));
+  await page.mouse.move(trackBox!.x + trackBox!.width - 2, thumbBox!.y + thumbBox!.height / 2);
   await page.mouse.up();
 
   expect(await codePanel.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
-  expect(await page.locator('html').evaluate(
-    (element) => element.scrollWidth === element.clientWidth,
-  )).toBe(true);
+  expect(await page.locator('html').evaluate((element) => element.scrollWidth === element.clientWidth)).toBe(true);
 });
 
 test('short markdown tables fit their content instead of stretching to the article width', async ({ page }) => {
@@ -1101,15 +1194,16 @@ test('code shells use theme-specific textured surfaces', async ({ page }) => {
   }));
   expect(darkScrollbar.color).not.toBe(lightScrollbar.color);
   expect(darkScrollbar.texture).toContain('code-shell-texture.webp');
-  const headerTexture = await shellHeader.evaluate(
-    (element) => getComputedStyle(element, '::before').backgroundImage,
-  );
+  const headerTexture = await shellHeader.evaluate((element) => getComputedStyle(element, '::before').backgroundImage);
   expect(headerTexture).toContain('code-shell-texture.webp');
-  expect(await shellHeader.evaluate((element) => getComputedStyle(element, '::before').backgroundPosition))
-    .not.toBe(await shell.evaluate((element) => getComputedStyle(element, '::before').backgroundPosition));
+  expect(await shellHeader.evaluate((element) => getComputedStyle(element, '::before').backgroundPosition)).not.toBe(
+    await shell.evaluate((element) => getComputedStyle(element, '::before').backgroundPosition),
+  );
 });
 
-test('table headers share the texture asset while light code headers use a quieter darker treatment', async ({ page }) => {
+test('table headers share the texture asset while light code headers use a quieter darker treatment', async ({
+  page,
+}) => {
   await page.goto('/blog/posts/telegram-bot/');
 
   const tableHeader = page.locator('.article__content thead').first();

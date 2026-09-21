@@ -12,7 +12,10 @@ export const initWorksScroll = () => {
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   let frame = 0;
 
-  const revealAll = () => revealables.forEach((element) => { element.dataset.revealed = 'true'; });
+  const revealAll = () =>
+    revealables.forEach((element) => {
+      element.dataset.revealed = 'true';
+    });
 
   const update = () => {
     frame = 0;
@@ -52,11 +55,14 @@ export const initWorksScroll = () => {
       return;
     }
 
-    const observer = new IntersectionObserver((observed) => {
-      for (const item of observed) {
-        if (item.isIntersecting) (item.target as HTMLElement).dataset.revealed = 'true';
-      }
-    }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
+    const observer = new IntersectionObserver(
+      (observed) => {
+        for (const item of observed) {
+          if (item.isIntersecting) (item.target as HTMLElement).dataset.revealed = 'true';
+        }
+      },
+      { threshold: 0.12, rootMargin: '0px 0px -8% 0px' },
+    );
     for (const element of revealables) {
       if (element.getBoundingClientRect().top < window.innerHeight) element.dataset.revealed = 'true';
       observer.observe(element);

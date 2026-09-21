@@ -29,14 +29,19 @@ export async function renderViewer(markdown: string) {
   fragment.innerHTML = DOMPurify.sanitize(String(await processor.process(markdown)), {
     USE_PROFILES: { html: true },
   });
-  await Promise.all(Array.from(fragment.querySelectorAll('pre > code')).map(async (code) => {
-    const language = Array.from(code.classList).find(name => name.startsWith('language-'))?.slice(9) ?? 'text';
-    const lang = Object.hasOwn(bundledLanguages, language) ? language as keyof typeof bundledLanguages : 'text';
-    const html = await codeToHtml(code.textContent?.replace(/\n$/, '') ?? '', { lang, theme: 'github-dark' });
-    const highlighted = document.createElement('div');
-    highlighted.innerHTML = html;
-    highlighted.querySelector('pre')?.classList.add('astro-code');
-    code.parentElement?.replaceWith(...highlighted.childNodes);
-  }));
+  await Promise.all(
+    Array.from(fragment.querySelectorAll('pre > code')).map(async (code) => {
+      const language =
+        Array.from(code.classList)
+          .find((name) => name.startsWith('language-'))
+          ?.slice(9) ?? 'text';
+      const lang = Object.hasOwn(bundledLanguages, language) ? (language as keyof typeof bundledLanguages) : 'text';
+      const html = await codeToHtml(code.textContent?.replace(/\n$/, '') ?? '', { lang, theme: 'github-dark' });
+      const highlighted = document.createElement('div');
+      highlighted.innerHTML = html;
+      highlighted.querySelector('pre')?.classList.add('astro-code');
+      code.parentElement?.replaceWith(...highlighted.childNodes);
+    }),
+  );
   return fragment.innerHTML;
 }

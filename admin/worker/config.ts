@@ -1,6 +1,6 @@
 import type { Env } from './types';
 
-export const requireConfig = (env: Env, keys: Array<keyof Env>) => keys.filter(key => !env[key]).map(String);
+export const requireConfig = (env: Env, keys: Array<keyof Env>) => keys.filter((key) => !env[key]).map(String);
 export const repoParts = (env: Env) => {
   const value = env.GITHUB_REPO ?? '';
   const [owner, repo] = value.split('/');

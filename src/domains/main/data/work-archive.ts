@@ -71,8 +71,7 @@ const CITEWELL_START = new Date(Date.UTC(2023, 11, 11));
 
 /** 시작일부터 기준일까지를 '2년 9개월' 형태로. 빌드 시점에 계산된다. */
 export const formatTenure = (from: Date, to: Date = new Date()): string => {
-  let months =
-    (to.getUTCFullYear() - from.getUTCFullYear()) * 12 + (to.getUTCMonth() - from.getUTCMonth());
+  let months = (to.getUTCFullYear() - from.getUTCFullYear()) * 12 + (to.getUTCMonth() - from.getUTCMonth());
   if (to.getUTCDate() < from.getUTCDate()) months -= 1;
   months = Math.max(months, 0);
 
@@ -257,8 +256,7 @@ export const works: WorkProject[] = [
             body:
               '검증 기준을 해외 데이터베이스에 두면서 국내 논문의 정확도가 구조적으로 낮은 상태. ' +
               '기능 결함이 아니라 참조 대상 자체의 한계이므로 코드 수정으로는 해소 불가.',
-            resolved:
-              '한계를 감추지 않고 내부 문서에 명시. 이후 별도 데이터 소스 확보를 과제로 분리해 기록',
+            resolved: '한계를 감추지 않고 내부 문서에 명시. 이후 별도 데이터 소스 확보를 과제로 분리해 기록',
           },
         ],
         outcome: [
@@ -424,10 +422,7 @@ export const works: WorkProject[] = [
           },
           {
             head: 'ORCID 연동',
-            body: [
-              '연구자 식별 체계인 ORCID를 OAuth로 연결',
-              '연동 계정의 권한 처리와 기존 계정과의 병합 경로 구현',
-            ],
+            body: ['연구자 식별 체계인 ORCID를 OAuth로 연결', '연동 계정의 권한 처리와 기존 계정과의 병합 경로 구현'],
           },
           {
             head: '주문과 항목 분리',
@@ -642,10 +637,7 @@ export const works: WorkProject[] = [
           },
           {
             head: '크레딧 운영 연결',
-            body: [
-              '견적 기반 크레딧 구매 경로 구현',
-              'Public API 사용분을 기존 재원 판정 규칙으로 차감하도록 연결',
-            ],
+            body: ['견적 기반 크레딧 구매 경로 구현', 'Public API 사용분을 기존 재원 판정 규칙으로 차감하도록 연결'],
           },
         ],
         hard: [
@@ -926,9 +918,7 @@ export const works: WorkProject[] = [
           },
           {
             head: '가입 마찰 축소',
-            body: [
-              '카카오 로그인을 도입해 별도 가입 절차 없이 진입 가능하도록 처리',
-            ],
+            body: ['카카오 로그인을 도입해 별도 가입 절차 없이 진입 가능하도록 처리'],
           },
         ],
         hard: [
@@ -952,9 +942,7 @@ export const works: WorkProject[] = [
         n: '03',
         period: '2023.10 — 2023.11',
         title: '이탈한 자리 대응',
-        lede:
-          '마무리를 1주 남기고 프론트엔드 담당자가 개인 사정으로 이탈. ' +
-          '게임의 핵심 화면 세 개가 미완성 상태.',
+        lede: '마무리를 1주 남기고 프론트엔드 담당자가 개인 사정으로 이탈. ' + '게임의 핵심 화면 세 개가 미완성 상태.',
         requirements: [
           { label: '완주', value: '남은 기간 안에 게임이 처음부터 끝까지 동작할 것' },
           { label: '범위 조정', value: '맡은 영역 밖이라도 프로젝트가 멈추지 않도록 대응' },
@@ -970,16 +958,11 @@ export const works: WorkProject[] = [
           },
           {
             head: '협업 정리',
-            body: [
-              '협업 문서 공간 구성과 관리',
-            ],
+            body: ['협업 문서 공간 구성과 관리'],
           },
         ],
         hard: [],
-        outcome: [
-          '남은 기간 안에 세 화면을 마무리해 프로젝트 완주',
-          '2차 차수 6주를 추가로 진행해 총 12주 개발',
-        ],
+        outcome: ['남은 기간 안에 세 화면을 마무리해 프로젝트 완주', '2차 차수 6주를 추가로 진행해 총 12주 개발'],
       },
     ],
   },

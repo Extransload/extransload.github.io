@@ -1,6 +1,22 @@
-.exit{display:block;margin-top:auto;padding:14px 18px;border-top:1px solid var(--line);color:#9da1b0;font-size:13px;text-decoration:none}
-.exit:hover{color:var(--accent);background:#faf9ff}
+.exit {
+  display: block;
+  margin-top: auto;
+  padding: 14px 18px;
+  border-top: 1px solid var(--line);
+  color: #9da1b0;
+  font-size: 13px;
+  text-decoration: none;
+}
+.exit:hover {
+  color: var(--accent);
+  background: #faf9ff;
+}
 
-@media(max-width:720px){
-  .exit{margin-top:0;padding:11px 13px;border:0;font-size:12px}
+@media (max-width: 720px) {
+  .exit {
+    margin-top: 0;
+    padding: 11px 13px;
+    border: 0;
+    font-size: 12px;
+  }
 }

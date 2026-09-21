@@ -44,14 +44,16 @@
   border: 1px solid rgb(201 172 102 / 55%);
   outline: 1px solid rgb(201 172 102 / 17%);
   outline-offset: 0.45rem;
-  box-shadow: inset 0 0 0 0.3rem rgb(7 16 28 / 28%), 0 1.5rem 4rem rgb(0 0 0 / 32%);
+  box-shadow:
+    inset 0 0 0 0.3rem rgb(7 16 28 / 28%),
+    0 1.5rem 4rem rgb(0 0 0 / 32%);
 }
 
 .main-space-page__mark {
   display: block;
   margin-bottom: 1.5rem;
   color: #c9ac66;
-  font-family: 'SFMono-Regular', Consolas, monospace;
+  font-family: SFMono-Regular, Consolas, monospace;
   font-size: 0.65rem;
   letter-spacing: 0.2em;
   text-transform: uppercase;
@@ -70,7 +72,7 @@
 .main-space-page__message {
   margin: 1.5rem 0 0;
   color: #c9ac66;
-  font-family: 'SFMono-Regular', Consolas, monospace;
+  font-family: SFMono-Regular, Consolas, monospace;
   font-size: 0.75rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -80,7 +82,7 @@
   display: inline-block;
   margin-top: 2.5rem;
   color: #abb4bc;
-  font-family: 'SFMono-Regular', Consolas, monospace;
+  font-family: SFMono-Regular, Consolas, monospace;
   font-size: 0.65rem;
   letter-spacing: 0.12em;
   text-decoration: none;
@@ -88,14 +90,22 @@
 }
 
 .main-space-page__back:hover,
-.main-space-page__back:focus-visible { color: #e0c77f; }
-
-@media (max-width: 640px) {
-  .main-space-page { padding-inline: 1.25rem; }
-  .main-space-page__frame { padding-inline: 1rem; }
+.main-space-page__back:focus-visible {
+  color: #e0c77f;
 }
 
-[data-theme='light'] .main-space-layout { background: #f0eadc; }
+@media (max-width: 640px) {
+  .main-space-page {
+    padding-inline: 1.25rem;
+  }
+  .main-space-page__frame {
+    padding-inline: 1rem;
+  }
+}
+
+[data-theme='light'] .main-space-layout {
+  background: #f0eadc;
+}
 
 [data-theme='light'] .main-space-page {
   color: #2b2520;
@@ -107,5 +117,9 @@
   box-shadow: inset 0 0 7rem rgb(83 60 28 / 12%);
 }
 
-[data-theme='light'] .main-space-page h1 { color: #2b2520; }
-[data-theme='light'] .main-space-page__back { color: #675641; }
+[data-theme='light'] .main-space-page h1 {
+  color: #2b2520;
+}
+[data-theme='light'] .main-space-page__back {
+  color: #675641;
+}

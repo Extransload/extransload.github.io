@@ -12,5 +12,7 @@ for (let i = 0; i < info.width * info.height; i++) {
   rgba.set([r, g, b, Math.round(alpha * 255)], i * 4);
 }
 await sharp(rgba, { raw: { width: info.width, height: info.height, channels: 4 } })
-  .trim().extend({ top: 12, bottom: 12, left: 12, right: 12, background: '#00000000' })
-  .webp({ lossless: true }).toFile(destination);
+  .trim()
+  .extend({ top: 12, bottom: 12, left: 12, right: 12, background: '#00000000' })
+  .webp({ lossless: true })
+  .toFile(destination);

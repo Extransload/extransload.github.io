@@ -21,9 +21,9 @@ interface PagesWorkflow {
 function hasContentsWrite(value: unknown): boolean {
   if (Array.isArray(value)) return value.some(hasContentsWrite);
   if (value && typeof value === 'object') {
-    return Object.entries(value).some(([key, nestedValue]) => (
-      (key === 'contents' && nestedValue === 'write') || hasContentsWrite(nestedValue)
-    ));
+    return Object.entries(value).some(
+      ([key, nestedValue]) => (key === 'contents' && nestedValue === 'write') || hasContentsWrite(nestedValue),
+    );
   }
   return false;
 }

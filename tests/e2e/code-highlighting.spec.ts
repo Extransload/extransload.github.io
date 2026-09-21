@@ -10,9 +10,9 @@ test('light theme preserves Shiki token colors inside syntax-highlighted code bl
     element.dataset.theme = 'light';
   });
 
-  const tokenColors = await codeBlock.locator('code span[style*="color"]').evaluateAll((tokens) => (
-    [...new Set(tokens.map((token) => getComputedStyle(token).color))]
-  ));
+  const tokenColors = await codeBlock
+    .locator('code span[style*="color"]')
+    .evaluateAll((tokens) => [...new Set(tokens.map((token) => getComputedStyle(token).color))]);
 
   expect(tokenColors.length).toBeGreaterThan(2);
 });
@@ -27,9 +27,9 @@ test('light theme remaps Bash options from bright blue to muted ink', async ({ p
     element.dataset.theme = 'light';
   });
 
-  const tokenColors = await codeBlock.locator('code span[style*="color"]').evaluateAll((tokens) => (
-    [...new Set(tokens.map((token) => getComputedStyle(token).color))]
-  ));
+  const tokenColors = await codeBlock
+    .locator('code span[style*="color"]')
+    .evaluateAll((tokens) => [...new Set(tokens.map((token) => getComputedStyle(token).color))]);
 
   expect(tokenColors).not.toContain('rgb(121, 184, 255)');
   expect(tokenColors).toContain('rgb(73, 109, 134)');
@@ -47,19 +47,20 @@ test('light code panels keep the same fixed-scale surface as tables at any heigh
   await expect(codeShell).toBeVisible();
   await expect(table).toBeVisible();
 
-  const surfaceStyles = async (locator: typeof codeShell) => locator.evaluate((element) => {
-    const surface = getComputedStyle(element);
-    const texture = getComputedStyle(element, '::before');
-    return {
-      backgroundColor: surface.backgroundColor,
-      borderColor: surface.borderColor,
-      textureImage: texture.backgroundImage,
-      textureColor: texture.backgroundColor,
-      textureOpacity: texture.opacity,
-      textureRepeat: texture.backgroundRepeat,
-      textureSize: texture.backgroundSize,
-    };
-  });
+  const surfaceStyles = async (locator: typeof codeShell) =>
+    locator.evaluate((element) => {
+      const surface = getComputedStyle(element);
+      const texture = getComputedStyle(element, '::before');
+      return {
+        backgroundColor: surface.backgroundColor,
+        borderColor: surface.borderColor,
+        textureImage: texture.backgroundImage,
+        textureColor: texture.backgroundColor,
+        textureOpacity: texture.opacity,
+        textureRepeat: texture.backgroundRepeat,
+        textureSize: texture.backgroundSize,
+      };
+    });
 
   expect(await surfaceStyles(codeShell)).toEqual(await surfaceStyles(table));
 
@@ -67,9 +68,12 @@ test('light code panels keep the same fixed-scale surface as tables at any heigh
   await page.locator('html').evaluate((element) => {
     element.dataset.theme = 'light';
   });
-  const tallCodeShell = page.locator('.code-shell').filter({
-    has: page.locator('pre[data-language="python"]'),
-  }).first();
+  const tallCodeShell = page
+    .locator('.code-shell')
+    .filter({
+      has: page.locator('pre[data-language="python"]'),
+    })
+    .first();
   await expect(tallCodeShell).toBeVisible();
   expect((await tallCodeShell.boundingBox())!.height).toBeGreaterThan(1000);
 
@@ -101,19 +105,20 @@ test('light tools and copy toasts use the same fixed-scale surface as tables', a
   await expect(toolsPanel).toBeVisible();
   await expect(toast).toBeVisible();
 
-  const surfaceStyles = async (locator: typeof table) => locator.evaluate((element) => {
-    const surface = getComputedStyle(element);
-    const texture = getComputedStyle(element, '::before');
-    return {
-      backgroundColor: surface.backgroundColor,
-      borderColor: surface.borderColor,
-      textureImage: texture.backgroundImage,
-      textureColor: texture.backgroundColor,
-      textureOpacity: texture.opacity,
-      textureRepeat: texture.backgroundRepeat,
-      textureSize: texture.backgroundSize,
-    };
-  });
+  const surfaceStyles = async (locator: typeof table) =>
+    locator.evaluate((element) => {
+      const surface = getComputedStyle(element);
+      const texture = getComputedStyle(element, '::before');
+      return {
+        backgroundColor: surface.backgroundColor,
+        borderColor: surface.borderColor,
+        textureImage: texture.backgroundImage,
+        textureColor: texture.backgroundColor,
+        textureOpacity: texture.opacity,
+        textureRepeat: texture.backgroundRepeat,
+        textureSize: texture.backgroundSize,
+      };
+    });
 
   const tableSurface = await surfaceStyles(table);
   for (const surface of [toolsPanel, toolsToggle, toast]) {

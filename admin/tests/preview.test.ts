@@ -15,5 +15,7 @@ it('supports design preview editing without any network requests', async () => {
     await previewApi.publish({ ...original, version: saved.version }, session.csrfToken, true);
     expect((await previewApi.post(original.id)).status).toBe('draft');
     expect(fetch).not.toHaveBeenCalled();
-  } finally { fetch.mockRestore(); }
+  } finally {
+    fetch.mockRestore();
+  }
 });

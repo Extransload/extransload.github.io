@@ -7,11 +7,7 @@ const POSTS_ROOT = 'src/domains/blog/content/posts';
 function markdownFiles(directory: string): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const path = join(directory, entry.name);
-    return entry.isDirectory()
-      ? markdownFiles(path)
-      : ['.md', '.mdx'].includes(extname(entry.name))
-        ? [path]
-        : [];
+    return entry.isDirectory() ? markdownFiles(path) : ['.md', '.mdx'].includes(extname(entry.name)) ? [path] : [];
   });
 }
 

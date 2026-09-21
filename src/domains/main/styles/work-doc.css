@@ -1,8 +1,12 @@
 /* 상세 폴리오 — 기술 문서 레이아웃. 목차 페이지의 고서 톤과 의도적으로 분리 */
 
-.main-space-layout:has(.work-doc) { background: #0d1117; }
+.main-space-layout:has(.work-doc) {
+  background: #0d1117;
+}
 
-[data-theme='light'] .main-space-layout:has(.work-doc) { background: #fff; }
+[data-theme='light'] .main-space-layout:has(.work-doc) {
+  background: #fff;
+}
 
 .work-doc {
   --doc-bg: #0d1117;
@@ -44,7 +48,9 @@
 
 .work-doc *,
 .work-doc *::before,
-.work-doc *::after { box-sizing: border-box; }
+.work-doc *::after {
+  box-sizing: border-box;
+}
 
 .work-doc__shell {
   display: grid;
@@ -74,7 +80,9 @@
   text-decoration: none;
 }
 
-.work-doc__back:hover { color: var(--doc-fg); }
+.work-doc__back:hover {
+  color: var(--doc-fg);
+}
 
 .work-doc__rail b {
   display: block;
@@ -94,10 +102,14 @@
   color: var(--doc-muted);
   line-height: 1.45;
   text-decoration: none;
-  transition: color 160ms ease, border-color 160ms ease;
+  transition:
+    color 160ms ease,
+    border-color 160ms ease;
 }
 
-.work-doc__rail a[data-rail-link]:hover { color: var(--doc-fg); }
+.work-doc__rail a[data-rail-link]:hover {
+  color: var(--doc-fg);
+}
 
 .work-doc__rail a[data-rail-link][aria-current='true'] {
   border-left-color: var(--doc-acc);
@@ -297,7 +309,9 @@
   counter-increment: build;
 }
 
-.work-build > li:last-child { padding-bottom: 0; }
+.work-build > li:last-child {
+  padding-bottom: 0;
+}
 
 .work-build > li::before {
   position: absolute;
@@ -349,7 +363,9 @@
   word-break: keep-all;
 }
 
-.work-build ul li + li { margin-top: 0.3rem; }
+.work-build ul li + li {
+  margin-top: 0.3rem;
+}
 
 .work-build ul li::before {
   position: absolute;
@@ -370,7 +386,9 @@
   background: var(--doc-panel);
 }
 
-.work-friction + .work-friction { margin-top: 0.85rem; }
+.work-friction + .work-friction {
+  margin-top: 0.85rem;
+}
 
 .work-friction h4 {
   margin: 0 0 0.6rem;
@@ -423,7 +441,9 @@
   word-break: keep-all;
 }
 
-.work-outcome li:first-child { border-top: 0; }
+.work-outcome li:first-child {
+  border-top: 0;
+}
 
 .work-outcome li::before {
   position: absolute;
@@ -468,7 +488,9 @@
   margin: clamp(2rem, 5vw, 3rem) 0 0;
 }
 
-.work-doc__shots figure { margin: 0; }
+.work-doc__shots figure {
+  margin: 0;
+}
 
 .work-doc__shots img {
   display: block;
@@ -509,7 +531,9 @@
   background: var(--doc-panel);
 }
 
-.work-patents p { margin: 0; }
+.work-patents p {
+  margin: 0;
+}
 
 .work-patents__scope {
   margin-bottom: 0.45rem !important;
@@ -551,7 +575,9 @@
   text-decoration: none;
 }
 
-.work-doc__nav a:last-child { text-align: right; }
+.work-doc__nav a:last-child {
+  text-align: right;
+}
 
 .work-doc__nav span {
   color: var(--doc-muted);
@@ -564,10 +590,14 @@
   font-weight: 600;
 }
 
-.work-doc__nav a:hover b { color: var(--doc-acc); }
+.work-doc__nav a:hover b {
+  color: var(--doc-acc);
+}
 
 @media (max-width: 900px) {
-  .work-doc__shell { grid-template-columns: 1fr; }
+  .work-doc__shell {
+    grid-template-columns: 1fr;
+  }
 
   .work-doc__rail {
     position: static;
@@ -576,17 +606,29 @@
   }
 
   .work-doc__rail b,
-  .work-doc__rail a[data-rail-link] { display: none; }
+  .work-doc__rail a[data-rail-link] {
+    display: none;
+  }
 
-  .work-req > div { grid-template-columns: 1fr; }
+  .work-req > div {
+    grid-template-columns: 1fr;
+  }
 
-  .work-doc__facts > div:last-child:nth-child(odd) { grid-column: 1 / -1; }
+  .work-doc__facts > div:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
 
-  .work-doc__nav { flex-direction: column; }
+  .work-doc__nav {
+    flex-direction: column;
+  }
 
-  .work-doc__nav a:last-child { text-align: left; }
+  .work-doc__nav a:last-child {
+    text-align: left;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .work-doc__rail a[data-rail-link] { transition: none; }
+  .work-doc__rail a[data-rail-link] {
+    transition: none;
+  }
 }

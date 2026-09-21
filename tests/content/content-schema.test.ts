@@ -6,7 +6,9 @@ import { getPostSlug } from '../../src/domains/blog/content/post-slug';
 
 const require = createRequire(import.meta.url);
 const astroDist = resolve(dirname(require.resolve('astro/package.json')), 'dist');
-const { resolveConfig, createSettings, createNodeLogger } = await import(pathToFileURL(join(astroDist, 'core/config/index.js')).href);
+const { resolveConfig, createSettings, createNodeLogger } = await import(
+  pathToFileURL(join(astroDist, 'core/config/index.js')).href
+);
 const { createContainer } = await import(pathToFileURL(join(astroDist, 'core/dev/container.js')).href);
 
 let container: Awaited<ReturnType<typeof createContainer>>;
