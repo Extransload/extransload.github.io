@@ -1,7 +1,7 @@
 ---
 import BlogLayout from '../../../domains/blog/layouts/BlogLayout.astro';
 import ArchiveView from '../../../domains/blog/components/ArchiveView.astro';
-import { POSTS_PER_PAGE, publishedPosts } from '../../../domains/blog/content/archive';
+import { publishedPosts } from '../../../domains/blog/content/archive';
 
 const posts = await publishedPosts();
 ---
@@ -10,7 +10,7 @@ const posts = await publishedPosts();
   <ArchiveView
     eyebrow="Archive"
     heading="모든 글"
-    summary={`${Math.min(posts.length, POSTS_PER_PAGE)}개의 기록을 시간순으로 모았습니다.`}
+    summary={`${posts.length}개의 기록을 시간순으로 모았습니다.`}
     posts={posts}
     currentPage={1}
     basePath="/blog/posts"
