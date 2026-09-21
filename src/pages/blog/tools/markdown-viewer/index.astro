@@ -92,7 +92,7 @@ import CodeShellEnhancer from '../../../../domains/blog/components/CodeShellEnha
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
   });
-  const withStore = async <T>(mode: IDBTransactionMode, action: (store: IDBObjectStore) => IDBRequest<T>) => {
+  const withStore = async <T,>(mode: IDBTransactionMode, action: (store: IDBObjectStore) => IDBRequest<T>) => {
     const db = await database();
     return new Promise<T>((resolve, reject) => {
       const transaction = db.transaction(storeName, mode);
@@ -235,6 +235,11 @@ import CodeShellEnhancer from '../../../../domains/blog/components/CodeShellEnha
     button.addEventListener('click', openFilePicker);
   });
   let dragDepth = 0;
+  const setDragging = (active: boolean) => {
+    if (!viewer) return;
+    if (active) viewer.dataset.dragging = 'true';
+    else delete viewer.dataset.dragging;
+  };
   const resetViewer = (navigate = true) => {
     renderVersion++;
     dragDepth = 0;
@@ -275,19 +280,19 @@ import CodeShellEnhancer from '../../../../domains/blog/components/CodeShellEnha
     if (!event.dataTransfer?.types.includes('Files')) return;
     event.preventDefault();
     dragDepth++;
-    viewer.dataset.dragging = 'true';
+    setDragging(true);
   });
   dropzone?.addEventListener('dragover', (event) => {
     if (event.dataTransfer?.types.includes('Files')) event.preventDefault();
   });
   dropzone?.addEventListener('dragleave', () => {
-    if (--dragDepth <= 0) { dragDepth = 0; delete viewer.dataset.dragging; }
+    if (--dragDepth <= 0) { dragDepth = 0; setDragging(false); }
   });
   dropzone?.addEventListener('drop', (event) => {
     if (!event.dataTransfer?.types.includes('Files')) return;
     event.preventDefault();
     dragDepth = 0;
-    delete viewer.dataset.dragging;
+    setDragging(false);
     void renderFile(event.dataTransfer.files[0]);
   });
   void showHistory();
