@@ -1,70 +1,60 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
+import astroConfig from '../../astro.config.mjs';
+import { renderMarkdown } from '../helpers/render-markdown';
+
+type RemarkEntry = NonNullable<NonNullable<typeof astroConfig.markdown>['remarkPlugins']>[number];
+
+const pluginName = (entry: RemarkEntry): string => {
+  const plugin = Array.isArray(entry) ? entry[0] : entry;
+  return typeof plugin === 'function' ? plugin.name : String(plugin);
+};
+
+const CALLOUTS = [
+  ['note', '✦', 'Note'],
+  ['tip', '✧', 'Tip'],
+  ['warning', '⚠', 'Warning'],
+  ['important', '◆', 'Important'],
+  ['success', '✓', 'Success'],
+] as const;
 
 describe('Markdown callouts', () => {
-  it('registers the custom callout directive with Astro Markdown', () => {
-    const config = readFileSync('astro.config.mjs', 'utf8');
+  it('runs the directive parser before the callout transform', () => {
+    const names = (astroConfig.markdown?.remarkPlugins ?? []).map(pluginName);
 
-    expect(config).toContain("import remarkDirective from 'remark-directive';");
-    expect(config).toContain("import remarkCallouts from './src/shared/markdown/remark-callouts.js';");
-    expect(config).toContain('remarkPlugins: [remarkDirective, remarkCallouts]');
+    expect(names).toContain('remarkDirective');
+    expect(names).toContain('remarkCallouts');
+    expect(names.indexOf('remarkDirective')).toBeLessThan(names.indexOf('remarkCallouts'));
   });
 
-  it('maps supported directives to styled callout surfaces', () => {
-    const plugin = readFileSync('src/shared/markdown/remark-callouts.js', 'utf8');
-    const styles = readFileSync('src/domains/blog/styles/blog.css', 'utf8');
-    const surfaces = readFileSync('src/domains/blog/styles/editorial-surfaces.css', 'utf8');
-    const sharedLayerStart = surfaces.indexOf('.editorial-surface::before,');
-    const sharedLayerSelector = surfaces.slice(sharedLayerStart, surfaces.indexOf('{', sharedLayerStart));
+  it.each(CALLOUTS)('renders :::%s as a labelled callout surface', (name, icon, label) => {
+    const html = renderMarkdown(`:::${name}\n본문입니다.\n:::`);
 
-    expect(plugin).toContain('note:');
-    expect(plugin).toContain('tip:');
-    expect(plugin).toContain('warning:');
-    expect(plugin).toContain('important:');
-    expect(plugin).toContain('success:');
-    expect(plugin).toContain("className: ['callout__icon']");
-    expect(styles).toContain('.article__content .callout');
-    expect(styles).toContain('.article__content blockquote');
-    expect(styles).toContain('.article__content table');
-    expect(surfaces).toContain('.editorial-surface');
-    expect(surfaces).toContain('.article__content table::before');
-    expect(surfaces).toContain('--surface-background: var(--color-code-shell);');
-    expect(surfaces).toContain("--surface-texture-image: url('/code-shell-texture.webp');");
-    expect(surfaces).toContain('--surface-texture-size: 36rem 36rem;');
-    expect(surfaces).toContain('--surface-texture-repeat: repeat;');
-    expect(surfaces).toContain('--surface-texture-tint: color-mix(in srgb, var(--surface-background) 72%, var(--color-background));');
-    expect(surfaces).toContain('background-color: var(--surface-texture-tint);');
-    expect(surfaces).toContain('.article__content thead');
-    expect(sharedLayerSelector).toContain('.article__content thead::before');
-    expect(surfaces).toContain('[data-theme=\'light\'] .article__content table::before');
-    expect(surfaces).toContain('[data-theme=\'light\'] .article__content thead::before');
-    expect(styles).toContain('border-left: 3px solid color-mix(in srgb, var(--color-accent) 58%, var(--color-surface));');
-    expect(surfaces).toContain('var(--surface-texture-image)');
-    expect(styles).toContain('.callout--note');
-    expect(styles).toContain('.callout--tip');
-    expect(styles).toContain('.callout--warning');
-    expect(styles).toContain('.callout--important');
-    expect(styles).toContain('.callout--success');
-    expect(styles).toContain('--callout-accent');
-    expect(styles).toContain('--callout-background');
-    expect(styles).toContain('--surface-texture-opacity: 0.42;');
-    expect(styles).toContain('.article__content .callout__title {\n  display: flex;\n  align-items: center;');
-    expect(styles).toContain('.article__content .callout__icon');
-    expect(styles).toContain('font-size: 1.125rem;');
-    expect(styles).not.toContain('vertical-align: -0.18em;');
-    expect(styles).toContain("[data-theme='light'] .article__content .callout--warning");
-    expect(surfaces).toContain("--surface-texture-image: url('/light-code-shell-texture-v2.webp');");
-    expect(surfaces).toContain('--surface-texture-opacity: 0.52;');
-    expect(surfaces).toContain('--surface-texture-tint: color-mix(in srgb, var(--color-surface) 92%, var(--color-background));');
-    expect(surfaces).toContain('background-blend-mode: normal, multiply;');
-    expect(styles).not.toContain('border-left: 3px solid color-mix(in srgb, var(--callout-accent)');
+    expect(html).toContain(`<aside class="callout callout--${name} editorial-surface" role="note">`);
+    expect(html).toContain(
+      `<p class="callout__title"><span class="callout__icon" aria-hidden="true">${icon}</span> ${label}</p>`,
+    );
+    expect(html).toContain('<p>본문입니다.</p>');
   });
 
-  it('keeps light code shells on the shared table surface without a stretched texture override', () => {
-    const styles = readFileSync('src/domains/blog/styles/blog.css', 'utf8');
+  it('falls back to the note callout for an unrecognised directive name', () => {
+    const html = renderMarkdown(':::bogus\n알 수 없음.\n:::');
 
-    expect(styles).not.toContain('--surface-background: #d2cec6;');
-    expect(styles).not.toContain('--surface-background: #c3bdb3;');
-    expect(styles).not.toContain("[data-theme='light'] .article__content .code-shell::before");
+    expect(html).toContain('<aside class="callout callout--note editorial-surface" role="note">');
+    expect(html).toContain('Note</p>');
+    expect(html).not.toContain('callout--bogus');
+  });
+
+  it('marks the icon as decorative so screen readers announce only the label', () => {
+    const html = renderMarkdown(':::tip\n도움말.\n:::');
+
+    expect(html).toContain('aria-hidden="true"');
+    expect(html).toMatch(/<aside[^>]*role="note"/);
+  });
+
+  it('leaves ordinary markdown free of callout markup', () => {
+    const html = renderMarkdown('그냥 문단입니다.\n\n> 인용문');
+
+    expect(html).not.toContain('callout');
+    expect(html).toContain('<blockquote>');
   });
 });

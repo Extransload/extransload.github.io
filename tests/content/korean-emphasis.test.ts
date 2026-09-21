@@ -1,25 +1,28 @@
-import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { unified } from 'unified';
-import remarkParse from 'remark-parse';
-import remarkRehype from 'remark-rehype';
-import rehypeStringify from 'rehype-stringify';
-import remarkKoreanEmphasis from '../../src/shared/markdown/remark-korean-emphasis.js';
+import astroConfig from '../../astro.config.mjs';
+import { renderMarkdown } from '../helpers/render-markdown';
 
 describe('Korean inline emphasis', () => {
-  it('registers the plugin for Astro Markdown and the client-side viewer', () => {
-    expect(readFileSync('astro.config.mjs', 'utf8')).toContain('remarkKoreanEmphasis');
-    expect(readFileSync('src/shared/markdown/render-viewer.ts', 'utf8')).toContain('remarkKoreanEmphasis');
+  it('is registered in the site markdown pipeline', () => {
+    const names = (astroConfig.markdown?.remarkPlugins ?? []).map((entry) => {
+      const plugin = Array.isArray(entry) ? entry[0] : entry;
+      return typeof plugin === 'function' ? plugin.name : String(plugin);
+    });
+
+    expect(names).toContain('remarkKoreanEmphasis');
   });
 
-  it('handles emphasis immediately followed by Korean text', () => {
-    const html = unified()
-      .use(remarkParse)
-      .use(remarkKoreanEmphasis)
-      .use(remarkRehype)
-      .use(rehypeStringify)
-      .processSync('**상호 배제(mutual exclusion)**다');
+  it('closes emphasis that is immediately followed by Korean text', () => {
+    expect(renderMarkdown('**상호 배제(mutual exclusion)**다')).toBe(
+      '<p><strong>상호 배제(mutual exclusion)</strong>다</p>',
+    );
+  });
 
-    expect(String(html)).toBe('<p><strong>상호 배제(mutual exclusion)</strong>다</p>');
+  it('closes italics that are immediately followed by Korean text', () => {
+    expect(renderMarkdown('*강조*와 나머지')).toBe('<p><em>강조</em>와 나머지</p>');
+  });
+
+  it('leaves emphasis followed by whitespace or punctuation unchanged', () => {
+    expect(renderMarkdown('**굵게** 그리고')).toBe('<p><strong>굵게</strong> 그리고</p>');
   });
 });
