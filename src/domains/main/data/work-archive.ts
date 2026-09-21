@@ -121,9 +121,9 @@ export const works: WorkProject[] = [
       {
         n: '01',
         period: '2024.01 — 2024.02',
-        title: '기반 재건 — GraphQL을 걷어내고 REST로',
+        title: '기반 재건 — REST API 기반 구조로',
         lede:
-          '합류 시점 구성은 Vue 프론트엔드와 Django 백엔드가 GraphQL로 통신하는 형태. ' +
+          '합류 시점 구성은 Vue 프론트엔드와 Django 백엔드. ' +
           '인증, 오류 응답, 요청 검증을 담당하는 층이 서버에 자리잡기 전이라, ' +
           '저널 옵션 같은 규칙을 얹으려면 통신 방식과 계층부터 정리가 필요한 상황.',
         requirements: [
@@ -134,11 +134,11 @@ export const works: WorkProject[] = [
         ],
         build: [
           {
-            head: 'REST 전환',
+            head: 'REST API 구조 도입',
             body: [
-              '기존 GraphQL 스키마 제거 후 REST API로 전환',
+              'REST API 기반으로 프로젝트 구조 재편',
               'Django 5.0.1 이관 및 새 버전에 맞춘 CSRF 처리 방식 정리',
-              '프론트엔드의 요청 경로를 GraphQL 클라이언트에서 HTTP 호출로 교체',
+              '프론트엔드의 요청 경로를 HTTP 호출 기준으로 정리',
             ],
           },
           {
