@@ -1,6 +1,6 @@
 ---
 import '../styles/comments.css';
-import '../../domains/blog/styles/editorial-surfaces.css';
+import '../styles/editorial-surfaces.css';
 interface Props { page: string; guestbook?: boolean }
 const { page, guestbook = false } = Astro.props;
 const api = import.meta.env.PUBLIC_COMMENTS_API_URL?.trim() || 'https://extransload-admin.tmdrbsla123.workers.dev';
