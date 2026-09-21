@@ -1,43 +1,30 @@
 ---
-import { getCollection } from 'astro:content';
 import BlogLayout from '../../../domains/blog/layouts/BlogLayout.astro';
-import PostCard from '../../../domains/blog/components/PostCard.astro';
-import Pagination from '../../../components/Pagination.astro';
-
-const pageSize = 10;
+import ArchiveView from '../../../domains/blog/components/ArchiveView.astro';
+import { overflowPages, pageCount, publishedPosts } from '../../../domains/blog/content/archive';
 
 export async function getStaticPaths() {
-  const pageSize = 10;
-  const allPosts = (await getCollection('posts', ({ data }) => !data.draft))
-    .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
-  const totalPages = Math.ceil(allPosts.length / pageSize);
-
-  return Array.from({ length: totalPages - 1 }, (_, index) => {
-    const currentPage = index + 2;
-    return {
-      params: { page: String(currentPage) },
-      props: {
-        currentPage,
-        posts: allPosts.slice((currentPage - 1) * pageSize, currentPage * pageSize),
-        totalPages,
-      },
-    };
-  });
+  const posts = await publishedPosts();
+  return overflowPages(posts.length).map((page) => ({
+    params: { page: String(page) },
+    props: { currentPage: page, posts },
+  }));
 }
 
-const { currentPage, posts, totalPages: pageCount } = Astro.props;
+const { currentPage, posts } = Astro.props;
 ---
 
-<BlogLayout title={`글 목록 ${currentPage} — Extransload`} description="Extransload의 모든 기록" canonicalPath={`/blog/posts/${currentPage}/`}>
-  <main class="shell archive-page">
-    <header class="archive-page__header">
-      <p class="eyebrow">Posts</p>
-      <h1>모든 글</h1>
-      <p>{currentPage} / {pageCount} 페이지 · 시간순 기록</p>
-    </header>
-    <ol class="post-list">
-      {posts.map((post) => <PostCard post={post} />)}
-    </ol>
-    <Pagination currentPage={currentPage} totalPages={pageCount} basePath="/blog/posts" />
-  </main>
+<BlogLayout
+  title={`글 목록 ${currentPage} — Extransload`}
+  description="Extransload의 모든 기록"
+  canonicalPath={`/blog/posts/${currentPage}/`}
+>
+  <ArchiveView
+    eyebrow="Posts"
+    heading="모든 글"
+    summary={`${currentPage} / ${pageCount(posts.length)} 페이지 · 시간순 기록`}
+    posts={posts}
+    currentPage={currentPage}
+    basePath="/blog/posts"
+  />
 </BlogLayout>

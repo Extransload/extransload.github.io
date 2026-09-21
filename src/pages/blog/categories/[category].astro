@@ -1,34 +1,28 @@
 ---
-import { getCollection } from 'astro:content';
 import BlogLayout from '../../../domains/blog/layouts/BlogLayout.astro';
-import PostCard from '../../../domains/blog/components/PostCard.astro';
-import Pagination from '../../../components/Pagination.astro';
+import ArchiveView from '../../../domains/blog/components/ArchiveView.astro';
+import { postsGroupedBy } from '../../../domains/blog/content/archive';
 
 export async function getStaticPaths() {
-  const posts = await getCollection('posts', ({ data }) => !data.draft);
-  const categories = [...new Set(posts.map((post) => post.data.category))];
-  return categories.map((category) => ({
-    params: { category },
-    props: { category, posts: posts.filter((post) => post.data.category === category) },
-  }));
+  const groups = await postsGroupedBy((post) => [post.data.category]);
+  return [...groups].map(([category, posts]) => ({ params: { category }, props: { category, posts } }));
 }
 
 const { category, posts } = Astro.props;
-const sortedPosts = posts.sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
-const pageSize = 10;
-const totalPages = Math.ceil(sortedPosts.length / pageSize);
+const basePath = `/blog/categories/${encodeURIComponent(category)}`;
 ---
 
-<BlogLayout title={`${category} 글 — Extransload`} description={`${category} 카테고리의 글`} canonicalPath={`/blog/categories/${encodeURIComponent(category)}/`}>
-  <main class="shell archive-page">
-    <header class="archive-page__header">
-      <p class="eyebrow">Category</p>
-      <h1>{category}</h1>
-      <p>{sortedPosts.length}개의 기록</p>
-    </header>
-    <ol class="post-list">
-      {sortedPosts.slice(0, pageSize).map((post) => <PostCard post={post} />)}
-    </ol>
-    <Pagination currentPage={1} totalPages={totalPages} basePath={`/blog/categories/${encodeURIComponent(category)}`} />
-  </main>
+<BlogLayout
+  title={`${category} 글 — Extransload`}
+  description={`${category} 카테고리의 글`}
+  canonicalPath={`${basePath}/`}
+>
+  <ArchiveView
+    eyebrow="Category"
+    heading={category}
+    summary={`${posts.length}개의 기록`}
+    posts={posts}
+    currentPage={1}
+    basePath={basePath}
+  />
 </BlogLayout>

@@ -1,26 +1,18 @@
 ---
-import { getCollection } from 'astro:content';
 import BlogLayout from '../../../domains/blog/layouts/BlogLayout.astro';
-import PostCard from '../../../domains/blog/components/PostCard.astro';
-import Pagination from '../../../components/Pagination.astro';
+import ArchiveView from '../../../domains/blog/components/ArchiveView.astro';
+import { POSTS_PER_PAGE, publishedPosts } from '../../../domains/blog/content/archive';
 
-const allPosts = (await getCollection('posts', ({ data }) => !data.draft))
-  .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
-const pageSize = 10;
-const posts = allPosts.slice(0, pageSize);
-const totalPages = Math.ceil(allPosts.length / pageSize);
+const posts = await publishedPosts();
 ---
 
 <BlogLayout title="글 목록 — Extransload" description="Extransload의 모든 기록" canonicalPath="/blog/posts/">
-  <main class="shell archive-page">
-    <header class="archive-page__header">
-      <p class="eyebrow">Archive</p>
-      <h1>모든 글</h1>
-      <p>{posts.length}개의 기록을 시간순으로 모았습니다.</p>
-    </header>
-    <ol class="post-list">
-      {posts.map((post) => <PostCard post={post} />)}
-    </ol>
-    <Pagination currentPage={1} totalPages={totalPages} basePath="/blog/posts" />
-  </main>
+  <ArchiveView
+    eyebrow="Archive"
+    heading="모든 글"
+    summary={`${Math.min(posts.length, POSTS_PER_PAGE)}개의 기록을 시간순으로 모았습니다.`}
+    posts={posts}
+    currentPage={1}
+    basePath="/blog/posts"
+  />
 </BlogLayout>

@@ -1,0 +1,33 @@
+---
+import PostCard from './PostCard.astro';
+import Pagination from './Pagination.astro';
+import { pageCount, pageSlice, type Post } from '../content/archive';
+
+interface Props {
+  eyebrow: string;
+  heading: string;
+  summary: string;
+  /** The full archive, newest first; this component does the paging. */
+  posts: Post[];
+  currentPage: number;
+  /** Archive root without a trailing slash, e.g. `/blog/tags/git`. */
+  basePath: string;
+}
+
+const { eyebrow, heading, summary, posts, currentPage, basePath } = Astro.props;
+const totalPages = pageCount(posts.length);
+---
+
+<main class="shell archive-page">
+  <header class="archive-page__header">
+    <p class="eyebrow">{eyebrow}</p>
+    <h1>{heading}</h1>
+    <p>{summary}</p>
+  </header>
+  <ol class="post-list">
+    {pageSlice(posts, currentPage).map((post) => (
+      <PostCard post={post} />
+    ))}
+  </ol>
+  <Pagination currentPage={currentPage} totalPages={totalPages} basePath={basePath} />
+</main>

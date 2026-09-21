@@ -1,34 +1,24 @@
 ---
-import { getCollection } from 'astro:content';
 import BlogLayout from '../../../domains/blog/layouts/BlogLayout.astro';
-import PostCard from '../../../domains/blog/components/PostCard.astro';
-import Pagination from '../../../components/Pagination.astro';
+import ArchiveView from '../../../domains/blog/components/ArchiveView.astro';
+import { postsGroupedBy } from '../../../domains/blog/content/archive';
 
 export async function getStaticPaths() {
-  const posts = await getCollection('posts', ({ data }) => !data.draft);
-  const tags = [...new Set(posts.flatMap((post) => post.data.tags))];
-  return tags.map((tag) => ({
-    params: { tag },
-    props: { tag, posts: posts.filter((post) => post.data.tags.includes(tag)) },
-  }));
+  const groups = await postsGroupedBy((post) => post.data.tags);
+  return [...groups].map(([tag, posts]) => ({ params: { tag }, props: { tag, posts } }));
 }
 
 const { tag, posts } = Astro.props;
-const sortedPosts = posts.sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
-const pageSize = 10;
-const totalPages = Math.ceil(sortedPosts.length / pageSize);
+const basePath = `/blog/tags/${encodeURIComponent(tag)}`;
 ---
 
-<BlogLayout title={`#${tag} 글 — Extransload`} description={`${tag} 태그의 글`} canonicalPath={`/blog/tags/${encodeURIComponent(tag)}/`}>
-  <main class="shell archive-page">
-    <header class="archive-page__header">
-      <p class="eyebrow">Tag</p>
-      <h1>#{tag}</h1>
-      <p>{sortedPosts.length}개의 기록</p>
-    </header>
-    <ol class="post-list">
-      {sortedPosts.slice(0, pageSize).map((post) => <PostCard post={post} />)}
-    </ol>
-    <Pagination currentPage={1} totalPages={totalPages} basePath={`/blog/tags/${encodeURIComponent(tag)}`} />
-  </main>
+<BlogLayout title={`#${tag} 글 — Extransload`} description={`${tag} 태그의 글`} canonicalPath={`${basePath}/`}>
+  <ArchiveView
+    eyebrow="Tag"
+    heading={`#${tag}`}
+    summary={`${posts.length}개의 기록`}
+    posts={posts}
+    currentPage={1}
+    basePath={basePath}
+  />
 </BlogLayout>

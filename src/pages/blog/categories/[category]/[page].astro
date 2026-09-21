@@ -1,44 +1,33 @@
 ---
-import { getCollection } from 'astro:content';
 import BlogLayout from '../../../../domains/blog/layouts/BlogLayout.astro';
-import PostCard from '../../../../domains/blog/components/PostCard.astro';
-import Pagination from '../../../../components/Pagination.astro';
+import ArchiveView from '../../../../domains/blog/components/ArchiveView.astro';
+import { overflowPages, pageCount, postsGroupedBy } from '../../../../domains/blog/content/archive';
 
 export async function getStaticPaths() {
-  const pageSize = 10;
-  const posts = await getCollection('posts', ({ data }) => !data.draft);
-  const categories = [...new Set(posts.map((post) => post.data.category))];
-  return categories.flatMap((category) => {
-    const sortedPosts = posts
-      .filter((post) => post.data.category === category)
-      .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
-    const totalPages = Math.ceil(sortedPosts.length / pageSize);
-    return Array.from({ length: Math.max(0, totalPages - 1) }, (_, index) => {
-      const currentPage = index + 2;
-      return {
-        params: { category, page: String(currentPage) },
-        props: { category, posts: sortedPosts, currentPage, totalPages },
-      };
-    });
-  });
+  const groups = await postsGroupedBy((post) => [post.data.category]);
+  return [...groups].flatMap(([category, posts]) =>
+    overflowPages(posts.length).map((page) => ({
+      params: { category, page: String(page) },
+      props: { category, posts, currentPage: page },
+    })),
+  );
 }
 
-const pageSize = 10;
-const { category, posts, currentPage, totalPages } = Astro.props;
-const startIndex = (currentPage - 1) * pageSize;
+const { category, posts, currentPage } = Astro.props;
 const basePath = `/blog/categories/${encodeURIComponent(category)}`;
 ---
 
-<BlogLayout title={`${category} 글 ${currentPage} — Extransload`} description={`${category} 카테고리의 글`} canonicalPath={`${basePath}/${currentPage}/`}>
-  <main class="shell archive-page">
-    <header class="archive-page__header">
-      <p class="eyebrow">Category</p>
-      <h1>{category}</h1>
-      <p>{currentPage} / {totalPages} 페이지 · {posts.length}개의 기록</p>
-    </header>
-    <ol class="post-list">
-      {posts.slice(startIndex, startIndex + pageSize).map((post) => <PostCard post={post} />)}
-    </ol>
-    <Pagination currentPage={currentPage} totalPages={totalPages} basePath={basePath} />
-  </main>
+<BlogLayout
+  title={`${category} 글 ${currentPage} — Extransload`}
+  description={`${category} 카테고리의 글`}
+  canonicalPath={`${basePath}/${currentPage}/`}
+>
+  <ArchiveView
+    eyebrow="Category"
+    heading={category}
+    summary={`${currentPage} / ${pageCount(posts.length)} 페이지 · ${posts.length}개의 기록`}
+    posts={posts}
+    currentPage={currentPage}
+    basePath={basePath}
+  />
 </BlogLayout>
