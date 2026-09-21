@@ -676,7 +676,7 @@ export const works: WorkProject[] = [
       { label: '역할', value: '설계 주도' },
       { label: '배포 후 10일', value: '새 사용자 165명' },
     ],
-    stack: 'Python · React · 분산 처리 · 크롤링 스케줄러',
+    stack: 'Python · FastAPI · APScheduler · Hadoop MapReduce · FastText · Mecab · React',
     links: [{ label: 'github.com/team-hca/danchu', href: 'https://github.com/team-hca/danchu' }],
     gallery: [
       {
@@ -718,8 +718,8 @@ export const works: WorkProject[] = [
           {
             head: '수집 파이프라인',
             body: [
-              '뉴스 기사 수집 파이프라인 구축과 자동화 스케줄러 구현',
-              '스케줄러를 외부에서 제어할 수 있는 API를 별도 구성',
+              'BeautifulSoup 기반 기사 수집기를 FastAPI 앱으로 구성하고 APScheduler로 24시간 주기 실행',
+              'URL 수집·본문 수집·오류 재시도를 별도 잡으로 나누고, 스케줄 제어와 수동 실행을 외부 API로 노출',
               '프로젝트 아키텍처 설계와 서비스 진행 흐름 구성 주도',
             ],
           },
@@ -727,9 +727,18 @@ export const works: WorkProject[] = [
             head: '단어 추출과 집계',
             decision: true,
             body: [
-              '기사 본문에서 명사만 추출하되 고유명사는 제외',
+              'Mecab으로 기사 본문에서 명사를 추출하고 고유명사(NNP)는 집계에서 제외',
               '인명·지명이 상위를 독점하면 추측 게임으로 성립하지 않는다는 판단',
-              '분산 처리로 단어 출현 횟수를 계산해 당일 문제 선정',
+              '출현 횟수 집계는 특화 과정의 학습 목표인 분산 처리를 적용해 Hadoop MapReduce로 구성. 분할한 텍스트를 WordCount 잡으로 세고 reducer에서 상위 단어를 추림',
+              '하루치 기사는 단일 프로세스로도 충분한 규모임을 인지한 선택. 수집 범위를 기간·매체로 넓힐 때 노드만 늘리면 되는 구조를 우선',
+            ],
+          },
+          {
+            head: '근접도 판정',
+            body: [
+              '수집한 기사로 FastText 임베딩을 직접 학습하고, 새 기사가 쌓일 때마다 이어서 학습해 모델을 갱신',
+              '정답과 유사한 상위 1000개 단어를 미리 계산해 두고, 추측 단어의 유사도와 순위를 근접도로 표시',
+              '고유명사 포함·제외 두 벌의 모델을 두어 정답 유형에 따라 선택',
             ],
           },
           {
