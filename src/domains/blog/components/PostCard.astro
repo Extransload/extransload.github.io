@@ -9,7 +9,16 @@ interface Props {
 const { post } = Astro.props;
 const slug = getPostSlug(post);
 const { category, description, pubDate, title } = post.data;
-const date = [pubDate.getFullYear(), String(pubDate.getMonth() + 1).padStart(2, '0'), String(pubDate.getDate()).padStart(2, '0')].join('.');
+// The site publishes in KST. Local-timezone getters would shift the day
+// whenever the build machine runs elsewhere, and CI builds in UTC.
+const date = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Asia/Seoul',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+})
+  .format(pubDate)
+  .replace(/-/g, '.');
 const categoryHref = `/blog/categories/${encodeURIComponent(category)}/`;
 ---
 
