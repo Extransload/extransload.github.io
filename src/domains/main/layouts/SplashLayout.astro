@@ -2,6 +2,7 @@
 import PageLoader from '../../../shared/components/PageLoader.astro';
 import ScrollProgress from '../../../shared/components/ScrollProgress.astro';
 import Analytics from '../../../shared/components/Analytics.astro';
+import ImageLightbox from '../../../shared/components/ImageLightbox.astro';
 import SeoHead from '../../../shared/components/SeoHead.astro';
 
 interface Props {
@@ -33,5 +34,6 @@ const { title, description } = Astro.props;
     <PageLoader />
     <ScrollProgress />
     <slot />
+    <ImageLightbox />
   </body>
 </html>

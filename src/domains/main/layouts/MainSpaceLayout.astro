@@ -6,6 +6,7 @@ import '../../../shared/themes/light.css';
 import { earlyThemeScript } from '../../../shared/scripts/theme-init';
 import PageLoader from '../../../shared/components/PageLoader.astro';
 import ScrollProgress from '../../../shared/components/ScrollProgress.astro';
+import ImageLightbox from '../../../shared/components/ImageLightbox.astro';
 import SeoHead from '../../../shared/components/SeoHead.astro';
 
 interface Props {
@@ -41,5 +42,6 @@ const {
     <PageLoader />
     <ScrollProgress />
     <slot />
+    <ImageLightbox />
   </body>
 </html>

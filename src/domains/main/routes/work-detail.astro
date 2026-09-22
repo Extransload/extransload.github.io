@@ -67,7 +67,7 @@ const galleryGroups = [
         {galleryGroups.map((group) => (
           <>
             <p class="work-doc__eyebrow work-doc__shots-label">{group.label}</p>
-            <section class="work-doc__shots" aria-label={`${project.title} ${group.label}`}>
+            <section class="work-doc__shots" aria-label={`${project.title} ${group.label}`} data-lightbox-group>
               {group.shots.map((shot) => (
                 <figure data-kind={shot.kind}>
                   {shot.href ? (
