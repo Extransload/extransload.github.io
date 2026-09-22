@@ -202,6 +202,9 @@ export function initializeLightbox(root: ParentNode = document): void {
     if (pointers.size === 2) {
       const [a, b] = [...pointers.values()];
       pinchDistance = Math.hypot(a.x - b.x, a.y - b.y);
+      dragFrom = null;
+      swipeFrom = null;
+      dragged = 0;
     } else {
       dragFrom = { x: event.clientX, y: event.clientY };
       swipeFrom = { x: event.clientX, y: event.clientY };
