@@ -95,9 +95,8 @@
 }
 
 .work-doc__rail a[data-rail-link] {
-  display: grid;
-  grid-template-columns: 1.7rem 1fr;
-  padding: 0.4rem 0 0.4rem 0.7rem;
+  display: block;
+  padding: 0.4rem 0 0.4rem 0.85rem;
   border-left: 2px solid var(--doc-line);
   color: var(--doc-muted);
   line-height: 1.45;
@@ -115,13 +114,6 @@
   border-left-color: var(--doc-acc);
   color: var(--doc-acc);
   font-weight: 500;
-}
-
-.work-doc__rail a[data-rail-link] i {
-  font-family: var(--font-mono);
-  font-size: 0.76rem;
-  font-style: normal;
-  opacity: 0.7;
 }
 
 /* ── 머리 ─────────────────────────────────── */
@@ -221,14 +213,6 @@
   font-size: 1.35rem;
   font-weight: 600;
   letter-spacing: -0.005em;
-}
-
-.work-doc h2 .work-doc__n {
-  margin-right: 0.7rem;
-  color: var(--doc-acc);
-  font-family: var(--font-mono);
-  font-size: 0.9rem;
-  font-weight: 500;
 }
 
 .work-doc h2 small {
