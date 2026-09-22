@@ -220,7 +220,8 @@
 
 .article__header h1 {
   margin: var(--space-4) 0;
-  font-size: clamp(2rem, 4vw, 3rem);
+  /* 본문 h2(1.75rem)와의 간격이 화면 폭에 상관없이 비슷하게 유지되는 범위. */
+  font-size: clamp(1.75rem, 2.6vw, 2.35rem);
 }
 
 /* 제목과 공유 버튼을 한 줄에 두되, 좁은 화면에서는 버튼이 아래로 내려간다. */
