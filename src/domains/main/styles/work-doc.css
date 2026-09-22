@@ -482,7 +482,15 @@
 
 /* 화면 */
 
-/* 갤러리: 종류별 고정 프레임으로 12열 그리드에 배치 */
+/* 갤러리: 영상·화면 그룹마다 라벨을 두고, 종류별 고정 프레임으로 12열 그리드에 배치 */
+
+.work-doc__shots-label {
+  margin: clamp(2rem, 5vw, 3rem) 0 0;
+}
+
+.work-doc__shots-label + .work-doc__shots {
+  margin-top: 0.85rem;
+}
 
 .work-doc__shots {
   display: grid;

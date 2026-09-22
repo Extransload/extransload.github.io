@@ -12,6 +12,12 @@ const position = works.findIndex((entry) => entry.slug === project.slug);
 const previous = position > 0 ? works[position - 1] : null;
 const next = position < works.length - 1 ? works[position + 1] : null;
 const milestoneFor = (n: string) => project.milestones.find((m) => m.after === n);
+
+// 영상(UCC)과 화면 캡처를 나눠 각자 라벨 아래 놓는다. 비어 있는 그룹은 생략.
+const galleryGroups = [
+  { label: '영상', shots: project.gallery.filter((shot) => shot.kind === 'video') },
+  { label: '화면', shots: project.gallery.filter((shot) => shot.kind !== 'video') },
+].filter((group) => group.shots.length > 0);
 ---
 
 <MainSpaceLayout
@@ -56,25 +62,28 @@ const milestoneFor = (n: string) => project.milestones.find((m) => m.after === n
           )}
         </header>
 
-        {project.gallery.length > 0 && (
-          <section class="work-doc__shots" aria-label={`${project.title} 화면`}>
-            {project.gallery.map((shot) => (
-              <figure data-kind={shot.kind}>
-                {shot.href ? (
-                  <a class="work-doc__shot-link" href={shot.href} target="_blank" rel="noreferrer">
+        {galleryGroups.map((group) => (
+          <>
+            <p class="work-doc__eyebrow work-doc__shots-label">{group.label}</p>
+            <section class="work-doc__shots" aria-label={`${project.title} ${group.label}`}>
+              {group.shots.map((shot) => (
+                <figure data-kind={shot.kind}>
+                  {shot.href ? (
+                    <a class="work-doc__shot-link" href={shot.href} target="_blank" rel="noreferrer">
+                      <img src={shot.src} alt={shot.alt} loading="lazy" decoding="async" />
+                      <span class="work-doc__play" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="22" height="22"><path d="M8 5v14l11-7z" fill="currentColor" /></svg>
+                      </span>
+                    </a>
+                  ) : (
                     <img src={shot.src} alt={shot.alt} loading="lazy" decoding="async" />
-                    <span class="work-doc__play" aria-hidden="true">
-                      <svg viewBox="0 0 24 24" width="22" height="22"><path d="M8 5v14l11-7z" fill="currentColor" /></svg>
-                    </span>
-                  </a>
-                ) : (
-                  <img src={shot.src} alt={shot.alt} loading="lazy" decoding="async" />
-                )}
-                <figcaption>{shot.caption}</figcaption>
-              </figure>
-            ))}
-          </section>
-        )}
+                  )}
+                  <figcaption>{shot.caption}</figcaption>
+                </figure>
+              ))}
+            </section>
+          </>
+        ))}
 
         {project.chapters.map((chapter) => (
           <>
