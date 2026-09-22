@@ -42,7 +42,6 @@ export function initializeLightbox(root: ParentNode = document): void {
   const previous = dialog.querySelector<HTMLButtonElement>('[data-lightbox-prev]')!;
   const next = dialog.querySelector<HTMLButtonElement>('[data-lightbox-next]')!;
   const openOriginal = dialog.querySelector<HTMLAnchorElement>('[data-lightbox-open]')!;
-  const download = dialog.querySelector<HTMLAnchorElement>('[data-lightbox-download]')!;
 
   let group: HTMLImageElement[] = [];
   let index = 0;
@@ -94,7 +93,6 @@ export function initializeLightbox(root: ParentNode = document): void {
     view.src = source;
     view.alt = image.getAttribute('alt')?.trim() || '';
     openOriginal.href = source;
-    download.href = source;
 
     const text = captionFor(image);
     caption.textContent = text;
@@ -160,7 +158,21 @@ export function initializeLightbox(root: ParentNode = document): void {
     if (event.target === dialog) close();
   });
 
+  // 스테이지는 그리드 칸을 가득 채우므로 이미지 바깥의 어두운 영역도 스테이지다.
+  // 끌지 않은 단일 클릭만 닫기로 본다. 더블클릭 확대의 첫 클릭까지 닫지 않도록
+  // detail 로 걸러내고, 두 번째 클릭이 올 여지를 한 박자 기다린다.
+  let closeOnClick: number | undefined;
+  stage.addEventListener('click', (event) => {
+    window.clearTimeout(closeOnClick);
+    if (event.target !== stage || dragged >= 4 || event.detail > 1) return;
+    closeOnClick = window.setTimeout(close, 250);
+  });
+
+  stage.addEventListener('dblclick', () => window.clearTimeout(closeOnClick));
+
   dialog.addEventListener('close', () => {
+    pointers.clear();
+    pinchDistance = 0;
     document.body.classList.remove('lightbox-open');
     view.removeAttribute('src');
     restoreFocus?.focus?.();

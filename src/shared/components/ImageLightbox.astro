@@ -4,19 +4,30 @@
 <dialog class="image-lightbox" aria-label="이미지 크게 보기">
   <div class="image-lightbox__toolbar">
     <span class="image-lightbox__counter" data-lightbox-counter aria-live="polite" hidden></span>
-    <button type="button" data-lightbox-zoom-out aria-label="축소">−</button>
-    <button type="button" data-lightbox-zoom-in aria-label="확대">+</button>
-    <a data-lightbox-open target="_blank" rel="noreferrer" aria-label="원본 새 탭에서 열기">↗</a>
-    <a data-lightbox-download download aria-label="내려받기">⤓</a>
-    <button type="button" data-lightbox-close aria-label="닫기">×</button>
+    <button type="button" data-lightbox-zoom-out aria-label="축소">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14" /></svg>
+    </button>
+    <button type="button" data-lightbox-zoom-in aria-label="확대">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+    </button>
+    <a data-lightbox-open target="_blank" rel="noreferrer" aria-label="원본 새 탭에서 열기">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 5h5v5M19 5l-8 8M18 14v4a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h4" /></svg>
+    </a>
+    <button type="button" data-lightbox-close aria-label="닫기">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
+    </button>
   </div>
 
-  <button type="button" class="image-lightbox__step" data-lightbox-prev aria-label="이전 이미지" hidden>‹</button>
+  <button type="button" class="image-lightbox__step" data-lightbox-prev aria-label="이전 이미지" hidden>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5-7 7 7 7" /></svg>
+  </button>
   <div class="image-lightbox__stage" data-lightbox-stage>
     <img class="image-lightbox__img" alt="" decoding="async" />
     <p class="image-lightbox__error">이미지를 불러오지 못했습니다.</p>
   </div>
-  <button type="button" class="image-lightbox__step" data-lightbox-next aria-label="다음 이미지" hidden>›</button>
+  <button type="button" class="image-lightbox__step" data-lightbox-next aria-label="다음 이미지" hidden>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7" /></svg>
+  </button>
 
   <p class="image-lightbox__caption" data-lightbox-caption hidden></p>
 </dialog>
@@ -83,7 +94,7 @@
     border-radius: 999px;
     color: inherit;
     background: rgb(255 255 255 / 12%);
-    font-size: 1.1rem;
+    padding: 0;
     line-height: 1;
     text-decoration: none;
     cursor: pointer;
@@ -96,16 +107,39 @@
   }
 
   .image-lightbox__step {
+    display: grid;
     width: 2.75rem;
     height: 2.75rem;
     margin: 0 0.75rem;
+    padding: 0;
     border: 0;
     border-radius: 999px;
     color: #fff;
     background: rgb(255 255 255 / 12%);
-    font-size: 1.5rem;
-    line-height: 1;
     cursor: pointer;
+    place-items: center;
+  }
+
+  .image-lightbox__step:hover:not([disabled]),
+  .image-lightbox__step:focus-visible {
+    background: rgb(255 255 255 / 24%);
+  }
+
+  /* 아이콘은 모두 같은 규격의 선 아이콘. 상자 한가운데 정확히 놓이도록 블록으로 둔다. */
+  .image-lightbox :is(.image-lightbox__toolbar, .image-lightbox__step) svg {
+    display: block;
+    width: 1.15rem;
+    height: 1.15rem;
+    fill: none;
+    stroke: currentcolor;
+    stroke-width: 1.75;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .image-lightbox__step svg {
+    width: 1.4rem;
+    height: 1.4rem;
   }
 
   .image-lightbox__step[disabled] {
@@ -124,6 +158,10 @@
 
   .image-lightbox__stage[data-zoomed='true'] {
     cursor: grab;
+  }
+
+  .image-lightbox__stage:not([data-zoomed='true']) {
+    cursor: zoom-out;
   }
 
   .image-lightbox__img {
@@ -156,13 +194,18 @@
     word-break: keep-all;
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    .image-lightbox__img {
-      transition: none;
-    }
-  }
-
   @media (max-width: 720px) {
+    /* 화살표가 그리드에서 빠지므로 스테이지가 남은 한 칸으로 몰리지 않게 전폭을 준다. */
+    .image-lightbox__stage {
+      grid-column: 1 / -1;
+    }
+
+    .image-lightbox__caption {
+      position: relative;
+      z-index: 2;
+      padding-inline: 4.5rem;
+    }
+
     .image-lightbox__step {
       position: fixed;
       bottom: 1.25rem;

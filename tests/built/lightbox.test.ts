@@ -34,7 +34,6 @@ describe('image lightbox', () => {
       'data-lightbox-zoom-in',
       'data-lightbox-zoom-out',
       'data-lightbox-open',
-      'data-lightbox-download',
     ]) {
       expect(
         findAll(dialog, (element) => attr(element, hook) !== undefined),

@@ -74,7 +74,7 @@
     animation: page-loader-pulse 1.2s ease-in-out infinite;
   }
 
-  body > :not([data-page-loader]):not(.site-frame) {
+  body > :not([data-page-loader]):not(.site-frame):not(dialog) {
     animation: page-content-reveal 420ms ease both;
   }
 
@@ -83,7 +83,7 @@
   }
 
   html.page-loading .page-loader { display: grid; }
-  html.page-loading body > :not([data-page-loader]):not(.site-frame),
+  html.page-loading body > :not([data-page-loader]):not(.site-frame):not(dialog),
   html.page-loading .site-content { opacity: 0; }
 
   html.page-ready .page-loader {
@@ -93,7 +93,7 @@
     transition: opacity 420ms ease, visibility 420ms ease;
   }
 
-  html.page-ready body > :not([data-page-loader]):not(.site-frame),
+  html.page-ready body > :not([data-page-loader]):not(.site-frame):not(dialog),
   html.page-ready .site-content {
     animation: page-content-reveal 420ms ease both;
   }
@@ -109,9 +109,9 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    body > :not([data-page-loader]):not(.site-frame),
+    body > :not([data-page-loader]):not(.site-frame):not(dialog),
     .site-content,
-    html.page-ready body > :not([data-page-loader]):not(.site-frame),
+    html.page-ready body > :not([data-page-loader]):not(.site-frame):not(dialog),
     html.page-ready .site-content {
       animation-duration: 240ms;
       animation-timing-function: ease-out;

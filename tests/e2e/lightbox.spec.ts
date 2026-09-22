@@ -146,3 +146,65 @@ test('a pinch gesture zooms', async ({ page }) => {
 
   await expect.poll(async () => (await scaleOf(page)).scale).toBeGreaterThan(1.5);
 });
+
+test('opens at full strength, with no page-reveal animation on the dialog', async ({ page }) => {
+  await page.goto(POST);
+  await page.locator('.article__content img[data-zoomable]').first().click();
+  await expect(page.locator('dialog.image-lightbox')).toBeVisible();
+
+  // PageLoader fades every direct child of <body> in. The dialog is one, so
+  // without an explicit exclusion it opened at opacity 0 and the page showed
+  // through the backdrop for 420ms. Assert on the running animation, not on a
+  // settled opacity — the fade finishes by itself and would pass a late check.
+  const state = await page.evaluate(() => {
+    const dialog = document.querySelector('dialog.image-lightbox')!;
+    return {
+      animations: document.getAnimations().filter((animation) => {
+        const effect = animation.effect;
+        return effect instanceof KeyframeEffect && effect.target === dialog;
+      }).length,
+      opacity: getComputedStyle(dialog).opacity,
+    };
+  });
+
+  expect(state.animations).toBe(0);
+  expect(state.opacity).toBe('1');
+});
+
+test('clicking the dark area beside the image closes it, but panning does not', async ({ page }) => {
+  await page.goto(POST);
+  const dialog = page.locator('dialog.image-lightbox');
+  const stage = page.locator('[data-lightbox-stage]');
+
+  await page.locator('.article__content img[data-zoomable]').first().click();
+  await expect(dialog).toBeVisible();
+
+  // The stage fills the grid cell, so the dark margin around the image is the
+  // stage rather than the dialog. A plain click there has to close the viewer.
+  // Closing is deferred briefly so a double-click can cancel it; toBeHidden retries.
+  const box = (await stage.boundingBox())!;
+  await page.mouse.click(box.x + 20, box.y + box.height / 2);
+  await expect(dialog).toBeHidden();
+
+  // A drag that ends on the stage also emits a click; that one must not close.
+  await page.locator('.article__content img[data-zoomable]').first().click();
+  await expect(dialog).toBeVisible();
+  const zoomed = (await stage.boundingBox())!;
+  await page.mouse.move(zoomed.x + zoomed.width / 2, zoomed.y + zoomed.height / 2);
+  await page.mouse.wheel(0, -1000);
+  await expect.poll(async () => (await scaleOf(page)).scale).toBeGreaterThan(2);
+  await page.mouse.down();
+  await page.mouse.move(zoomed.x + zoomed.width / 2 - 120, zoomed.y + zoomed.height / 2, { steps: 8 });
+  await page.mouse.up();
+  await expect(dialog).toBeVisible();
+});
+
+test('the toolbar offers zoom, open-original and close, and no download', async ({ page }) => {
+  await page.goto(POST);
+  await page.locator('.article__content img[data-zoomable]').first().click();
+  await expect(page.locator('dialog.image-lightbox')).toBeVisible();
+
+  await expect(page.locator('.image-lightbox__toolbar button, .image-lightbox__toolbar a')).toHaveCount(4);
+  await expect(page.locator('[data-lightbox-download]')).toHaveCount(0);
+  await expect(page.locator('[data-lightbox-open]')).toHaveAttribute('target', '_blank');
+});
