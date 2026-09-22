@@ -19,3 +19,8 @@ COPILOT.md
 .windsurfrules
 .codex/
 **/.DS_Store
+
+# 편집기 스왑·백업 파일
+*.swp
+*.swo
+*~
