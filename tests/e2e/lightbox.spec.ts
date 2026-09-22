@@ -208,3 +208,65 @@ test('the toolbar offers zoom, open-original and close, and no download', async 
   await expect(page.locator('[data-lightbox-download]')).toHaveCount(0);
   await expect(page.locator('[data-lightbox-open]')).toHaveAttribute('target', '_blank');
 });
+
+test('a horizontal swipe at fitted scale moves through the group', async ({ page }) => {
+  await page.goto(FOLIO);
+  const screens = page.locator('.work-doc__shots[data-lightbox-group]').last();
+  await screens.locator('img').first().click();
+  await expect(page.locator('dialog.image-lightbox')).toBeVisible();
+  await expect(page.locator('[data-lightbox-counter]')).toHaveText(/^1 \//);
+
+  const stage = page.locator('[data-lightbox-stage]');
+
+  // Swipes are only read at the fitted size, and only past SWIPE_DISTANCE (60px).
+  // Chromium refuses setPointerCapture for fabricated pointerIds, so the stub
+  // from the pinch test applies here too.
+  const swipe = (distance: number) =>
+    stage.evaluate((node, dx) => {
+      const box = node.getBoundingClientRect();
+      const y = box.top + box.height / 2;
+      const from = box.left + box.width / 2;
+      (node as HTMLElement).setPointerCapture = () => {};
+      const send = (type: string, x: number) =>
+        node.dispatchEvent(
+          new PointerEvent(type, { pointerId: 1, pointerType: 'touch', clientX: x, clientY: y, bubbles: true }),
+        );
+      send('pointerdown', from);
+      for (let step = 1; step <= 4; step++) send('pointermove', from + (dx * step) / 4);
+      send('pointerup', from + dx);
+    }, distance);
+
+  await swipe(-160);
+  await expect(page.locator('[data-lightbox-counter]')).toHaveText(/^2 \//);
+
+  await swipe(160);
+  await expect(page.locator('[data-lightbox-counter]')).toHaveText(/^1 \//);
+
+  // A drag shorter than the threshold must not navigate.
+  await swipe(-30);
+  await expect(page.locator('[data-lightbox-counter]')).toHaveText(/^1 \//);
+
+  // A long path that ends near where it began is a scribble, not a swipe. This
+  // clears the accumulated-distance guard, so only the start-to-end check can
+  // reject it — without that check the viewer would jump on any idle fidget.
+  await stage.evaluate((node) => {
+    const box = node.getBoundingClientRect();
+    const y = box.top + box.height / 2;
+    const from = box.left + box.width / 2;
+    (node as HTMLElement).setPointerCapture = () => {};
+    const send = (type: string, x: number) =>
+      node.dispatchEvent(
+        new PointerEvent(type, { pointerId: 1, pointerType: 'touch', clientX: x, clientY: y, bubbles: true }),
+      );
+    send('pointerdown', from);
+    for (const offset of [-50, 0, -50, 0, -50, -10]) send('pointermove', from + offset);
+    send('pointerup', from - 10);
+  });
+  await expect(page.locator('[data-lightbox-counter]')).toHaveText(/^1 \//);
+});
+
+test('the splash wordmark is decorative and never opens', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('.book-splash__title-glyph')).toBeVisible();
+  await expect(page.locator('img[data-zoomable]')).toHaveCount(0);
+});
