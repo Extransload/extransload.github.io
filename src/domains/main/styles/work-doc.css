@@ -280,30 +280,38 @@
 /* 구현 */
 
 .work-build {
+  --work-build-indent: 1.4rem;
+
   margin: 0;
-  padding: 0 0 0 1.4rem;
+  padding: 0 0 0 var(--work-build-indent);
   border-left: 1px solid var(--doc-line);
   list-style: none;
 }
 
 .work-build > li {
-  position: relative;
   padding-bottom: 1.5rem;
+}
+
+.work-build > li > h4 {
+  position: relative;
 }
 
 .work-build > li:last-child {
   padding-bottom: 0;
 }
 
-.work-build > li::before {
+.work-build > li > h4::before {
+  /* 세로선 위에 정확히 앉히고 제목 줄 한가운데에 맞춘다. rotate 는 배치 뒤에
+     적용되므로 translate 로 먼저 중심을 잡아야 회전해도 중심이 유지된다. */
   position: absolute;
-  top: 0.55rem;
-  left: -1.78rem;
+  top: 50%;
+  left: calc(-1 * (var(--work-build-indent) + 1px));
   width: 0.45rem;
   height: 0.45rem;
   border: 1px solid color-mix(in srgb, var(--doc-acc) 70%, var(--doc-line));
   background: color-mix(in srgb, var(--doc-acc) 22%, var(--doc-bg));
   content: '';
+  translate: -50% -50%;
   rotate: 45deg;
 }
 
