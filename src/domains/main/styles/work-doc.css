@@ -525,6 +525,46 @@
   aspect-ratio: 1;
 }
 
+.work-doc__shots figure[data-kind='video'] {
+  grid-column: span 6;
+}
+
+.work-doc__shots figure[data-kind='video'] img {
+  aspect-ratio: 16 / 9;
+}
+
+/* 영상 썸네일: 링크로 감싸고 재생 배지를 얹는다 */
+
+.work-doc__shot-link {
+  position: relative;
+  display: block;
+  color: inherit;
+}
+
+.work-doc__play {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  display: grid;
+  place-items: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  translate: -50% -50%;
+  border-radius: 999px;
+  color: #fff;
+  background: rgb(0 0 0 / 58%);
+  box-shadow: 0 0 0 2px rgb(255 255 255 / 70%);
+  transition: transform 160ms ease;
+}
+
+.work-doc__play svg {
+  margin-left: 0.15rem;
+}
+
+.work-doc__shot-link:hover .work-doc__play,
+.work-doc__shot-link:focus-visible .work-doc__play {
+  transform: scale(1.08);
+}
+
 .work-doc__shots figcaption {
   margin-top: 0.7rem;
   color: var(--doc-muted);
@@ -536,7 +576,8 @@
 
 @media (max-width: 720px) {
   .work-doc__shots figure[data-kind='wide'],
-  .work-doc__shots figure[data-kind='card'] {
+  .work-doc__shots figure[data-kind='card'],
+  .work-doc__shots figure[data-kind='video'] {
     grid-column: span 12;
   }
 

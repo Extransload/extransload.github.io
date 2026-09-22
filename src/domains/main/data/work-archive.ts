@@ -9,11 +9,13 @@ export interface WorkLink {
 }
 
 /** Frame each screen is cut to: wide 16:10, screen 9:16, card 1:1. */
-export type ShotKind = 'wide' | 'screen' | 'card';
+export type ShotKind = 'wide' | 'screen' | 'card' | 'video';
 
 export interface WorkShot {
   src: string;
   kind: ShotKind;
+  /** Set when the shot opens a video; the image is its poster. */
+  href?: string;
   alt: string;
   caption: string;
 }
@@ -794,11 +796,7 @@ export const works: WorkProject[] = [
       { label: '배포 후 5일', value: '사용자 410명' },
     ],
     stack: 'Python · FastAPI · OpenCV · Keras · Java · STOMP · WebSocket · React · OpenVidu · Docker · Jenkins',
-    links: [
-      { label: 'github.com/TEAM-DGRR', href: 'https://github.com/TEAM-DGRR' },
-      { label: 'UCC 1차', href: 'https://www.youtube.com/watch?v=PGguXQPKS0c' },
-      { label: 'UCC 2차', href: 'https://www.youtube.com/watch?v=zh_8nalaMYE' },
-    ],
+    links: [{ label: 'github.com/TEAM-DGRR', href: 'https://github.com/TEAM-DGRR' }],
     gallery: [
       {
         src: '/images/works/degureure-architecture.webp',
@@ -871,6 +869,20 @@ export const works: WorkProject[] = [
         kind: 'wide',
         alt: '배포 후 사용자 추이 그래프. 총 사용자 410명, 새 사용자 409명, 이벤트 1만 건으로 표시되어 있다.',
         caption: '1차 배포 후 5일간 사용자 410명, 이벤트 1만 건',
+      },
+      {
+        src: '/images/works/degureure-ucc-1.webp',
+        kind: 'video',
+        href: 'https://www.youtube.com/watch?v=PGguXQPKS0c',
+        alt: '1차 UCC 썸네일. "내게 웃음은 사치일 뿐! 역삼동 포커페이스 달인" 문구가 적힌 홍보 영상 표지.',
+        caption: 'UCC 1차 · 홍보 영상 ↗',
+      },
+      {
+        src: '/images/works/degureure-ucc-2.webp',
+        kind: 'video',
+        href: 'https://www.youtube.com/watch?v=zh_8nalaMYE',
+        alt: '2차 UCC 썸네일. 파란 배경에 데구르르 로고만 놓여 있다.',
+        caption: 'UCC 2차 · 시연 영상 ↗',
       },
     ],
     milestones: [],

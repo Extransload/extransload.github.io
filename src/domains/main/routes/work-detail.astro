@@ -60,7 +60,16 @@ const milestoneFor = (n: string) => project.milestones.find((m) => m.after === n
           <section class="work-doc__shots" aria-label={`${project.title} 화면`}>
             {project.gallery.map((shot) => (
               <figure data-kind={shot.kind}>
-                <img src={shot.src} alt={shot.alt} loading="lazy" decoding="async" />
+                {shot.href ? (
+                  <a class="work-doc__shot-link" href={shot.href} target="_blank" rel="noreferrer">
+                    <img src={shot.src} alt={shot.alt} loading="lazy" decoding="async" />
+                    <span class="work-doc__play" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" width="22" height="22"><path d="M8 5v14l11-7z" fill="currentColor" /></svg>
+                    </span>
+                  </a>
+                ) : (
+                  <img src={shot.src} alt={shot.alt} loading="lazy" decoding="async" />
+                )}
                 <figcaption>{shot.caption}</figcaption>
               </figure>
             ))}
