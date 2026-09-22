@@ -34,6 +34,7 @@ const galleryGroups = [
         <b>이 문서</b>
         {chapters.map((chapter) => (
           <a href={`#ch-${chapter.n}`} data-rail-link={`ch-${chapter.n}`}>
+            <i>{chapter.n}</i>
             <span>{chapter.title}</span>
           </a>
         ))}

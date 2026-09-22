@@ -95,7 +95,9 @@
 }
 
 .work-doc__rail a[data-rail-link] {
-  display: block;
+  display: grid;
+  grid-template-columns: 1.35rem 1fr;
+  align-items: baseline;
   padding: 0.4rem 0 0.4rem 0.85rem;
   border-left: 2px solid var(--doc-line);
   color: var(--doc-muted);
@@ -104,6 +106,18 @@
   transition:
     color 160ms ease,
     border-color 160ms ease;
+}
+
+/* 번호는 본문 장 제목과 같은 표기. 읽는 자리를 짚어 주되 제목을 밀지 않는다. */
+.work-doc__rail a[data-rail-link] i {
+  color: color-mix(in srgb, var(--doc-acc) 55%, var(--doc-muted));
+  font-family: var(--font-mono);
+  font-size: 0.78em;
+  font-style: normal;
+}
+
+.work-doc__rail a[data-rail-link][aria-current='true'] i {
+  color: var(--doc-acc);
 }
 
 .work-doc__rail a[data-rail-link]:hover {
