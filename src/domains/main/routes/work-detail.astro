@@ -87,8 +87,16 @@ const galleryGroups = [
           </>
         ))}
 
-        {chapters.map((chapter) => (
+        {chapters.map((chapter, order) => (
           <>
+            {order > 0 && (
+              <div class="work-doc__divider" aria-hidden="true">
+                <span></span>
+                <i></i>
+                <span></span>
+              </div>
+            )}
+
             {/* after 는 연대순 기준 '이 장 다음'. 최신순 페이지에서는 그 장 위에 놓인다. */}
             {milestoneFor(chapter.n) && (
               <aside class="work-milestone">

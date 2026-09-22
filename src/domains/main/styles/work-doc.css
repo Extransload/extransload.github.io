@@ -466,6 +466,53 @@
 
 /* 화면 */
 
+/* 장 구분자: 가운데 마름모에서 양쪽으로 실선이 뻗다가 사라진다.
+   스플래시 챕터의 ornament 와 같은 어휘를 문서 폭에 맞춰 늘린 것. */
+
+.work-doc__divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin: clamp(3rem, 7vw, 4.5rem) 0;
+}
+
+.work-doc__divider span {
+  display: block;
+  flex: 1 1 0;
+  height: 1px;
+  /* 끝에서 완전히 사라지도록 투명까지 끌고 간다. */
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--doc-line) 70%, transparent) 38%,
+    var(--doc-line) 72%,
+    color-mix(in srgb, var(--doc-acc) 55%, var(--doc-line))
+  );
+}
+
+.work-doc__divider span:last-child {
+  background: linear-gradient(
+    270deg,
+    transparent,
+    color-mix(in srgb, var(--doc-line) 70%, transparent) 38%,
+    var(--doc-line) 72%,
+    color-mix(in srgb, var(--doc-acc) 55%, var(--doc-line))
+  );
+}
+
+/* 가운데 보석: 작은 마름모에 옅은 후광을 둘러 실선과 구분되게 한다. */
+.work-doc__divider i {
+  display: block;
+  width: 0.5rem;
+  height: 0.5rem;
+  flex: none;
+  border: 1px solid color-mix(in srgb, var(--doc-acc) 70%, var(--doc-line));
+  background: color-mix(in srgb, var(--doc-acc) 22%, var(--doc-bg));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--doc-acc) 8%, transparent);
+  rotate: 45deg;
+}
+
 /* 갤러리: 영상·화면 그룹마다 라벨을 두고, 종류별 고정 프레임으로 12열 그리드에 배치 */
 
 .work-doc__shots-label {
