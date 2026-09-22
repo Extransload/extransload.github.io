@@ -676,7 +676,7 @@ export const works: WorkProject[] = [
       { label: '역할', value: '설계 주도' },
       { label: '배포 후 10일', value: '새 사용자 165명' },
     ],
-    stack: 'Python · FastAPI · APScheduler · Hadoop MapReduce · FastText · Mecab · React',
+    stack: 'Python · FastAPI · APScheduler · Hadoop MapReduce · FastText · Mecab · Java · React',
     links: [{ label: 'github.com/team-hca/danchu', href: 'https://github.com/team-hca/danchu' }],
     gallery: [
       {
