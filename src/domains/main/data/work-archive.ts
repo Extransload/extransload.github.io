@@ -785,7 +785,7 @@ export const works: WorkProject[] = [
       { label: '역할', value: '백엔드 · 프론트 · 인프라' },
       { label: '배포 후 5일', value: '사용자 410명' },
     ],
-    stack: 'Python · FastAPI · Java · STOMP · WebSocket · React · OpenVidu · Docker · Jenkins',
+    stack: 'Python · FastAPI · OpenCV · Keras · Java · STOMP · WebSocket · React · OpenVidu · Docker · Jenkins',
     links: [
       { label: 'github.com/TEAM-DGRR', href: 'https://github.com/TEAM-DGRR' },
       { label: 'UCC 1차', href: 'https://www.youtube.com/watch?v=PGguXQPKS0c' },
@@ -851,14 +851,16 @@ export const works: WorkProject[] = [
           {
             head: '모델 서버 구성',
             body: [
-              '얼굴 인식과 표정 분석 모델을 FastAPI 서버로 구축해 서빙',
-              '클라이언트에서 직접 이미지를 받는 웹소켓 경로 추가',
+              'Haar cascade로 얼굴을 찾고, 잘라낸 64×64 흑백 영역을 사전학습된 7종 표정 분류 모델(FER 계열, Keras)에 넣어 확률을 얻는 FastAPI 서버 구성',
+              '최상위 클래스가 Happy이고 확률이 0.5를 넘는 프레임을 웃음으로 판정. 얼굴이 검출되지 않으면 별도 상태로 반환해 진행 로직이 구분하도록 처리',
+              '카메라 프레임을 주기적으로 올려 판정을 바로 확인하는 HTTP 업로드 경로와 테스트 화면 구성',
             ],
           },
           {
             head: '실시간 통신',
             body: [
-              'Java 메인 서버와 Python 서버 사이의 이미지 전송을 웹소켓으로 구현',
+              'Python 서버가 STOMP over WebSocket 클라이언트로 Java 메인 서버에 접속해 프레임을 구독하고, 판정 결과를 같은 연결로 되돌려 보내는 구조',
+              '모델 서버는 들어오는 연결을 열지 않고 메인 서버 하나만 외부에 노출',
               'STOMP로 대결 진행 상황을 양쪽에 실시간 전달',
             ],
           },
