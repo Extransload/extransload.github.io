@@ -799,6 +799,20 @@ export const works: WorkProject[] = [
     links: [{ label: 'github.com/TEAM-DGRR', href: 'https://github.com/TEAM-DGRR' }],
     gallery: [
       {
+        src: '/images/works/degureure-ucc-1.webp',
+        kind: 'video',
+        href: 'https://www.youtube.com/watch?v=PGguXQPKS0c',
+        alt: '1차 UCC 썸네일. "내게 웃음은 사치일 뿐! 역삼동 포커페이스 달인" 문구가 적힌 홍보 영상 표지.',
+        caption: 'UCC 1차 · 홍보 영상 ↗',
+      },
+      {
+        src: '/images/works/degureure-ucc-2.webp',
+        kind: 'video',
+        href: 'https://www.youtube.com/watch?v=zh_8nalaMYE',
+        alt: '2차 UCC 썸네일. 파란 배경에 데구르르 로고만 놓여 있다.',
+        caption: 'UCC 2차 · 시연 영상 ↗',
+      },
+      {
         src: '/images/works/degureure-architecture.webp',
         kind: 'wide',
         alt: '데구르르 서비스 아키텍처 다이어그램. 사용자에서 Nginx와 Next를 거쳐 Spring 메인 서버로, 다시 Redis, MySQL, OpenVidu, FastAPI 모델 서버로 연결된다.',
@@ -869,20 +883,6 @@ export const works: WorkProject[] = [
         kind: 'wide',
         alt: '배포 후 사용자 추이 그래프. 총 사용자 410명, 새 사용자 409명, 이벤트 1만 건으로 표시되어 있다.',
         caption: '1차 배포 후 5일간 사용자 410명, 이벤트 1만 건',
-      },
-      {
-        src: '/images/works/degureure-ucc-1.webp',
-        kind: 'video',
-        href: 'https://www.youtube.com/watch?v=PGguXQPKS0c',
-        alt: '1차 UCC 썸네일. "내게 웃음은 사치일 뿐! 역삼동 포커페이스 달인" 문구가 적힌 홍보 영상 표지.',
-        caption: 'UCC 1차 · 홍보 영상 ↗',
-      },
-      {
-        src: '/images/works/degureure-ucc-2.webp',
-        kind: 'video',
-        href: 'https://www.youtube.com/watch?v=zh_8nalaMYE',
-        alt: '2차 UCC 썸네일. 파란 배경에 데구르르 로고만 놓여 있다.',
-        caption: 'UCC 2차 · 시연 영상 ↗',
       },
     ],
     milestones: [],
