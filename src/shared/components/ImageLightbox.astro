@@ -1,0 +1,180 @@
+---
+---
+
+<dialog class="image-lightbox" aria-label="이미지 크게 보기">
+  <div class="image-lightbox__toolbar">
+    <span class="image-lightbox__counter" data-lightbox-counter aria-live="polite" hidden></span>
+    <button type="button" data-lightbox-zoom-out aria-label="축소">−</button>
+    <button type="button" data-lightbox-zoom-in aria-label="확대">+</button>
+    <a data-lightbox-open target="_blank" rel="noreferrer" aria-label="원본 새 탭에서 열기">↗</a>
+    <a data-lightbox-download download aria-label="내려받기">⤓</a>
+    <button type="button" data-lightbox-close aria-label="닫기">×</button>
+  </div>
+
+  <button type="button" class="image-lightbox__step" data-lightbox-prev aria-label="이전 이미지" hidden>‹</button>
+  <div class="image-lightbox__stage" data-lightbox-stage>
+    <img class="image-lightbox__img" alt="" decoding="async" />
+    <p class="image-lightbox__error">이미지를 불러오지 못했습니다.</p>
+  </div>
+  <button type="button" class="image-lightbox__step" data-lightbox-next aria-label="다음 이미지" hidden>›</button>
+
+  <p class="image-lightbox__caption" data-lightbox-caption hidden></p>
+</dialog>
+
+<script>
+  import { initializeLightbox } from '../scripts/lightbox';
+
+  initializeLightbox();
+</script>
+
+<style is:global>
+  img[data-zoomable] {
+    cursor: zoom-in;
+  }
+
+  body.lightbox-open {
+    overflow: hidden;
+  }
+
+  dialog.image-lightbox {
+    display: none;
+    width: 100vw;
+    max-width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  dialog.image-lightbox[open] {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    grid-template-rows: auto 1fr auto;
+    align-items: center;
+  }
+
+  dialog.image-lightbox::backdrop {
+    background: rgb(0 0 0 / 88%);
+  }
+
+  .image-lightbox__toolbar {
+    display: flex;
+    grid-column: 1 / -1;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    color: #fff;
+  }
+
+  .image-lightbox__counter {
+    margin-right: auto;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    opacity: 0.85;
+  }
+
+  .image-lightbox__toolbar :is(button, a) {
+    display: grid;
+    width: 2.25rem;
+    height: 2.25rem;
+    border: 0;
+    border-radius: 999px;
+    color: inherit;
+    background: rgb(255 255 255 / 12%);
+    font-size: 1.1rem;
+    line-height: 1;
+    text-decoration: none;
+    cursor: pointer;
+    place-items: center;
+  }
+
+  .image-lightbox__toolbar :is(button, a):hover,
+  .image-lightbox__toolbar :is(button, a):focus-visible {
+    background: rgb(255 255 255 / 24%);
+  }
+
+  .image-lightbox__step {
+    width: 2.75rem;
+    height: 2.75rem;
+    margin: 0 0.75rem;
+    border: 0;
+    border-radius: 999px;
+    color: #fff;
+    background: rgb(255 255 255 / 12%);
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .image-lightbox__step[disabled] {
+    opacity: 0.35;
+    cursor: default;
+  }
+
+  .image-lightbox__stage {
+    display: grid;
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+    touch-action: none;
+    place-items: center;
+  }
+
+  .image-lightbox__stage[data-zoomed='true'] {
+    cursor: grab;
+  }
+
+  .image-lightbox__img {
+    max-width: none;
+    transform-origin: center;
+    will-change: transform;
+  }
+
+  .image-lightbox__error {
+    display: none;
+    color: #fff;
+  }
+
+  dialog.image-lightbox[data-error='true'] .image-lightbox__img {
+    display: none;
+  }
+
+  dialog.image-lightbox[data-error='true'] .image-lightbox__error {
+    display: block;
+  }
+
+  .image-lightbox__caption {
+    grid-column: 1 / -1;
+    margin: 0;
+    padding: 0.85rem 1.25rem 1.5rem;
+    color: rgb(255 255 255 / 82%);
+    font-size: 0.92rem;
+    line-height: 1.6;
+    text-align: center;
+    word-break: keep-all;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .image-lightbox__img {
+      transition: none;
+    }
+  }
+
+  @media (max-width: 720px) {
+    .image-lightbox__step {
+      position: fixed;
+      bottom: 1.25rem;
+      z-index: 1;
+    }
+
+    [data-lightbox-prev] {
+      left: 1rem;
+    }
+
+    [data-lightbox-next] {
+      right: 1rem;
+    }
+  }
+</style>
