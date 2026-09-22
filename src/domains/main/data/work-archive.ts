@@ -913,6 +913,13 @@ export const works: WorkProject[] = [
     links: [{ label: 'github.com/team-hca/danchu', href: 'https://github.com/team-hca/danchu' }],
     gallery: [
       {
+        src: '/images/works/danchu-ucc.webp',
+        kind: 'video',
+        href: 'https://www.youtube.com/watch?v=MwKHLo3xA9U',
+        alt: '단추 UCC 썸네일. 발표자 옆에 2023년 10월 4일의 단추 문제 화면이 떠 있다.',
+        caption: 'UCC · 홍보 및 시연 영상 ↗',
+      },
+      {
         src: '/images/works/danchu-play.webp',
         kind: 'card',
         alt: '오늘의 단추 게임 화면. 뉴스 제목에서 핵심 단어가 빈칸으로 가려져 있고 아래에 추측 입력창과 시도 기록이 있다.',
