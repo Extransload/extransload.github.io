@@ -482,26 +482,47 @@
 
 /* 화면 */
 
+/* 갤러리: 종류별 고정 프레임으로 12열 그리드에 배치 */
+
 .work-doc__shots {
   display: grid;
-  gap: clamp(1.25rem, 3vw, 2rem);
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: clamp(1rem, 2.5vw, 1.5rem);
+  align-items: start;
   margin: clamp(2rem, 5vw, 3rem) 0 0;
 }
 
 .work-doc__shots figure {
+  grid-column: span 12;
+  min-width: 0;
   margin: 0;
+}
+
+.work-doc__shots figure[data-kind='wide'],
+.work-doc__shots figure[data-kind='card'] {
+  grid-column: span 6;
+}
+
+.work-doc__shots figure[data-kind='screen'] {
+  grid-column: span 3;
 }
 
 .work-doc__shots img {
   display: block;
-  width: auto;
-  max-width: 100%;
-  /* 세로로 긴 화면 캡처가 전폭으로 늘어나 뭉개지지 않도록 높이로 제한 */
-  max-height: 30rem;
+  width: 100%;
   height: auto;
-  margin-inline: auto;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
   border: 1px solid var(--doc-line);
   border-radius: 6px;
+}
+
+.work-doc__shots figure[data-kind='screen'] img {
+  aspect-ratio: 9 / 16;
+}
+
+.work-doc__shots figure[data-kind='card'] img {
+  aspect-ratio: 1;
 }
 
 .work-doc__shots figcaption {
@@ -511,6 +532,17 @@
   line-height: 1.7;
   text-align: center;
   word-break: keep-all;
+}
+
+@media (max-width: 720px) {
+  .work-doc__shots figure[data-kind='wide'],
+  .work-doc__shots figure[data-kind='card'] {
+    grid-column: span 12;
+  }
+
+  .work-doc__shots figure[data-kind='screen'] {
+    grid-column: span 6;
+  }
 }
 
 /* 특허 */

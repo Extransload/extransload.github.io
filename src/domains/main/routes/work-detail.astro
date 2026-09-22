@@ -59,7 +59,7 @@ const milestoneFor = (n: string) => project.milestones.find((m) => m.after === n
         {project.gallery.length > 0 && (
           <section class="work-doc__shots" aria-label={`${project.title} 화면`}>
             {project.gallery.map((shot) => (
-              <figure>
+              <figure data-kind={shot.kind}>
                 <img src={shot.src} alt={shot.alt} loading="lazy" decoding="async" />
                 <figcaption>{shot.caption}</figcaption>
               </figure>

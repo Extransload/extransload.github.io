@@ -8,8 +8,12 @@ export interface WorkLink {
   href: string;
 }
 
+/** Frame each screen is cut to: wide 16:10, screen 9:16, card 1:1. */
+export type ShotKind = 'wide' | 'screen' | 'card';
+
 export interface WorkShot {
   src: string;
+  kind: ShotKind;
   alt: string;
   caption: string;
 }
@@ -681,21 +685,25 @@ export const works: WorkProject[] = [
     gallery: [
       {
         src: '/images/works/danchu-play.webp',
+        kind: 'card',
         alt: '오늘의 단추 게임 화면. 뉴스 제목에서 핵심 단어가 빈칸으로 가려져 있고 아래에 추측 입력창과 시도 기록이 있다.',
         caption: '그날의 뉴스 제목에서 핵심 단어를 가리고, 추측할 때마다 근접도를 기록으로 표시',
       },
       {
         src: '/images/works/danchu-result.webp',
+        kind: 'card',
         alt: '문제를 모두 맞혔을 때 나타나는 축하 화면. 시도 횟수와 걸린 시간, 결과 복사와 관련 뉴스 버튼이 있다.',
         caption: '정답 이후 관련 뉴스로 연결해 게임이 끝나는 자리에서 시사로 이동',
       },
       {
         src: '/images/works/danchu-scheduler.webp',
+        kind: 'wide',
         alt: '수집 스케줄러를 제어하는 API 목록 화면. scheduling과 collection 그룹으로 나뉜 엔드포인트가 나열되어 있다.',
         caption: '수집 파이프라인을 직접 제어할 수 있도록 스케줄러 API를 별도 구성',
       },
       {
         src: '/images/works/danchu-users.webp',
+        kind: 'wide',
         alt: '배포 후 사용자 추이 그래프. 새 사용자 165명, 재사용자 31명으로 표시되어 있다.',
         caption: '배포 후 약 10일간 새 사용자 165명, 재사용자 31명',
       },
@@ -794,61 +802,73 @@ export const works: WorkProject[] = [
     gallery: [
       {
         src: '/images/works/degureure-architecture.webp',
+        kind: 'wide',
         alt: '데구르르 서비스 아키텍처 다이어그램. 사용자에서 Nginx와 Next를 거쳐 Spring 메인 서버로, 다시 Redis, MySQL, OpenVidu, FastAPI 모델 서버로 연결된다.',
         caption: '서비스 아키텍처. 오른쪽 아래 FastAPI가 얼굴 인식과 표정 분석을 담당한 별도 서버',
       },
       {
         src: '/images/works/degureure-flow.webp',
+        kind: 'wide',
         alt: '게임 진행 흐름도. 공격과 수비 표시에서 시작해 웃음 게이지와 얼굴 인식 여부로 갈라진다.',
         caption: '공격과 수비를 번갈아 두고, 웃음 게이지와 얼굴 인식 결과로 판정이 분기',
       },
       {
         src: '/images/works/degureure-login.webp',
+        kind: 'screen',
         alt: '데구르르 로그인 화면. 파란 배경에 로고와 카카오 로그인 버튼 하나만 놓여 있다.',
         caption: '카카오 로그인 하나로 가입 절차 없이 진입',
       },
       {
         src: '/images/works/degureure-lobby.webp',
+        kind: 'screen',
         alt: '데구르르 로비 화면. 방 만들기, 방 찾기, 랜덤 매칭 세 개의 버튼이 있다.',
         caption: '방 코드 입장과 ELO 기반 랜덤 매칭을 함께 배치',
       },
       {
         src: '/images/works/degureure-waiting.webp',
+        kind: 'screen',
         alt: '랜덤 매칭 대기 화면. 빵 캐릭터가 구르는 아래에 경과 시간과 "게임을 찾는 중입니다" 문구가 있다.',
         caption: '랜덤 매칭 대기 중 경과 시간을 표시해 연결 과정을 드러냄',
       },
       {
         src: '/images/works/degureure-match.webp',
+        kind: 'screen',
         alt: '매칭 성사 화면. 두 참가자의 프로필과 닉네임이 VS 표시를 사이에 두고 위아래로 놓여 있다.',
         caption: '매칭이 성사되면 양쪽의 닉네임과 상태 메시지를 맞붙여 표시',
       },
       {
         src: '/images/works/degureure-round1.webp',
+        kind: 'screen',
         alt: '1라운드 화면. 위쪽 방어 참가자와 아래쪽 공격 참가자의 카메라 사이에 웃음 확률 27% 게이지와 남은 시간 0:23이 표시된다. 얼굴은 모자이크 처리.',
         caption: '1라운드. 방패가 방어, 검이 공격. 가운데 게이지가 현재 웃음 확률',
       },
       {
         src: '/images/works/degureure-round2.webp',
+        kind: 'screen',
         alt: '2라운드 화면. 공수가 바뀌어 위쪽이 공격, 아래쪽 방어 참가자가 입을 가리고 웃음을 참고 있다. 게이지 21%, 남은 시간 0:30. 얼굴은 모자이크 처리.',
         caption: '2라운드는 공수 교대. 방어 쪽이 웃음을 참는 동안 게이지가 움직임',
       },
       {
         src: '/images/works/degureure-result.webp',
+        kind: 'screen',
         alt: '대결 결과 화면. LOSS 표시 아래 레이팅 1443과 17점 하락이 적혀 있고, 티어 진행 막대와 상대 정보가 있다.',
         caption: '대결 직후 레이팅 증감과 티어 진행도를 함께 노출',
       },
       {
         src: '/images/works/degureure-ranking.webp',
+        kind: 'screen',
         alt: '시즌 랭킹 목록. 순위별로 메달, 프로필, 닉네임, 레이팅이 나열되어 있다.',
         caption: '시즌별 랭킹으로 상위권을 확인',
       },
       {
         src: '/images/works/degureure-tiers.webp',
+        kind: 'wide',
         alt: '브론즈·실버·골드 티어 아이콘 세 개. 원형 배지 안에 왕관이 그려져 있다.',
         caption: '레이팅 구간을 브론즈·실버·골드 세 티어로 나눠 표시',
       },
       {
         src: '/images/works/degureure-users.webp',
+        kind: 'wide',
         alt: '배포 후 사용자 추이 그래프. 총 사용자 410명, 새 사용자 409명, 이벤트 1만 건으로 표시되어 있다.',
         caption: '1차 배포 후 5일간 사용자 410명, 이벤트 1만 건',
       },
