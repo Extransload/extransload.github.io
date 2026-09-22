@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { works } from '../../src/domains/main/data/work-archive';
 
 /** Resolves a theme token to the rgb() string the browser computes for it. */
 const themeColor = (page: Page, token: string) =>
@@ -249,8 +250,11 @@ test('works opens a dedicated folio for each project', async ({ page }) => {
 test('folios with captured screens render them without broken images', async ({ page }) => {
   await page.goto('/works/degureure/');
 
+  // Compare against the archive data rather than a literal, so adding a
+  // screen to the folio does not fail the test.
+  const declared = works.find((project) => project.slug === 'degureure')!.gallery.length;
   const shots = page.locator('.work-doc__shots img');
-  await expect(shots).toHaveCount(8);
+  await expect(shots).toHaveCount(declared);
 
   for (const shot of await shots.all()) {
     await expect(shot).toHaveJSProperty('complete', true);

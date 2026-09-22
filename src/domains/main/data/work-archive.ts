@@ -803,14 +803,34 @@ export const works: WorkProject[] = [
         caption: '공격과 수비를 번갈아 두고, 웃음 게이지와 얼굴 인식 결과로 판정이 분기',
       },
       {
+        src: '/images/works/degureure-login.webp',
+        alt: '데구르르 로그인 화면. 파란 배경에 로고와 카카오 로그인 버튼 하나만 놓여 있다.',
+        caption: '카카오 로그인 하나로 가입 절차 없이 진입',
+      },
+      {
         src: '/images/works/degureure-lobby.webp',
         alt: '데구르르 로비 화면. 방 만들기, 방 찾기, 랜덤 매칭 세 개의 버튼이 있다.',
         caption: '방 코드 입장과 ELO 기반 랜덤 매칭을 함께 배치',
       },
       {
+        src: '/images/works/degureure-waiting.webp',
+        alt: '랜덤 매칭 대기 화면. 빵 캐릭터가 구르는 아래에 경과 시간과 "게임을 찾는 중입니다" 문구가 있다.',
+        caption: '랜덤 매칭 대기 중 경과 시간을 표시해 연결 과정을 드러냄',
+      },
+      {
         src: '/images/works/degureure-match.webp',
         alt: '매칭 성사 화면. 두 참가자의 프로필과 닉네임이 VS 표시를 사이에 두고 위아래로 놓여 있다.',
         caption: '매칭이 성사되면 양쪽의 닉네임과 상태 메시지를 맞붙여 표시',
+      },
+      {
+        src: '/images/works/degureure-round1.webp',
+        alt: '1라운드 화면. 위쪽 방어 참가자와 아래쪽 공격 참가자의 카메라 사이에 웃음 확률 27% 게이지와 남은 시간 0:23이 표시된다. 얼굴은 모자이크 처리.',
+        caption: '1라운드. 방패가 방어, 검이 공격. 가운데 게이지가 현재 웃음 확률',
+      },
+      {
+        src: '/images/works/degureure-round2.webp',
+        alt: '2라운드 화면. 공수가 바뀌어 위쪽이 공격, 아래쪽 방어 참가자가 입을 가리고 웃음을 참고 있다. 게이지 21%, 남은 시간 0:30. 얼굴은 모자이크 처리.',
+        caption: '2라운드는 공수 교대. 방어 쪽이 웃음을 참는 동안 게이지가 움직임',
       },
       {
         src: '/images/works/degureure-result.webp',
@@ -824,8 +844,8 @@ export const works: WorkProject[] = [
       },
       {
         src: '/images/works/degureure-tiers.webp',
-        alt: '티어 엠블럼 일곱 개가 나란히 놓인 이미지. 등급이 올라갈수록 장식이 화려해진다.',
-        caption: '레이팅 구간을 티어로 표현해 실력대를 시각적으로 구분',
+        alt: '브론즈·실버·골드 티어 아이콘 세 개. 원형 배지 안에 왕관이 그려져 있다.',
+        caption: '레이팅 구간을 브론즈·실버·골드 세 티어로 나눠 표시',
       },
       {
         src: '/images/works/degureure-users.webp',
