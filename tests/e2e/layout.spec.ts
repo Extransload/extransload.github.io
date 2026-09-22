@@ -209,7 +209,8 @@ test('works presents a scannable contents page for every folio', async ({ page }
 
   const folios = page.locator('.works-index__item');
   await expect(folios).toHaveCount(3);
-  await expect(page.locator('.works-index__name')).toHaveText(['CiteWell', 'DANCHU', '데구르르']);
+  // The contents page follows the archive's own order.
+  await expect(page.locator('.works-index__name')).toHaveText(works.map((project) => project.title));
   await expect(folios.first()).toContainText('2023.12.11 — 현재');
   await expect(page.locator('.works-index__link').first()).toHaveAttribute('href', '/works/citewell/');
 
@@ -241,7 +242,8 @@ test('works opens a dedicated folio for each project', async ({ page }) => {
   await expect(page.locator('.work-doc__rail a[data-rail-link]')).toHaveCount(8);
 
   await page.locator('.work-doc__nav a').last().click();
-  await expect(page).toHaveURL(/\/works\/danchu\/$/);
+  // From the first folio the last nav link is the one that follows it.
+  await expect(page).toHaveURL(new RegExp(`/works/${works[1].slug}/$`));
 
   await page.locator('.work-doc__back').click();
   await expect(page).toHaveURL(/\/works\/$/);
