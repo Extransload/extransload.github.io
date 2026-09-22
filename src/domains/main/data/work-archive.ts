@@ -666,121 +666,9 @@ export const works: WorkProject[] = [
     ],
   },
   {
-    slug: 'danchu',
-    logo: { src: '/images/works/logo-danchu.webp', alt: 'DANCHU 로고' },
-    folio: 'Folio 02',
-    title: 'DANCHU',
-    subtitle: '지난 24시간의 뉴스를 단어 추측 게임으로 바꾸는 서비스',
-    period: '2023.08.21 — 2023.10.06',
-    role: '아키텍처 설계 · 데이터 파이프라인 · 프론트엔드',
-    context: '삼성 청년 SW 아카데미',
-    summary:
-      '시사에 익숙하지 않은 사람도 전날의 주요 뉴스를 접하게 만드는 것이 목표. ' +
-      '뉴스를 모아 단어로 분해하고 그날 가장 많이 언급된 단어를 문제로 출제하는 구조.',
-    metrics: [
-      { label: '기간', value: '7주' },
-      { label: '역할', value: '설계 주도' },
-      { label: '배포 후 10일', value: '새 사용자 165명' },
-    ],
-    stack: 'Python · FastAPI · APScheduler · Hadoop MapReduce · FastText · Mecab · Java · React',
-    links: [{ label: 'github.com/team-hca/danchu', href: 'https://github.com/team-hca/danchu' }],
-    gallery: [
-      {
-        src: '/images/works/danchu-play.webp',
-        kind: 'card',
-        alt: '오늘의 단추 게임 화면. 뉴스 제목에서 핵심 단어가 빈칸으로 가려져 있고 아래에 추측 입력창과 시도 기록이 있다.',
-        caption: '그날의 뉴스 제목에서 핵심 단어를 가리고, 추측할 때마다 근접도를 기록으로 표시',
-      },
-      {
-        src: '/images/works/danchu-result.webp',
-        kind: 'card',
-        alt: '문제를 모두 맞혔을 때 나타나는 축하 화면. 시도 횟수와 걸린 시간, 결과 복사와 관련 뉴스 버튼이 있다.',
-        caption: '정답 이후 관련 뉴스로 연결해 게임이 끝나는 자리에서 시사로 이동',
-      },
-      {
-        src: '/images/works/danchu-scheduler.webp',
-        kind: 'wide',
-        alt: '수집 스케줄러를 제어하는 API 목록 화면. scheduling과 collection 그룹으로 나뉜 엔드포인트가 나열되어 있다.',
-        caption: '수집 파이프라인을 직접 제어할 수 있도록 스케줄러 API를 별도 구성',
-      },
-      {
-        src: '/images/works/danchu-users.webp',
-        kind: 'wide',
-        alt: '배포 후 사용자 추이 그래프. 새 사용자 165명, 재사용자 31명으로 표시되어 있다.',
-        caption: '배포 후 약 10일간 새 사용자 165명, 재사용자 31명',
-      },
-    ],
-    milestones: [],
-    chapters: [
-      {
-        n: '01',
-        period: '2023.08 — 2023.10',
-        title: '뉴스를 문제로 바꾸는 파이프라인',
-        lede:
-          '매일 쏟아지는 기사에서 그날을 대표하는 단어를 뽑아내는 것이 핵심. ' +
-          '사람 손이 닿지 않고 하루 단위로 도는 흐름이어야 서비스로 성립.',
-        requirements: [
-          { label: '자동 수집', value: '매일 지난 24시간의 기사를 사람 개입 없이 수집' },
-          { label: '출제 가능성', value: '추측 게임으로 성립하는 단어를 선정' },
-          { label: '시사 연결', value: '게임 종료 후 실제 기사로 이동할 수 있을 것' },
-        ],
-        build: [
-          {
-            head: '수집 파이프라인',
-            body: [
-              'BeautifulSoup 기반 기사 수집기를 FastAPI 앱으로 구성하고 APScheduler로 24시간 주기 실행',
-              'URL 수집·본문 수집·오류 재시도를 별도 잡으로 나누고, 스케줄 제어와 수동 실행을 외부 API로 노출',
-              '프로젝트 아키텍처 설계와 서비스 진행 흐름 구성 주도',
-            ],
-          },
-          {
-            head: '단어 추출과 집계',
-            decision: true,
-            body: [
-              'Mecab으로 기사 본문에서 명사를 추출하고 고유명사(NNP)는 집계에서 제외',
-              '인명·지명이 상위를 독점하면 추측 게임으로 성립하지 않는다는 판단',
-              '출현 횟수 집계는 특화 과정의 학습 목표인 분산 처리를 적용해 Hadoop MapReduce로 구성. 분할한 텍스트를 WordCount 잡으로 세고 reducer에서 상위 단어를 추림',
-              '하루치 기사는 단일 프로세스로도 충분한 규모임을 인지한 선택. 수집 범위를 기간·매체로 넓힐 때 노드만 늘리면 되는 구조를 우선',
-            ],
-          },
-          {
-            head: '근접도 판정',
-            body: [
-              '수집한 기사로 FastText 임베딩을 직접 학습하고, 새 기사가 쌓일 때마다 이어서 학습해 모델을 갱신',
-              '정답과 유사한 상위 1000개 단어를 미리 계산해 두고, 추측 단어의 유사도와 순위를 근접도로 표시',
-              '고유명사 포함·제외 두 벌의 모델을 두어 정답 유형에 따라 선택',
-            ],
-          },
-          {
-            head: '결과 화면',
-            body: [
-              '게임 종료 후 결과 화면 디자인과 구현',
-              '정답 단어와 연관된 실제 기사를 함께 노출해 시사 정보로 연결',
-            ],
-          },
-        ],
-        hard: [
-          {
-            head: '많이 나온 단어가 좋은 문제는 아님',
-            body:
-              '단순 빈도 상위를 그대로 출제하면 인명과 지명이 대부분을 차지하는 구조. ' +
-              '고유명사는 추측의 실마리가 없어 게임이 성립하지 않고, 시사 상식으로서의 가치도 낮음.',
-            resolved:
-              '고유명사를 집계에서 제외하고 일반명사만 대상으로 한정. 그날의 사건을 설명하는 단어가 상위로 올라오도록 조정',
-          },
-        ],
-        outcome: [
-          '수집부터 출제까지 사람 손이 닿지 않는 하루 단위 자동 흐름 완성',
-          '게임과 시사 정보가 결과 화면에서 이어지는 구조 확보',
-          '배포 후 약 10일간 새 사용자 165명, 그중 31명이 재방문',
-        ],
-      },
-    ],
-  },
-  {
     slug: 'degureure',
     logo: { src: '/images/works/logo-degureure.webp', alt: '데구르르 로고' },
-    folio: 'Folio 03',
+    folio: 'Folio 02',
     title: '데구르르',
     subtitle: '1:1 웃음 참기 화상 대결',
     period: '2023.07.10 — 2023.11.17',
@@ -1005,6 +893,118 @@ export const works: WorkProject[] = [
           '1차 배포 후 5일간 사용자 410명, 이벤트 약 1만 건 기록',
           '대결 결과가 레이팅·티어·하이라이트로 남아 재대결 동기를 형성',
           '2차 차수에서 이 구조 위에 통계와 랭킹 화면을 확장',
+        ],
+      },
+    ],
+  },
+  {
+    slug: 'danchu',
+    logo: { src: '/images/works/logo-danchu.webp', alt: 'DANCHU 로고' },
+    folio: 'Folio 03',
+    title: 'DANCHU',
+    subtitle: '지난 24시간의 뉴스를 단어 추측 게임으로 바꾸는 서비스',
+    period: '2023.08.21 — 2023.10.06',
+    role: '아키텍처 설계 · 데이터 파이프라인 · 프론트엔드',
+    context: '삼성 청년 SW 아카데미',
+    summary:
+      '시사에 익숙하지 않은 사람도 전날의 주요 뉴스를 접하게 만드는 것이 목표. ' +
+      '뉴스를 모아 단어로 분해하고 그날 가장 많이 언급된 단어를 문제로 출제하는 구조.',
+    metrics: [
+      { label: '기간', value: '7주' },
+      { label: '역할', value: '설계 주도' },
+      { label: '배포 후 10일', value: '새 사용자 165명' },
+    ],
+    stack: 'Python · FastAPI · APScheduler · Hadoop MapReduce · FastText · Mecab · Java · React',
+    links: [{ label: 'github.com/team-hca/danchu', href: 'https://github.com/team-hca/danchu' }],
+    gallery: [
+      {
+        src: '/images/works/danchu-play.webp',
+        kind: 'card',
+        alt: '오늘의 단추 게임 화면. 뉴스 제목에서 핵심 단어가 빈칸으로 가려져 있고 아래에 추측 입력창과 시도 기록이 있다.',
+        caption: '그날의 뉴스 제목에서 핵심 단어를 가리고, 추측할 때마다 근접도를 기록으로 표시',
+      },
+      {
+        src: '/images/works/danchu-result.webp',
+        kind: 'card',
+        alt: '문제를 모두 맞혔을 때 나타나는 축하 화면. 시도 횟수와 걸린 시간, 결과 복사와 관련 뉴스 버튼이 있다.',
+        caption: '정답 이후 관련 뉴스로 연결해 게임이 끝나는 자리에서 시사로 이동',
+      },
+      {
+        src: '/images/works/danchu-scheduler.webp',
+        kind: 'wide',
+        alt: '수집 스케줄러를 제어하는 API 목록 화면. scheduling과 collection 그룹으로 나뉜 엔드포인트가 나열되어 있다.',
+        caption: '수집 파이프라인을 직접 제어할 수 있도록 스케줄러 API를 별도 구성',
+      },
+      {
+        src: '/images/works/danchu-users.webp',
+        kind: 'wide',
+        alt: '배포 후 사용자 추이 그래프. 새 사용자 165명, 재사용자 31명으로 표시되어 있다.',
+        caption: '배포 후 약 10일간 새 사용자 165명, 재사용자 31명',
+      },
+    ],
+    milestones: [],
+    chapters: [
+      {
+        n: '01',
+        period: '2023.08 — 2023.10',
+        title: '뉴스를 문제로 바꾸는 파이프라인',
+        lede:
+          '매일 쏟아지는 기사에서 그날을 대표하는 단어를 뽑아내는 것이 핵심. ' +
+          '사람 손이 닿지 않고 하루 단위로 도는 흐름이어야 서비스로 성립.',
+        requirements: [
+          { label: '자동 수집', value: '매일 지난 24시간의 기사를 사람 개입 없이 수집' },
+          { label: '출제 가능성', value: '추측 게임으로 성립하는 단어를 선정' },
+          { label: '시사 연결', value: '게임 종료 후 실제 기사로 이동할 수 있을 것' },
+        ],
+        build: [
+          {
+            head: '수집 파이프라인',
+            body: [
+              'BeautifulSoup 기반 기사 수집기를 FastAPI 앱으로 구성하고 APScheduler로 24시간 주기 실행',
+              'URL 수집·본문 수집·오류 재시도를 별도 잡으로 나누고, 스케줄 제어와 수동 실행을 외부 API로 노출',
+              '프로젝트 아키텍처 설계와 서비스 진행 흐름 구성 주도',
+            ],
+          },
+          {
+            head: '단어 추출과 집계',
+            decision: true,
+            body: [
+              'Mecab으로 기사 본문에서 명사를 추출하고 고유명사(NNP)는 집계에서 제외',
+              '인명·지명이 상위를 독점하면 추측 게임으로 성립하지 않는다는 판단',
+              '출현 횟수 집계는 특화 과정의 학습 목표인 분산 처리를 적용해 Hadoop MapReduce로 구성. 분할한 텍스트를 WordCount 잡으로 세고 reducer에서 상위 단어를 추림',
+              '하루치 기사는 단일 프로세스로도 충분한 규모임을 인지한 선택. 수집 범위를 기간·매체로 넓힐 때 노드만 늘리면 되는 구조를 우선',
+            ],
+          },
+          {
+            head: '근접도 판정',
+            body: [
+              '수집한 기사로 FastText 임베딩을 직접 학습하고, 새 기사가 쌓일 때마다 이어서 학습해 모델을 갱신',
+              '정답과 유사한 상위 1000개 단어를 미리 계산해 두고, 추측 단어의 유사도와 순위를 근접도로 표시',
+              '고유명사 포함·제외 두 벌의 모델을 두어 정답 유형에 따라 선택',
+            ],
+          },
+          {
+            head: '결과 화면',
+            body: [
+              '게임 종료 후 결과 화면 디자인과 구현',
+              '정답 단어와 연관된 실제 기사를 함께 노출해 시사 정보로 연결',
+            ],
+          },
+        ],
+        hard: [
+          {
+            head: '많이 나온 단어가 좋은 문제는 아님',
+            body:
+              '단순 빈도 상위를 그대로 출제하면 인명과 지명이 대부분을 차지하는 구조. ' +
+              '고유명사는 추측의 실마리가 없어 게임이 성립하지 않고, 시사 상식으로서의 가치도 낮음.',
+            resolved:
+              '고유명사를 집계에서 제외하고 일반명사만 대상으로 한정. 그날의 사건을 설명하는 단어가 상위로 올라오도록 조정',
+          },
+        ],
+        outcome: [
+          '수집부터 출제까지 사람 손이 닿지 않는 하루 단위 자동 흐름 완성',
+          '게임과 시사 정보가 결과 화면에서 이어지는 구조 확보',
+          '배포 후 약 10일간 새 사용자 165명, 그중 31명이 재방문',
         ],
       },
     ],
