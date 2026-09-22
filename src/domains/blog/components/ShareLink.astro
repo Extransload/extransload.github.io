@@ -1,0 +1,45 @@
+---
+// 글 주소를 클립보드로 복사한다. canonical 을 우선 읽어, 미리보기 서버나
+// 쿼리 문자열이 붙은 주소에서도 공유되는 값이 늘 정본 주소가 되게 한다.
+---
+
+<button type="button" class="article-share" data-share-post aria-label="글 주소 복사">
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1" />
+    <path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1" />
+  </svg>
+  <span>공유</span>
+</button>
+
+<script>
+  const button = document.querySelector<HTMLButtonElement>('[data-share-post]');
+
+  if (button) {
+    const label = button.querySelector('span')!;
+    const original = label.textContent ?? '공유';
+    let restore: number | undefined;
+
+    const settle = (text: string) => {
+      label.textContent = text;
+      window.clearTimeout(restore);
+      restore = window.setTimeout(() => {
+        label.textContent = original;
+        delete button.dataset.copied;
+      }, 1800);
+    };
+
+    button.addEventListener('click', async () => {
+      const canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]')?.href;
+      const address = canonical || window.location.href;
+
+      try {
+        await navigator.clipboard.writeText(address);
+        button.dataset.copied = 'true';
+        settle('복사됨');
+      } catch {
+        // 클립보드가 막힌 환경(비보안 컨텍스트, 권한 거부)에서는 주소를 선택해 준다.
+        settle('복사 실패');
+      }
+    });
+  }
+</script>

@@ -199,14 +199,16 @@ test('clicking the dark area beside the image closes it, but panning does not', 
   await expect(dialog).toBeVisible();
 });
 
-test('the toolbar offers zoom, open-original and close, and no download', async ({ page }) => {
+test('the toolbar offers only zoom and close', async ({ page }) => {
   await page.goto(POST);
   await page.locator('.article__content img[data-zoomable]').first().click();
   await expect(page.locator('dialog.image-lightbox')).toBeVisible();
 
-  await expect(page.locator('.image-lightbox__toolbar button, .image-lightbox__toolbar a')).toHaveCount(4);
+  // The viewer shows images; it does not hand out their URLs. Sharing is a
+  // post-level action, offered beside the title instead.
+  await expect(page.locator('.image-lightbox__toolbar button, .image-lightbox__toolbar a')).toHaveCount(3);
   await expect(page.locator('[data-lightbox-download]')).toHaveCount(0);
-  await expect(page.locator('[data-lightbox-open]')).toHaveAttribute('target', '_blank');
+  await expect(page.locator('[data-lightbox-open]')).toHaveCount(0);
 });
 
 test('a horizontal swipe at fitted scale moves through the group', async ({ page }) => {
@@ -269,4 +271,24 @@ test('the splash wordmark is decorative and never opens', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('.book-splash__title-glyph')).toBeVisible();
   await expect(page.locator('img[data-zoomable]')).toHaveCount(0);
+});
+
+test('the share control copies the post address', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.goto(POST);
+
+  const share = page.locator('[data-share-post]');
+  const label = share.locator('span');
+  await expect(label).toHaveText('공유');
+
+  await share.click();
+  await expect(label).toHaveText('복사됨');
+  await expect(share).toHaveAttribute('data-copied', 'true');
+
+  // The canonical address travels, not the preview host the tester is on.
+  const canonical = await page.locator('link[rel="canonical"]').getAttribute('href');
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(canonical);
+
+  // The label returns on its own so the button is ready for the next reader.
+  await expect(label).toHaveText('공유', { timeout: 4000 });
 });

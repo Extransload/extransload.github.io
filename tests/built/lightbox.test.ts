@@ -33,7 +33,6 @@ describe('image lightbox', () => {
       'data-lightbox-next',
       'data-lightbox-zoom-in',
       'data-lightbox-zoom-out',
-      'data-lightbox-open',
     ]) {
       expect(
         findAll(dialog, (element) => attr(element, hook) !== undefined),
@@ -53,5 +52,28 @@ describe('image lightbox', () => {
 
   it('groups the markdown viewer output', () => {
     expect(groups('/blog/tools/markdown-viewer/')).toHaveLength(1);
+  });
+});
+
+describe('post sharing', () => {
+  it('offers one share control beside the title of a post', () => {
+    const post = loadRoute('/blog/posts/heap-heapsort/');
+    const buttons = findAll(post, (element) => attr(element, 'data-share-post') !== undefined);
+
+    expect(buttons).toHaveLength(1);
+    expect(attr(buttons[0], 'aria-label')).toBeTruthy();
+    // It reads the canonical link at click time, so that link must be present.
+    expect(findAll(post, (element) => element.tagName === 'link' && attr(element, 'rel') === 'canonical')).toHaveLength(
+      1,
+    );
+  });
+
+  it('keeps the share control out of pages that are not posts', () => {
+    for (const route of ['/blog/', '/works/degureure/', '/']) {
+      expect(
+        findAll(loadRoute(route), (element) => attr(element, 'data-share-post') !== undefined),
+        route,
+      ).toHaveLength(0);
+    }
   });
 });

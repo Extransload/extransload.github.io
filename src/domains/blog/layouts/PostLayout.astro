@@ -3,6 +3,7 @@ import type { CollectionEntry } from 'astro:content';
 import BlogLayout from './BlogLayout.astro';
 import { getPostSlug } from '../content/post-slug';
 import ArticleMeta from '../components/ArticleMeta.astro';
+import ShareLink from '../components/ShareLink.astro';
 import CodeShellEnhancer from '../components/CodeShellEnhancer.astro';
 import TableOfContents from '../components/TableOfContents.astro';
 import Comments from '../../../shared/components/Comments.astro';
@@ -39,7 +40,10 @@ const slug = getPostSlug(post);
     <article class="article" data-pagefind-body>
       <header class="article__header">
         <ArticleMeta post={post} />
-        <h1>{post.data.title}</h1>
+        <div class="article__title-row">
+          <h1>{post.data.title}</h1>
+          <ShareLink />
+        </div>
         <p class="article__description">{post.data.description}</p>
       </header>
 

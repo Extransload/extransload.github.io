@@ -41,7 +41,6 @@ export function initializeLightbox(root: ParentNode = document): void {
   const counter = dialog.querySelector<HTMLElement>('[data-lightbox-counter]')!;
   const previous = dialog.querySelector<HTMLButtonElement>('[data-lightbox-prev]')!;
   const next = dialog.querySelector<HTMLButtonElement>('[data-lightbox-next]')!;
-  const openOriginal = dialog.querySelector<HTMLAnchorElement>('[data-lightbox-open]')!;
 
   let group: HTMLImageElement[] = [];
   let index = 0;
@@ -92,7 +91,6 @@ export function initializeLightbox(root: ParentNode = document): void {
     dialog.dataset.error = 'false';
     view.src = source;
     view.alt = image.getAttribute('alt')?.trim() || '';
-    openOriginal.href = source;
 
     const text = captionFor(image);
     caption.textContent = text;
