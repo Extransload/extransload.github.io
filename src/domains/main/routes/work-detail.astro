@@ -12,8 +12,8 @@ const position = works.findIndex((entry) => entry.slug === project.slug);
 const previous = position > 0 ? works[position - 1] : null;
 const next = position < works.length - 1 ? works[position + 1] : null;
 const milestoneFor = (n: string) => project.milestones.find((m) => m.after === n);
-// 데이터는 연대순으로 적고, 페이지는 최신 장부터 보여준다.
-const chapters = [...project.chapters].reverse();
+// 장은 앞 장 위에 쌓인다("04번에서 만든 …"). 참조가 앞을 가리키도록 연대순으로 읽힌다.
+const chapters = project.chapters;
 
 // 영상(UCC)과 화면 캡처를 나눠 각자 라벨 아래 놓는다. 비어 있는 그룹은 생략.
 const galleryGroups = [
@@ -97,16 +97,9 @@ const galleryGroups = [
               </div>
             )}
 
-            {/* after 는 연대순 기준 '이 장 다음'. 최신순 페이지에서는 그 장 위에 놓인다. */}
-            {milestoneFor(chapter.n) && (
-              <aside class="work-milestone">
-                <h3>{milestoneFor(chapter.n)!.label}</h3>
-                <p>{milestoneFor(chapter.n)!.body}</p>
-              </aside>
-            )}
-
             <section aria-labelledby={`ch-${chapter.n}`} data-chapter={chapter.n}>
               <h2 id={`ch-${chapter.n}`}>
+                <span class="work-doc__n">{chapter.n}</span>
                 {chapter.title}
                 <small>{chapter.period}</small>
               </h2>
@@ -153,6 +146,14 @@ const galleryGroups = [
                 {chapter.outcome.map((line) => <li>{line}</li>)}
               </ul>
             </section>
+
+            {/* after 는 '이 장 다음'이므로 연대순 페이지에서는 그 장 뒤에 온다. */}
+            {milestoneFor(chapter.n) && (
+              <aside class="work-milestone">
+                <h3>{milestoneFor(chapter.n)!.label}</h3>
+                <p>{milestoneFor(chapter.n)!.body}</p>
+              </aside>
+            )}
           </>
         ))}
 

@@ -284,13 +284,11 @@
   padding: 0 0 0 1.4rem;
   border-left: 1px solid var(--doc-line);
   list-style: none;
-  counter-reset: build;
 }
 
 .work-build > li {
   position: relative;
   padding-bottom: 1.5rem;
-  counter-increment: build;
 }
 
 .work-build > li:last-child {
@@ -299,19 +297,14 @@
 
 .work-build > li::before {
   position: absolute;
-  top: 0.1rem;
-  left: -2.15rem;
-  width: 1.5rem;
-  height: 1.5rem;
-  border: 1px solid var(--doc-line);
-  border-radius: 50%;
-  background: var(--doc-bg);
-  color: var(--doc-acc);
-  content: counter(build, decimal-leading-zero);
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  line-height: 1.42rem;
-  text-align: center;
+  top: 0.55rem;
+  left: -1.78rem;
+  width: 0.45rem;
+  height: 0.45rem;
+  border: 1px solid color-mix(in srgb, var(--doc-acc) 70%, var(--doc-line));
+  background: color-mix(in srgb, var(--doc-acc) 22%, var(--doc-bg));
+  content: '';
+  rotate: 45deg;
 }
 
 .work-build h4 {
@@ -465,6 +458,16 @@
 }
 
 /* 화면 */
+
+/* 장 번호: 레일이 아니라 섹션 제목이 번호를 갖는다. */
+
+.work-doc h2 .work-doc__n {
+  margin-right: 0.6rem;
+  color: var(--doc-acc);
+  font-family: var(--font-mono);
+  font-size: 0.78em;
+  font-weight: 500;
+}
 
 /* 장 구분자: 가운데 마름모에서 양쪽으로 실선이 뻗다가 사라진다.
    스플래시 챕터의 ornament 와 같은 어휘를 문서 폭에 맞춰 늘린 것. */
