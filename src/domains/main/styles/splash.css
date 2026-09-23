@@ -466,17 +466,6 @@
   color: var(--cover-gold-bright) !important;
   border-color: var(--cover-gold-bright) !important;
 }
-@keyframes splash-art-glow {
-  0%,
-  100% {
-    opacity: 0.55;
-    transform: scale(0.94);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.06);
-  }
-}
 @keyframes splash-scroll-cue {
   0%,
   100% {
@@ -488,30 +477,12 @@
     opacity: 1;
   }
 }
-@keyframes splash-art-object-idle {
-  0%,
-  100% {
-    transform: translateY(0) rotate(0deg);
-  }
-  50% {
-    transform: translateY(-8px) rotate(1deg);
-  }
-}
 @keyframes splash-art-object-hover {
   0% {
     transform: translateY(-4px) rotate(-1deg) scale(1);
   }
   100% {
     transform: translateY(-18px) rotate(2deg) scale(1.012);
-  }
-}
-@keyframes splash-art-drifter-idle {
-  0%,
-  100% {
-    transform: translate(0, 0) rotate(-1deg);
-  }
-  50% {
-    transform: translate(-10px, 8px) rotate(3deg);
   }
 }
 @keyframes splash-art-drifter-hover {
@@ -522,30 +493,12 @@
     transform: translate(14px, -19px) rotate(8deg);
   }
 }
-@keyframes splash-art-ribbon-idle {
-  0%,
-  100% {
-    transform: rotate(-2deg);
-  }
-  50% {
-    transform: rotate(4deg);
-  }
-}
 @keyframes splash-art-ribbon-hover {
   0% {
     transform: rotate(-2deg);
   }
   100% {
     transform: rotate(10deg);
-  }
-}
-@keyframes splash-art-letter-idle {
-  0%,
-  100% {
-    transform: translateY(0) rotate(-1deg);
-  }
-  50% {
-    transform: translateY(-10px) rotate(2deg);
   }
 }
 @keyframes splash-art-letter-hover {
@@ -583,6 +536,16 @@
   }
   to {
     opacity: 0;
+  }
+}
+@keyframes sheaf-arrive {
+  from {
+    opacity: 0;
+    translate: 0 2rem;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
   }
 }
 @supports (animation-timeline: scroll()) {
@@ -634,6 +597,12 @@
     --cover-exit-scale: 0.96;
 
     animation-range: 8.2svh 49.2svh;
+  }
+  /* 표지에서 가장 늦게 사라지는 화살표가 65.6svh 에서 끝난다. 그 뒤부터 나타난다. */
+  .splash-sheaf {
+    animation: sheaf-arrive linear both;
+    animation-timeline: scroll(root block);
+    animation-range: 70svh 95svh;
   }
 }
 @media (max-width: 860px) {

@@ -316,6 +316,26 @@ test('splash drops its motion when the visitor asks for less', async ({ page }) 
   await expect(page).toHaveURL(/\/works\/$/);
 });
 
+test('splash reveals its leaves only after the cover has finished fading', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  const viewport = 900;
+
+  // 표지가 아직 걷히는 중이면 낱장 뭉치는 보이지 않는다.
+  expect(await opacityOf(page, '.splash-sheaf')).toBeCloseTo(0, 2);
+  await scrollTo(page, viewport * 0.6);
+  expect(await opacityOf(page, '.splash-sheaf')).toBeCloseTo(0, 2);
+
+  // 화살표가 다 사라진 뒤부터 나타난다.
+  await scrollTo(page, viewport * 0.82);
+  const arriving = await opacityOf(page, '.splash-sheaf');
+  expect(arriving).toBeGreaterThan(0.05);
+  expect(arriving).toBeLessThan(0.95);
+
+  await scrollTo(page, viewport * 0.95);
+  expect(await opacityOf(page, '.splash-sheaf')).toBeCloseTo(1, 2);
+});
+
 test('works presents a scannable contents page for every folio', async ({ page }) => {
   await page.goto('/works/');
 
