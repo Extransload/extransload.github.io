@@ -76,8 +76,7 @@
   display: none;
 }
 .book-splash__face {
-  position: sticky;
-  top: 0;
+  position: relative;
   z-index: 3;
   height: 100svh;
   min-height: 100svh;
@@ -90,19 +89,12 @@
   inset: 0;
   content: '';
   pointer-events: none;
-  opacity: 0;
+  opacity: 1;
   background:
     radial-gradient(ellipse at 65% 45%, transparent, rgb(1 5 10 / 35%)),
     linear-gradient(90deg, rgb(3 10 18 / 52%), transparent 40%),
     url('/splash-leather-cover-texture.webp') center / cover;
   box-shadow: inset 0 0 7rem rgb(0 0 0 / 30%);
-  transition: opacity 300ms ease;
-}
-.book-splash[data-enhanced='true'] .book-splash__face::before {
-  opacity: var(--cover-veil-opacity, 1);
-}
-.book-splash[data-cover-ready='false'] .book-splash__face::before {
-  transition: none;
 }
 .book-splash__filigree {
   position: fixed;
@@ -121,12 +113,7 @@
   left: 50%;
   width: clamp(5rem, 9vw, 7rem);
   height: clamp(5rem, 9vw, 7rem);
-  opacity: var(--cover-opacity, 1);
-  transform: translate(-50%, var(--cover-offset, 0)) scale(var(--cover-scale, 1));
-  will-change: opacity, transform;
-  transition:
-    opacity 420ms ease,
-    transform 700ms cubic-bezier(0.2, 0.7, 0.25, 1);
+  transform: translate(-50%, 0);
 }
 .book-splash__crest-img {
   width: 100%;
@@ -140,12 +127,6 @@
   inset: 0;
   display: grid;
   place-content: center;
-  opacity: var(--cover-opacity, 1);
-  transform: translateY(var(--cover-offset, 0)) scale(var(--cover-scale, 1));
-  will-change: opacity, transform;
-  transition:
-    opacity 420ms ease,
-    transform 700ms cubic-bezier(0.2, 0.7, 0.25, 1);
 }
 .book-splash__title {
   margin: 0;
@@ -168,12 +149,7 @@
   letter-spacing: 0.08em;
   line-height: 1.8;
   text-align: center;
-  opacity: var(--cover-opacity, 1);
-  transform: translate(-50%, var(--cover-offset, 0)) scale(var(--cover-scale, 1));
-  will-change: opacity, transform;
-  transition:
-    opacity 420ms ease,
-    transform 700ms cubic-bezier(0.2, 0.7, 0.25, 1);
+  transform: translate(-50%, 0);
 }
 .book-splash__scroll {
   position: absolute;
@@ -188,12 +164,7 @@
   color: var(--cover-muted);
   text-decoration: none;
   pointer-events: auto;
-  opacity: var(--cover-opacity, 1);
-  transform: translate(-50%, var(--cover-offset, 0)) scale(var(--cover-scale, 1));
-  will-change: opacity, transform;
-  transition:
-    opacity 420ms ease,
-    transform 700ms cubic-bezier(0.2, 0.7, 0.25, 1);
+  transform: translate(-50%, 0);
 }
 .book-splash__scroll-line {
   height: 2.1rem;
@@ -212,10 +183,6 @@
 }
 .book-splash__scroll:hover {
   color: var(--cover-gold-bright);
-}
-.book-splash[data-cover-ready='false']
-  :is(.book-splash__crest, .book-splash__center, .book-splash__tagline, .book-splash__scroll, .book-splash__admin) {
-  transition: none;
 }
 .splash-toc {
   position: fixed;
@@ -561,12 +528,6 @@
   align-items: center;
   gap: 0.55rem;
   pointer-events: auto;
-  opacity: var(--cover-opacity, 1);
-  transform: translateY(var(--cover-offset, 0)) scale(var(--cover-scale, 1));
-  will-change: opacity, transform;
-  transition:
-    opacity 420ms ease,
-    transform 700ms cubic-bezier(0.2, 0.7, 0.25, 1);
 }
 .book-splash__admin[hidden],
 .book-splash__admin a[hidden] {
@@ -689,6 +650,92 @@
 @keyframes splash-orbit {
   to {
     transform: rotate(360deg);
+  }
+}
+/* 표지 페이드.
+   원본 JS는 불투명도를 1-(1-stage)³ 로 계산했다. 스크롤 진행도 t = 1-stage 이므로
+   불투명도는 1-t³ 이고, from{1} to{0} 키프레임에서 그 곡선을 내는 타이밍 함수는
+   t³ 곧 ease-in-cubic 이다. 구간 값은 travel = 82svh 기준으로 환산한 것이다. */
+@keyframes cover-exit {
+  from {
+    opacity: 1;
+    translate: 0 0;
+    scale: 1;
+  }
+  to {
+    opacity: 0;
+    translate: 0 var(--cover-exit-offset, 0);
+    scale: var(--cover-exit-scale, 1);
+  }
+}
+@keyframes cover-veil {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+@supports (animation-timeline: scroll()) {
+  /* 표지가 제자리에서 녹아 사라지고 그 아래에서 본문이 올라온다.
+     미지원 브라우저에서는 이 블록이 통째로 빠져 표지가 평범하게 밀려 올라간다. */
+  .book-splash__face {
+    position: sticky;
+    top: 0;
+  }
+  .book-splash__face::before,
+  .book-splash__crest,
+  .book-splash__center,
+  .book-splash__tagline,
+  .book-splash__scroll,
+  .book-splash__admin {
+    animation: cover-exit both cubic-bezier(0.32, 0, 0.67, 0);
+    animation-timeline: scroll(root block);
+  }
+  .book-splash__face::before {
+    animation-name: cover-veil;
+    animation-timing-function: linear;
+    animation-range: 0 82svh;
+  }
+  .book-splash__crest {
+    --cover-exit-offset: -2.5rem;
+    --cover-exit-scale: 0.88;
+
+    animation-range: 0 42.6svh;
+  }
+  .book-splash__center {
+    --cover-exit-offset: -1.25rem;
+    --cover-exit-scale: 0.94;
+
+    animation-range: 8.2svh 54.1svh;
+  }
+  .book-splash__tagline {
+    --cover-exit-offset: 1.5rem;
+
+    animation-range: 23svh 59svh;
+  }
+  .book-splash__scroll {
+    --cover-exit-offset: 2.5rem;
+    --cover-exit-scale: 0.86;
+
+    animation-range: 39.4svh 65.6svh;
+  }
+  .book-splash__admin {
+    --cover-exit-offset: 1rem;
+    --cover-exit-scale: 0.96;
+
+    animation-range: 8.2svh 49.2svh;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .book-splash__face::before,
+  .book-splash__crest,
+  .book-splash__center,
+  .book-splash__tagline,
+  .book-splash__scroll,
+  .book-splash__scroll-line,
+  .book-splash__admin {
+    animation: none;
   }
 }
 @media (max-width: 1100px) and (min-width: 761px) {

@@ -103,9 +103,6 @@ const adminOrigin = adminUrl?.replace(/\/+$/, '').replace(/\/admin$/, '') || '';
     </footer>
   </main>
 </SplashLayout>
-<script>
-  import '../domains/main/scripts/splash';
-</script>
 {adminUrl && <script is:inline define:vars={{ adminOrigin }}>
   const controls = document.querySelector('[data-admin-controls]');
   const login = document.querySelector('[data-admin-login]');
