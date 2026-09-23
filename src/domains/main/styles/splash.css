@@ -636,6 +636,37 @@
     animation-range: 8.2svh 49.2svh;
   }
 }
+@media (max-width: 860px) {
+  .splash-sheaf {
+    /* 좁은 화면에는 hover 가 없다. 접힌 상태를 두지 않는다. */
+    --leaf-tilt: 0px;
+    --leaf-lap: 0px;
+
+    flex-direction: column;
+    gap: 1px;
+    padding: clamp(3rem, 9svh, 6rem) clamp(1rem, 5vw, 2.5rem);
+  }
+  .splash-leaf {
+    flex: 0 0 auto;
+    min-height: 11rem;
+    clip-path: none;
+  }
+  .splash-leaf + .splash-leaf {
+    margin-left: 0;
+  }
+  .splash-leaf__copy {
+    position: static;
+    padding: 1.6rem 1.4rem;
+  }
+  .splash-leaf__detail {
+    max-height: none;
+    opacity: 1;
+  }
+  .splash-leaf__art,
+  .splash-leaf__crease {
+    display: none;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .book-splash__face::before,
   .book-splash__crest,
@@ -643,7 +674,22 @@
   .book-splash__tagline,
   .book-splash__scroll,
   .book-splash__scroll-line,
-  .book-splash__admin {
+  .book-splash__admin,
+  .splash-sheaf {
+    animation: none;
+  }
+  .splash-leaf,
+  .splash-leaf__gilt,
+  .splash-leaf__gilt::before,
+  .splash-leaf__gilt::after,
+  .splash-leaf__crease,
+  .splash-leaf__art,
+  .splash-leaf__copy,
+  .splash-leaf__title,
+  .splash-leaf__detail {
+    transition: none;
+  }
+  .splash-leaf:is(:hover, :focus-within) :is(.art-object, .art-drifter, .art-ribbon, .art-letter, .art-orbit) {
     animation: none;
   }
 }

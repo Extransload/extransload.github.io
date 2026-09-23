@@ -255,6 +255,54 @@ test('splash artwork appears only in the leaf that has opened', async ({ page })
   expect(await art('works').evaluate((element) => getComputedStyle(element).pointerEvents)).toBe('none');
 });
 
+test('splash leaves stack and stay open on narrow screens', async ({ page }) => {
+  for (const width of [320, 390, 760, 860]) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto('/');
+
+    const boxes = await page
+      .locator('.splash-sheaf .splash-leaf')
+      .evaluateAll((elements) =>
+        elements.map((element) => element.getBoundingClientRect()).map((b) => [b.top, b.left]),
+      );
+
+    // 세로로 쌓인다.
+    for (let index = 1; index < boxes.length; index += 1) {
+      expect(boxes[index][0]).toBeGreaterThan(boxes[index - 1][0]);
+      expect(Math.abs(boxes[index][1] - boxes[0][1])).toBeLessThanOrEqual(1);
+    }
+
+    // 기울기와 겹침이 풀린다.
+    const tilt = await page
+      .locator('.splash-sheaf')
+      .evaluate((element) => parseFloat(getComputedStyle(element).getPropertyValue('--leaf-tilt')));
+    expect(tilt).toBe(0);
+
+    // 전부 펼쳐져 있다.
+    for (const chapter of splashChapters) {
+      await expect(page.locator(`a.splash-leaf#${chapter.id} .splash-leaf__description`)).toBeVisible();
+    }
+
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth),
+    ).toBe(true);
+  }
+});
+
+test('splash drops its motion when the visitor asks for less', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+
+  const leaf = page.locator('a.splash-leaf#works');
+  expect(await leaf.evaluate((element) => getComputedStyle(element).transitionDuration)).toMatch(/^0s(, 0s)*$/);
+  expect(await opacityOf(page, '.book-splash__crest')).toBeCloseTo(1, 2);
+
+  // 움직임을 줄여도 목적지는 그대로 열린다.
+  await leaf.click();
+  await expect(page).toHaveURL(/\/works\/$/);
+});
+
 test('works presents a scannable contents page for every folio', async ({ page }) => {
   await page.goto('/works/');
 
