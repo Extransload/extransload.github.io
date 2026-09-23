@@ -8,25 +8,13 @@ const adminOrigin = adminUrl?.replace(/\/+$/, '').replace(/\/admin$/, '') || '';
 ---
 
 <SplashLayout title="Extransload" description="기록과 작업, 취향과 놀이를 보관하는 한 권의 개인 장서">
-  <main class="book-splash" data-splash>
+  <main class="book-splash">
     <div class="book-splash__frame-mask" aria-hidden="true">
       <span class="book-splash__frame-mask-bar book-splash__frame-mask-bar--top"></span>
       <span class="book-splash__frame-mask-bar book-splash__frame-mask-bar--right"></span>
       <span class="book-splash__frame-mask-bar book-splash__frame-mask-bar--bottom"></span>
       <span class="book-splash__frame-mask-bar book-splash__frame-mask-bar--left"></span>
     </div>
-    <nav class="splash-toc" aria-label="장서 목차">
-      <span class="splash-toc__caption" aria-hidden="true">CONTENTS</span>
-      <ol>
-        {splashChapters.map((chapter) => <li>
-          <a href={`#${chapter.id}`} data-chapter-link={chapter.id}>
-            <span class="splash-toc__number" aria-hidden="true">{chapter.number}</span>
-            <span>{chapter.label}</span>
-          </a>
-        </li>)}
-      </ol>
-      <span class="splash-toc__rule" aria-hidden="true"></span>
-    </nav>
     <section class="book-splash__face" id="cover" aria-labelledby="splash-title">
       <div class="book-splash__filigree" aria-hidden="true"></div>
       <div class="book-splash__crest" aria-hidden="true">
@@ -48,7 +36,7 @@ const adminOrigin = adminUrl?.replace(/\/+$/, '').replace(/\/admin$/, '') || '';
         </h1>
       </div>
       <p class="book-splash__tagline">기록과 작업, 취향과 놀이를 보관하는 한 권의 개인 장서</p>
-      <a class="book-splash__scroll" href="#journal" aria-label="아래로 이동">
+      <a class="book-splash__scroll" href="#contents" aria-label="아래로 이동">
         <span class="book-splash__scroll-line" aria-hidden="true"></span>
         <svg viewBox="0 0 20 12" aria-hidden="true"><path d="m3 3 7 6 7-6" /></svg>
       </a>
@@ -61,43 +49,26 @@ const adminOrigin = adminUrl?.replace(/\/+$/, '').replace(/\/admin$/, '') || '';
         </a>
       </div>}
     </section>
-    <div class="splash-chapters">
-      {splashChapters.map((chapter) => <section
-        class={`splash-chapter splash-chapter--${chapter.id}`}
+    <section class="splash-sheaf" id="contents" aria-label="장서 목차">
+      {splashChapters.map((chapter) => <a
+        class="splash-leaf"
         id={chapter.id}
-        aria-labelledby={`${chapter.id}-title`}
-        data-chapter
+        href={chapter.href}
+        aria-describedby={`${chapter.id}-description`}
       >
-        <a class="splash-chapter__link" href={chapter.href} aria-labelledby={`${chapter.id}-title`} aria-describedby={`${chapter.id}-description`}>
-          <div class="splash-chapter__copy">
-            <span class="splash-chapter__ornament" aria-hidden="true"><span></span><i></i><span></span></span>
-            <h2 class="splash-chapter__title" id={`${chapter.id}-title`}>
-              <span class="splash-sr-only">{chapter.label}</span>
-              <img
-                class="splash-chapter__wordmark"
-                src={`/images/splash-${chapter.id}-embroidered.webp`}
-                alt=""
-                aria-hidden="true"
-                loading="lazy"
-                decoding="async"
-              />
-            </h2>
-            <div class="splash-chapter__detail">
-              <p class="splash-chapter__description" id={`${chapter.id}-description`}>{chapter.description}</p>
-              <span class="splash-chapter__invitation" aria-hidden="true">{chapter.invitation}<span>↗</span></span>
-            </div>
-          </div>
-          <div class="splash-chapter__media">
-            {chapter.media ? chapter.media.kind === 'video' ? <video
-              muted loop playsinline preload="none" poster={chapter.media.poster}
-              aria-label={chapter.media.alt} data-chapter-video
-            ><source data-src={chapter.media.src} /></video> : <img
-              src={chapter.media.src} alt={chapter.media.alt} loading="lazy" decoding="async"
-            /> : <SplashArtwork chapter={chapter.id} />}
-          </div>
-        </a>
-      </section>)}
-    </div>
+        <span class="splash-leaf__gilt" aria-hidden="true"></span>
+        <span class="splash-leaf__crease" aria-hidden="true"></span>
+        <span class="splash-leaf__art" aria-hidden="true"><SplashArtwork chapter={chapter.id} /></span>
+        <span class="splash-leaf__copy">
+          <span class="splash-leaf__number" aria-hidden="true">{chapter.number}</span>
+          <h2 class="splash-leaf__title">{chapter.label}</h2>
+          <span class="splash-leaf__detail">
+            <span class="splash-leaf__description" id={`${chapter.id}-description`}>{chapter.description}</span>
+            <span class="splash-leaf__invitation" aria-hidden="true">{chapter.invitation}<span>↗</span></span>
+          </span>
+        </span>
+      </a>)}
+    </section>
     <footer class="splash-colophon">
       <a href="#cover">표지로 돌아가기 <span aria-hidden="true">↑</span></a>
     </footer>

@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { works } from '../../src/domains/main/data/work-archive';
+import { splashChapters } from '../../src/domains/main/data/splash-chapters';
 
 /** Resolves a theme token to the rgb() string the browser computes for it. */
 const themeColor = (page: Page, token: string) =>
@@ -61,6 +62,46 @@ test('splash cover fades out on scroll and returns on the way back, without a sc
   expect(await opacityOf(page, '.book-splash__crest')).toBeCloseTo(1, 2);
 });
 
+test('splash lays every chapter out as one row of leaves', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+
+  const leaves = page.locator('.splash-sheaf .splash-leaf');
+  await expect(leaves).toHaveCount(splashChapters.length);
+
+  const boxes = await leaves.evaluateAll((elements) =>
+    elements.map((element) => {
+      const box = element.getBoundingClientRect();
+      return { left: box.left, right: box.right, top: box.top, width: box.width };
+    }),
+  );
+
+  for (const box of boxes) expect(box.width).toBeGreaterThan(40);
+  // 한 줄이다: 모든 낱장의 윗변이 같은 높이에 있다.
+  for (const box of boxes) expect(Math.abs(box.top - boxes[0].top)).toBeLessThanOrEqual(1);
+  // 왼쪽에서 오른쪽으로 순서대로 놓인다.
+  for (let index = 1; index < boxes.length; index += 1) {
+    expect(boxes[index].left).toBeGreaterThan(boxes[index - 1].left);
+  }
+});
+
+test('splash leaves carry their number, title and destination from the data', async ({ page }) => {
+  await page.goto('/');
+
+  for (const chapter of splashChapters) {
+    const leaf = page.locator(`a.splash-leaf#${chapter.id}`);
+    await expect(leaf).toHaveAttribute('href', chapter.href);
+    await expect(leaf.locator('.splash-leaf__number')).toHaveText(chapter.number);
+    await expect(leaf.locator('.splash-leaf__title')).toHaveText(chapter.label);
+    await expect(leaf.locator('.splash-leaf__description')).toHaveText(chapter.description);
+  }
+
+  // 목차는 사라졌다.
+  await expect(page.locator('.splash-toc')).toHaveCount(0);
+  // 워드마크 이미지는 쓰지 않는다.
+  await expect(page.locator('.splash-sheaf img')).toHaveCount(0);
+});
+
 test('splash sections link to each independent space', async ({ page }) => {
   await page.goto('/');
   for (const [id, href, label] of [
@@ -70,14 +111,10 @@ test('splash sections link to each independent space', async ({ page }) => {
     ['about', '/about/', 'About'],
     ['guestbook', '/guestbook/', 'Guestbook'],
   ]) {
-    await expect(page.locator('#' + id + ' > a')).toHaveAttribute('href', href);
-    await expect(page.locator(`#${id} .splash-chapter__title .splash-chapter__wordmark`)).toHaveAttribute(
-      'src',
-      `/images/splash-${id}-embroidered.webp`,
-    );
-    await expect(page.locator(`#${id} .splash-sr-only`)).toHaveText(label);
+    await expect(page.locator(`a.splash-leaf#${id}`)).toHaveAttribute('href', href);
+    await expect(page.locator(`a.splash-leaf#${id} .splash-leaf__title`)).toHaveText(label);
   }
-  await page.locator('#works > a').click();
+  await page.locator('a.splash-leaf#works').click();
   await expect(page).toHaveURL(/\/works\/$/);
   await expect(page.getByRole('heading', { name: 'Works', exact: true })).toBeVisible();
 });
