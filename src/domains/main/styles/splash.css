@@ -228,8 +228,51 @@
   min-width: 0;
   color: inherit;
   text-decoration: none;
+  /* 오른쪽으로 좁아지는 사다리꼴. 모든 낱장이 같은 방향으로 기운다. */
+  clip-path: polygon(0 0, 100% var(--leaf-tilt), 100% calc(100% - var(--leaf-tilt)), 0 100%);
   background: var(--leaf-face);
 }
+/* 다음 장이 앞 장의 좁아진 오른쪽 변을 덮는다. 겹치지 않으면 쐐기 빈틈이 생긴다.
+   쌓임 순서는 문서 순서다 — z-index 를 주면 낱장 수에 묶인다. */
+.splash-leaf + .splash-leaf {
+  margin-left: calc(-1 * var(--leaf-lap));
+}
+/* 금박 테. 위·아래 띠 두 개를 따로 그린다.
+   한 폴리곤으로 두 띠를 내려면 자기교차에 기대야 해서 쓰지 않는다. */
+.splash-leaf__gilt {
+  inset: 0;
+  z-index: 1;
+  opacity: 0.6;
+}
+.splash-leaf__gilt::before,
+.splash-leaf__gilt::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+  background: var(--cover-gold-bright);
+}
+.splash-leaf__gilt::before {
+  clip-path: polygon(0 0, 100% var(--leaf-tilt), 100% calc(var(--leaf-tilt) + 2px), 0 2px);
+}
+.splash-leaf__gilt::after {
+  clip-path: polygon(
+    0 calc(100% - 2px),
+    100% calc(100% - var(--leaf-tilt) - 2px),
+    100% calc(100% - var(--leaf-tilt)),
+    0 100%
+  );
+}
+/* 다음 장이 드리우는 그늘. clip-path 가 box-shadow 를 잘라내므로 요소로 그린다. */
+.splash-leaf__crease {
+  inset: 0 -1px 0 auto;
+  z-index: 1;
+  width: 22px;
+  background: linear-gradient(90deg, transparent, rgb(0 0 0 / 50%));
+}
+.splash-leaf:last-child .splash-leaf__crease {
+  opacity: 0;
+}
+/* 겹친 폭만큼 글자를 안쪽으로 민다. 모든 낱장이 같은 값을 써야 기준선이 맞는다. */
 .splash-leaf__copy {
   position: absolute;
   z-index: 2;
@@ -237,7 +280,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.55rem;
-  padding: 0 1.4rem 2rem;
+  padding: 0 1.4rem 2rem calc(1.4rem + var(--leaf-lap));
 }
 .splash-leaf__number {
   font-size: 0.68rem;

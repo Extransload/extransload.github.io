@@ -85,6 +85,43 @@ test('splash lays every chapter out as one row of leaves', async ({ page }) => {
   }
 });
 
+test('splash leaves lean the same way and overlap their neighbour', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+
+  const lap = await page
+    .locator('.splash-sheaf')
+    .evaluate((element) => parseFloat(getComputedStyle(element).getPropertyValue('--leaf-lap')));
+  expect(lap).toBeGreaterThan(0);
+
+  const boxes = await page
+    .locator('.splash-sheaf .splash-leaf')
+    .evaluateAll((elements) =>
+      elements.map((element) => element.getBoundingClientRect()).map((b) => [b.left, b.right]),
+    );
+
+  // 이웃한 낱장은 --leaf-lap 만큼 겹친다.
+  for (let index = 1; index < boxes.length; index += 1) {
+    const overlap = boxes[index - 1][1] - boxes[index][0];
+    expect(Math.abs(overlap - lap)).toBeLessThanOrEqual(1);
+  }
+
+  // 모든 낱장이 같은 방향으로 기운다: clip-path 가 오른쪽으로 좁아지는 사다리꼴이다.
+  const shapes = await page
+    .locator('.splash-sheaf .splash-leaf')
+    .evaluateAll((elements) => elements.map((element) => getComputedStyle(element).clipPath));
+  for (const shape of shapes) {
+    expect(shape).toContain('polygon');
+    expect(shape).toBe(shapes[0]);
+  }
+
+  // 뒤 낱장이 앞 낱장 위에 그려진다: z-index 를 쓰지 않고 문서 순서로.
+  const stacking = await page
+    .locator('.splash-sheaf .splash-leaf')
+    .evaluateAll((elements) => elements.map((element) => getComputedStyle(element).zIndex));
+  for (const value of stacking) expect(value).toBe('auto');
+});
+
 test('splash leaves carry their number, title and destination from the data', async ({ page }) => {
   await page.goto('/');
 
