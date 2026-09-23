@@ -10,8 +10,11 @@
   --cover-muted: #b3b9ba;
   --cover-gold: #c7a75a;
   --cover-gold-bright: #e0c77f;
+  display: flex;
   position: relative;
+  flex-direction: column;
   isolation: isolate;
+  min-height: 100svh;
   color: var(--cover-ivory);
   background: var(--cover-ink);
   font-family: 'Noto Serif KR', Georgia, serif;
@@ -53,8 +56,8 @@
   flex-direction: column;
   align-items: center;
   /* 문장 · 워드마크 · 태그라인이 한 덩어리로 위쪽에 모인다. */
-  gap: clamp(0.5rem, 1.3svh, 1rem);
-  padding: clamp(2.5rem, 7svh, 5rem) 1.5rem 0;
+  gap: clamp(0.9rem, 2.2svh, 1.6rem);
+  padding: clamp(3.5rem, 9svh, 6.5rem) 1.5rem 0;
   pointer-events: none;
 }
 .book-splash__crest {
@@ -131,7 +134,9 @@
 
   display: flex;
   align-items: center;
-  padding: clamp(1.75rem, 4.5svh, 3.5rem) clamp(1.5rem, 5vw, 5rem);
+  /* 표지 덩어리는 위, 낱장은 아래. 남는 높이는 둘 사이가 가져간다. */
+  margin-top: auto;
+  padding: clamp(2rem, 5svh, 3.5rem) clamp(1.5rem, 5vw, 5rem) clamp(2.5rem, 7svh, 5rem);
 }
 .splash-leaf {
   position: relative;
