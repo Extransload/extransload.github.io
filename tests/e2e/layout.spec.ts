@@ -231,6 +231,30 @@ test('splash leaf opens on keyboard focus alone', async ({ page }) => {
   await expect(leaf.locator('.splash-leaf__description')).toBeVisible();
 });
 
+test('splash artwork appears only in the leaf that has opened', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+
+  // 삽화는 인라인 SVG다. 이미지 요청이 늘지 않는다.
+  await expect(page.locator('.splash-leaf__art svg.chapter-art')).toHaveCount(splashChapters.length);
+
+  const art = (id: string) => page.locator(`a.splash-leaf#${id} .splash-leaf__art`);
+  expect(await art('works').evaluate((element) => parseFloat(getComputedStyle(element).opacity))).toBe(0);
+
+  await page.locator('a.splash-leaf#works').hover();
+  await page.waitForTimeout(1400);
+
+  const opened = await art('works').evaluate((element) => parseFloat(getComputedStyle(element).opacity));
+  expect(opened).toBeGreaterThan(0.1);
+  expect(opened).toBeLessThan(0.5);
+
+  // 이웃은 그대로 감춰져 있다.
+  expect(await art('about').evaluate((element) => parseFloat(getComputedStyle(element).opacity))).toBe(0);
+
+  // 삽화가 링크 판정에 끼어들지 않는다.
+  expect(await art('works').evaluate((element) => getComputedStyle(element).pointerEvents)).toBe('none');
+});
+
 test('works presents a scannable contents page for every folio', async ({ page }) => {
   await page.goto('/works/');
 
