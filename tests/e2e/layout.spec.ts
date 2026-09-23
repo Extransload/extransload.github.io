@@ -29,7 +29,7 @@ const scrollTo = async (page: Page, top: number) => {
 const opacityOf = (page: Page, selector: string) =>
   page.locator(selector).evaluate((element) => parseFloat(getComputedStyle(element).opacity));
 
-test('splash cover fades out on scroll and returns on the way back, without a script', async ({ page }) => {
+test('splash shows the whole book on one screen, without a script', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
 
@@ -38,28 +38,34 @@ test('splash cover fades out on scroll and returns on the way back, without a sc
     page.locator('[data-enhanced], [data-chapter-locked], [data-chapter-visible], [data-cover-ready]'),
   ).toHaveCount(0);
 
-  const viewport = 900;
-  expect(await opacityOf(page, '.book-splash__crest')).toBeCloseTo(1, 2);
-  expect(await opacityOf(page, '.book-splash__scroll')).toBeCloseTo(1, 2);
+  // 표지와 낱장이 한 화면에 함께 있다. 스크롤할 것이 남지 않는다.
+  expect(await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight)).toBeLessThanOrEqual(1);
 
-  // 문장은 0 ~ 42.6svh 구간에서 사라진다. 중간에서는 사이값이어야 한다.
-  await scrollTo(page, viewport * 0.21);
-  const midway = await opacityOf(page, '.book-splash__crest');
-  expect(midway).toBeGreaterThan(0.05);
-  expect(midway).toBeLessThan(0.95);
+  for (const selector of ['.book-splash__crest', '.book-splash__title-glyph', '.book-splash__tagline']) {
+    await expect(page.locator(selector)).toBeInViewport();
+    expect(await opacityOf(page, selector)).toBeCloseTo(1, 2);
+  }
+  for (const chapter of splashChapters) {
+    await expect(page.locator(`a.splash-leaf#${chapter.id}`)).toBeInViewport();
+  }
 
-  // 화살표 구간은 39.4svh 에서 시작하므로 여기서는 아직 온전하다.
-  expect(await opacityOf(page, '.book-splash__scroll')).toBeCloseTo(1, 2);
-
-  await scrollTo(page, viewport * 0.5);
-  expect(await opacityOf(page, '.book-splash__crest')).toBeCloseTo(0, 2);
-
-  // 화살표는 65.6svh 까지 남는다.
-  await scrollTo(page, viewport * 0.7);
-  expect(await opacityOf(page, '.book-splash__scroll')).toBeCloseTo(0, 2);
-
-  await scrollTo(page, 0);
-  expect(await opacityOf(page, '.book-splash__crest')).toBeCloseTo(1, 2);
+  // 문장 · 워드마크 · 태그라인은 한 덩어리로 붙고, 낱장과는 그보다 벌어진다.
+  const gaps = await page.evaluate(() => {
+    const box = (selector: string) => document.querySelector(selector)!.getBoundingClientRect();
+    const crest = box('.book-splash__crest');
+    const mark = box('.book-splash__title-glyph');
+    const tagline = box('.book-splash__tagline');
+    return {
+      crestTop: crest.top,
+      crestToMark: mark.top - crest.bottom,
+      markToTagline: tagline.top - mark.bottom,
+      taglineToLeaf: box('a.splash-leaf#journal').top - tagline.bottom,
+    };
+  });
+  expect(gaps.crestTop).toBeLessThan(120);
+  expect(gaps.crestToMark).toBeLessThan(40);
+  expect(gaps.markToTagline).toBeLessThan(40);
+  expect(gaps.taglineToLeaf).toBeGreaterThan(gaps.markToTagline);
 });
 
 test('splash lays every chapter out as one row of leaves', async ({ page }) => {
@@ -331,51 +337,23 @@ test('splash drops its motion when the visitor asks for less', async ({ page }) 
 
   const leaf = page.locator('a.splash-leaf#works');
   expect(await leaf.evaluate((element) => getComputedStyle(element).transitionDuration)).toMatch(/^0s(, 0s)*$/);
-  expect(await opacityOf(page, '.book-splash__crest')).toBeCloseTo(1, 2);
 
-  // 표지 문장의 페이드 구간(0–42.6svh)을 지난 지점에서 봐야 구분이 된다.
-  // 모션을 끄지 않았다면 여기서 0 이다.
-  await scrollTo(page, 450);
+  // 모션을 꺼도 표지와 낱장이 모두 온전히 보인다.
   expect(await opacityOf(page, '.book-splash__crest')).toBeCloseTo(1, 2);
-
-  // 표지를 지나면 sticky 로 눌어붙지 않고 낱장 위에서 물러나 있어야 한다.
-  // @supports 블록이 표지를 sticky 로 고정하므로, 모션만 꺼서는 표지가 화면에
-  // 남아 낱장을 가릴 수 있다.
-  await scrollTo(page, 1000);
-  expect(
-    await page.locator('.book-splash__face').evaluate((element) => element.getBoundingClientRect().bottom),
-  ).toBeLessThanOrEqual(0);
+  expect(await opacityOf(page, '.splash-sheaf')).toBeCloseTo(1, 2);
+  await expect(leaf).toBeInViewport();
 
   // 움직임을 줄여도 목적지는 그대로 열린다.
   await leaf.click();
   await expect(page).toHaveURL(/\/works\/$/);
 });
 
-test('splash reveals its leaves only after the cover has finished fading', async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
+test('splash colophon link returns the reader to the cover where the page scrolls', async ({ page }) => {
+  // 데스크톱은 한 화면에 다 들어가 스크롤이 없다. 낱장이 세로로 쌓이는 폭에서만 의미가 있다.
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
-  const viewport = 900;
-
-  // 표지가 아직 걷히는 중이면 낱장 뭉치는 보이지 않는다.
-  expect(await opacityOf(page, '.splash-sheaf')).toBeCloseTo(0, 2);
-  await scrollTo(page, viewport * 0.6);
-  expect(await opacityOf(page, '.splash-sheaf')).toBeCloseTo(0, 2);
-
-  // 화살표가 다 사라진 뒤부터 나타난다.
-  await scrollTo(page, viewport * 0.82);
-  const arriving = await opacityOf(page, '.splash-sheaf');
-  expect(arriving).toBeGreaterThan(0.05);
-  expect(arriving).toBeLessThan(0.95);
-
-  await scrollTo(page, viewport * 0.95);
-  expect(await opacityOf(page, '.splash-sheaf')).toBeCloseTo(1, 2);
-});
-
-test('splash colophon link returns the reader to the cover', async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/');
-  await scrollTo(page, 1000);
-  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(500);
+  await scrollTo(page, 2000);
+  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(300);
 
   await page.getByRole('link', { name: /표지로 돌아가기/ }).click();
   await page.waitForFunction(() => window.scrollY < 2);

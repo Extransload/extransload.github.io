@@ -49,19 +49,19 @@
 .book-splash__face {
   position: relative;
   z-index: 3;
-  height: 100svh;
-  min-height: 100svh;
-  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* 문장 · 워드마크 · 태그라인이 한 덩어리로 위쪽에 모인다. */
+  gap: clamp(0.5rem, 1.3svh, 1rem);
+  padding: clamp(2.5rem, 7svh, 5rem) 1.5rem 0;
   pointer-events: none;
 }
 .book-splash__crest {
-  position: absolute;
+  position: relative;
   z-index: 11;
-  top: clamp(4rem, 14svh, 9rem);
-  left: 50%;
-  width: clamp(5rem, 9vw, 7rem);
-  height: clamp(5rem, 9vw, 7rem);
-  transform: translate(-50%, 0);
+  width: clamp(4.25rem, 7vw, 5.75rem);
+  height: clamp(4.25rem, 7vw, 5.75rem);
 }
 .book-splash__crest-img {
   width: 100%;
@@ -70,11 +70,8 @@
   filter: drop-shadow(0 4px 14px rgb(0 0 0 / 65%));
 }
 .book-splash__center {
-  position: absolute;
+  position: relative;
   z-index: 2;
-  inset: 0;
-  display: grid;
-  place-content: center;
 }
 .book-splash__title {
   margin: 0;
@@ -86,51 +83,15 @@
   max-width: 57.4vw;
 }
 .book-splash__tagline {
-  position: absolute;
+  position: relative;
   z-index: 2;
-  bottom: clamp(8rem, 14svh, 10rem);
-  left: 50%;
-  width: min(32rem, calc(100% - 3rem));
+  width: min(32rem, 100%);
   margin: 0;
   color: var(--cover-muted);
   font-size: 0.74rem;
   letter-spacing: 0.08em;
   line-height: 1.8;
   text-align: center;
-  transform: translate(-50%, 0);
-}
-.book-splash__scroll {
-  position: absolute;
-  z-index: 2;
-  bottom: clamp(1.25rem, 3svh, 2.5rem);
-  left: 50%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.8rem;
-  padding: 0.75rem;
-  color: var(--cover-muted);
-  text-decoration: none;
-  pointer-events: auto;
-  transform: translate(-50%, 0);
-}
-.book-splash__scroll-line {
-  height: 2.1rem;
-  width: 1px;
-  background: linear-gradient(transparent, var(--cover-gold));
-  transform-origin: top;
-  animation: splash-scroll-cue 2.8s ease-in-out infinite;
-}
-.book-splash__scroll svg {
-  width: 16px;
-  height: 10px;
-  margin-top: -0.8rem;
-  stroke: var(--cover-gold);
-  stroke-width: 1;
-  fill: none;
-}
-.book-splash__scroll:hover {
-  color: var(--cover-gold-bright);
 }
 .chapter-art {
   display: block;
@@ -170,8 +131,7 @@
 
   display: flex;
   align-items: center;
-  min-height: 100svh;
-  padding: clamp(4rem, 12svh, 9rem) clamp(1.5rem, 5vw, 5rem);
+  padding: clamp(1.75rem, 4.5svh, 3.5rem) clamp(1.5rem, 5vw, 5rem);
 }
 .splash-leaf {
   position: relative;
@@ -433,17 +393,6 @@
   color: var(--cover-gold-bright) !important;
   border-color: var(--cover-gold-bright) !important;
 }
-@keyframes splash-scroll-cue {
-  0%,
-  100% {
-    transform: scaleY(0.65);
-    opacity: 0.4;
-  }
-  50% {
-    transform: scaleY(1);
-    opacity: 1;
-  }
-}
 @keyframes splash-art-object-hover {
   0% {
     transform: translateY(-4px) rotate(-1deg) scale(1);
@@ -485,79 +434,6 @@
    원본 JS는 불투명도를 1-(1-stage)³ 로 계산했다. 스크롤 진행도 t = 1-stage 이므로
    불투명도는 1-t³ 이고, from{1} to{0} 키프레임에서 그 곡선을 내는 타이밍 함수는
    t³ 곧 ease-in-cubic 이다. 구간 값은 travel = 82svh 기준으로 환산한 것이다. */
-@keyframes cover-exit {
-  from {
-    opacity: 1;
-    translate: 0 0;
-    scale: 1;
-  }
-  to {
-    opacity: 0;
-    translate: 0 var(--cover-exit-offset, 0);
-    scale: var(--cover-exit-scale, 1);
-  }
-}
-@keyframes sheaf-arrive {
-  from {
-    opacity: 0;
-    translate: 0 2rem;
-  }
-  to {
-    opacity: 1;
-    translate: 0 0;
-  }
-}
-@supports (animation-timeline: scroll()) {
-  /* 표지가 제자리에서 녹아 사라지고 그 아래에서 본문이 올라온다.
-     미지원 브라우저에서는 이 블록이 통째로 빠져 표지가 평범하게 밀려 올라간다. */
-  .book-splash__face {
-    position: sticky;
-    top: 0;
-  }
-  .book-splash__crest,
-  .book-splash__center,
-  .book-splash__tagline,
-  .book-splash__scroll,
-  .book-splash__admin {
-    animation: cover-exit both cubic-bezier(0.32, 0, 0.67, 0);
-    animation-timeline: scroll(root block);
-  }
-  .book-splash__crest {
-    --cover-exit-offset: -2.5rem;
-    --cover-exit-scale: 0.88;
-
-    animation-range: 0 42.6svh;
-  }
-  .book-splash__center {
-    --cover-exit-offset: -1.25rem;
-    --cover-exit-scale: 0.94;
-
-    animation-range: 8.2svh 54.1svh;
-  }
-  .book-splash__tagline {
-    --cover-exit-offset: 1.5rem;
-
-    animation-range: 23svh 59svh;
-  }
-  .book-splash__scroll {
-    --cover-exit-offset: 2.5rem;
-    --cover-exit-scale: 0.86;
-
-    animation-range: 39.4svh 65.6svh;
-  }
-  .book-splash__admin {
-    --cover-exit-offset: 1rem;
-    --cover-exit-scale: 0.96;
-
-    animation-range: 8.2svh 49.2svh;
-  }
-  /* 표지에서 가장 늦게 사라지는 화살표가 65.6svh 에서 끝난다. 그 뒤부터 나타난다. */
-  .splash-sheaf {
-    animation: sheaf-arrive linear both;
-    animation-timeline: scroll(root block);
-    animation-range: 70svh 95svh;
-  }
-}
 @media (max-width: 860px) {
   .splash-sheaf {
     /* 좁은 화면에는 hover 가 없다. 접힌 상태를 두지 않는다. */
@@ -590,21 +466,6 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  /* @supports 규칙이 표지를 sticky 로 고정한다. 애니메이션만 꺼서는 표지가
-     화면에 그대로 눌어붙어 낱장을 가린다. 표지를 문서 흐름으로 되돌린다. */
-  .book-splash__face {
-    position: relative;
-    top: auto;
-  }
-  .book-splash__crest,
-  .book-splash__center,
-  .book-splash__tagline,
-  .book-splash__scroll,
-  .book-splash__scroll-line,
-  .book-splash__admin,
-  .splash-sheaf {
-    animation: none;
-  }
   .splash-leaf,
   .splash-leaf__gilt,
   .splash-leaf__gilt::before,
@@ -626,15 +487,8 @@
     width: 5.5rem;
     height: 5.5rem;
   }
-  .book-splash__center {
-    padding-bottom: 3rem;
-  }
   .book-splash__tagline {
-    bottom: max(8rem, calc(env(safe-area-inset-bottom) + 6rem));
     font-size: 0.7rem;
-  }
-  .book-splash__scroll {
-    bottom: max(1rem, env(safe-area-inset-bottom));
   }
   .splash-colophon {
     flex-direction: column;
