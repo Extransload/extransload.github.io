@@ -120,6 +120,35 @@ test('splash leaves lean the same way and overlap their neighbour', async ({ pag
     .locator('.splash-sheaf .splash-leaf')
     .evaluateAll((elements) => elements.map((element) => getComputedStyle(element).zIndex));
   for (const value of stacking) expect(value).toBe('auto');
+
+  // 기울기는 변수가 아니라 실제로 계산된 폴리곤에서 읽어야 한다.
+  // --leaf-tilt 를 읽으면 규칙이 그 변수를 쓰는지 여부를 검사하지 못한다.
+  // 계산된 clip-path 는 px/%/calc() 가 섞여 직렬화되므로(예: "polygon(0px 0px, 100%
+  // 17px, 100% calc(100% - 17px), 0px 100%)"), 각 점의 y 성분을 DOM 으로 실제
+  // 해석해 픽셀 값을 얻는다.
+  const resting = await page.locator('a.splash-leaf#journal').evaluate((element) => {
+    const height = element.getBoundingClientRect().height;
+    const clip = getComputedStyle(element).clipPath;
+    const points = clip.slice(clip.indexOf('(') + 1, clip.lastIndexOf(')')).split(',');
+    const container = document.createElement('div');
+    container.style.cssText = `position:absolute; visibility:hidden; height:${height}px; width:0; top:0;`;
+    document.body.append(container);
+    const ys = points.map((point) => {
+      const yExpr = point.trim().replace(/^\S+\s+/, '');
+      const probe = document.createElement('div');
+      probe.style.cssText = `position:absolute; top:${yExpr}; left:0; height:0; width:0;`;
+      container.append(probe);
+      const y = probe.getBoundingClientRect().top - container.getBoundingClientRect().top;
+      probe.remove();
+      return y;
+    });
+    container.remove();
+    return ys;
+  });
+  expect(resting).toHaveLength(4);
+  // 오른쪽으로 좁아진다: 오른쪽 위가 더 낮고, 오른쪽 아래가 더 높다.
+  expect(resting[1]).toBeGreaterThan(resting[0]);
+  expect(resting[2]).toBeLessThan(resting[3]);
 });
 
 test('splash leaves carry their number, title and destination from the data', async ({ page }) => {
@@ -229,6 +258,10 @@ test('splash leaf opens on keyboard focus alone', async ({ page }) => {
 
   expect(await leaf.evaluate((element) => element.getBoundingClientRect().width)).toBeGreaterThan(resting * 1.5);
   await expect(leaf.locator('.splash-leaf__description')).toBeVisible();
+
+  // clip-path 가 바깥으로 그린 outline 을 잘라낸다. 링이 남으려면 offset 이 음수여야 한다.
+  const outlineOffset = await leaf.evaluate((element) => parseFloat(getComputedStyle(element).outlineOffset));
+  expect(outlineOffset).toBeLessThan(0);
 });
 
 test('splash artwork appears only in the leaf that has opened', async ({ page }) => {
@@ -281,14 +314,8 @@ test('splash leaves stack and stay open on narrow screens', async ({ page }) => 
     // 전부 펼쳐져 있다.
     for (const chapter of splashChapters) {
       const detail = page.locator(`a.splash-leaf#${chapter.id} .splash-leaf__detail`);
-      // toBeVisible() 은 opacity 와 조상의 overflow 클리핑을 보지 않는다.
-      // 접힘/펼침을 실제로 가르는 것은 이 둘이다.
+      // toBeVisible() 은 opacity 를 보지 않는다. 접힘/펼침을 실제로 가르는 것은 이 값이다.
       expect(await detail.evaluate((element) => getComputedStyle(element).opacity)).toBe('1');
-      const unclipped = await page.locator(`a.splash-leaf#${chapter.id}`).evaluate((leaf) => {
-        const text = leaf.querySelector('.splash-leaf__description')!.getBoundingClientRect();
-        return text.height > 0 && text.bottom <= leaf.getBoundingClientRect().bottom + 1;
-      });
-      expect(unclipped).toBe(true);
     }
 
     expect(
@@ -310,6 +337,14 @@ test('splash drops its motion when the visitor asks for less', async ({ page }) 
   // 모션을 끄지 않았다면 여기서 0 이다.
   await scrollTo(page, 450);
   expect(await opacityOf(page, '.book-splash__crest')).toBeCloseTo(1, 2);
+
+  // 표지를 지나면 sticky 로 눌어붙지 않고 낱장 위에서 물러나 있어야 한다.
+  // @supports 블록이 표지를 sticky 로 고정하므로, 모션만 꺼서는 표지가 화면에
+  // 남아 낱장을 가릴 수 있다.
+  await scrollTo(page, 1000);
+  expect(
+    await page.locator('.book-splash__face').evaluate((element) => element.getBoundingClientRect().bottom),
+  ).toBeLessThanOrEqual(0);
 
   // 움직임을 줄여도 목적지는 그대로 열린다.
   await leaf.click();
@@ -334,6 +369,17 @@ test('splash reveals its leaves only after the cover has finished fading', async
 
   await scrollTo(page, viewport * 0.95);
   expect(await opacityOf(page, '.splash-sheaf')).toBeCloseTo(1, 2);
+});
+
+test('splash colophon link returns the reader to the cover', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  await scrollTo(page, 1000);
+  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(500);
+
+  await page.getByRole('link', { name: /표지로 돌아가기/ }).click();
+  await page.waitForFunction(() => window.scrollY < 2);
+  expect(await page.evaluate(() => window.scrollY)).toBeLessThan(2);
 });
 
 test('works presents a scannable contents page for every folio', async ({ page }) => {

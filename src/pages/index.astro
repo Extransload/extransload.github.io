@@ -60,18 +60,18 @@ const adminOrigin = adminUrl?.replace(/\/+$/, '').replace(/\/admin$/, '') || '';
         <span class="splash-leaf__gilt" aria-hidden="true"></span>
         <span class="splash-leaf__crease" aria-hidden="true"></span>
         <span class="splash-leaf__art" aria-hidden="true"><SplashArtwork chapter={chapter.id} /></span>
-        <span class="splash-leaf__copy">
+        <div class="splash-leaf__copy">
           <span class="splash-leaf__number" aria-hidden="true">{chapter.number}</span>
           <h2 class="splash-leaf__title" id={`${chapter.id}-title`}>{chapter.label}</h2>
           <span class="splash-leaf__detail">
             <span class="splash-leaf__description" id={`${chapter.id}-description`}>{chapter.description}</span>
             <span class="splash-leaf__invitation" aria-hidden="true">{chapter.invitation}<span>↗</span></span>
           </span>
-        </span>
+        </div>
       </a>)}
     </section>
     <footer class="splash-colophon">
-      <a href="#cover">표지로 돌아가기 <span aria-hidden="true">↑</span></a>
+      <a href="#top">표지로 돌아가기 <span aria-hidden="true">↑</span></a>
     </footer>
   </main>
 </SplashLayout>

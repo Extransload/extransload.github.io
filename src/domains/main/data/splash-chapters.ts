@@ -7,8 +7,6 @@ export interface SplashChapter {
   href: string;
   description: string;
   invitation: string;
-  // Optional replacement for the built-in illustration. Videos need a still poster.
-  media?: { kind: 'image'; src: string; alt: string } | { kind: 'video'; src: string; poster: string; alt: string };
 }
 
 export const splashChapters: SplashChapter[] = [

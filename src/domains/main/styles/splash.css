@@ -30,9 +30,6 @@
   outline: 1px solid var(--cover-gold-bright);
   outline-offset: 8px;
 }
-.book-splash section:focus {
-  outline: none;
-}
 .book-splash::before,
 .book-splash::after {
   position: fixed;
@@ -244,6 +241,18 @@
 .splash-leaf + .splash-leaf {
   margin-left: calc(-1 * var(--leaf-lap));
 }
+/* clip-path 가 outline 도 잘라낸다. 바깥으로 그린 링은 남지 않으므로 안쪽으로 그린다.
+   .book-splash a:focus-visible 보다 상세도가 높아야 이긴다(class+type+pseudo 대
+   class+pseudo 로는 지지 않는다). */
+.book-splash .splash-leaf:focus-visible {
+  outline-offset: -3px;
+}
+.splash-leaf__gilt,
+.splash-leaf__crease,
+.splash-leaf__art {
+  position: absolute;
+  pointer-events: none;
+}
 /* 금박 테. 위·아래 띠 두 개를 따로 그린다.
    한 폴리곤으로 두 띠를 내려면 자기교차에 기대야 해서 쓰지 않는다. */
 .splash-leaf__gilt {
@@ -342,62 +351,60 @@
 .splash-leaf__invitation > span {
   margin-left: 0.5rem;
 }
-.splash-leaf__gilt,
-.splash-leaf__crease,
-.splash-leaf__art {
-  position: absolute;
-  pointer-events: none;
-}
-/* 마우스와 키보드가 같은 규칙을 탄다. */
-.splash-leaf:is(:hover, :focus-within) {
-  /* 펼침: 기울기를 0으로 두면 낱장과 금박 띠가 한꺼번에 펴진다. */
-  --leaf-tilt: 0px;
+/* 861px 아래는 이미 펼쳐진 채로 쌓여 있다(아래 860px 블록). 열림 상태 규칙은
+   호버가 있는 화면에만 둔다 — 그래야 모바일에서 탭했을 때 낱장이 튀지 않는다. */
+@media (min-width: 861px) {
+  /* 마우스와 키보드가 같은 규칙을 탄다. */
+  .splash-leaf:is(:hover, :focus-within) {
+    /* 펼침: 기울기를 0으로 두면 낱장과 금박 띠가 한꺼번에 펴진다. */
+    --leaf-tilt: 0px;
 
-  z-index: 1;
-  flex-grow: var(--leaf-grow);
-  margin-left: 0;
-  /* 반응: 즉시 뜨고 밝아진다. */
-  transform: translateY(-6px);
-  background: var(--leaf-face-open);
-}
-/* 펼쳐진 낱장을 다음 장이 덮지 않게 한다. */
-.splash-leaf:is(:hover, :focus-within) + .splash-leaf {
-  margin-left: 0;
-}
-.splash-leaf:is(:hover, :focus-within) .splash-leaf__copy {
-  padding-left: 1.4rem;
-}
-.splash-leaf:is(:hover, :focus-within) .splash-leaf__title {
-  font-size: 1.6rem;
-}
-.splash-leaf:is(:hover, :focus-within) .splash-leaf__detail {
-  max-height: 12rem;
-  opacity: 1;
-}
-.splash-leaf:is(:hover, :focus-within) .splash-leaf__gilt {
-  opacity: 1;
-}
-.splash-leaf:is(:hover, :focus-within) .splash-leaf__crease {
-  opacity: 0;
-}
-.splash-leaf:is(:hover, :focus-within) .splash-leaf__art {
-  opacity: 0.22;
-}
-/* 삽화의 hover 모션은 기존 키프레임을 그대로 쓴다. 선택자만 낱장으로 바꾼다. */
-.splash-leaf:is(:hover, :focus-within) .art-object {
-  animation: splash-art-object-hover 1.1s cubic-bezier(0.2, 0.7, 0.25, 1) infinite alternate;
-}
-.splash-leaf:is(:hover, :focus-within) .art-drifter {
-  animation: splash-art-drifter-hover 1.6s cubic-bezier(0.2, 0.7, 0.25, 1) infinite alternate;
-}
-.splash-leaf:is(:hover, :focus-within) .art-ribbon {
-  animation: splash-art-ribbon-hover 1.25s ease-in-out infinite alternate;
-}
-.splash-leaf:is(:hover, :focus-within) .art-letter {
-  animation: splash-art-letter-hover 1.5s cubic-bezier(0.2, 0.7, 0.25, 1) infinite alternate;
-}
-.splash-leaf:is(:hover, :focus-within) .art-orbit {
-  animation: splash-orbit 8s linear infinite;
+    z-index: 1;
+    flex-grow: var(--leaf-grow);
+    margin-left: 0;
+    /* 반응: 즉시 뜨고 밝아진다. */
+    transform: translateY(-6px);
+    background: var(--leaf-face-open);
+  }
+  /* 펼쳐진 낱장을 다음 장이 덮지 않게 한다. */
+  .splash-leaf:is(:hover, :focus-within) + .splash-leaf {
+    margin-left: 0;
+  }
+  .splash-leaf:is(:hover, :focus-within) .splash-leaf__copy {
+    padding-left: 1.4rem;
+  }
+  .splash-leaf:is(:hover, :focus-within) .splash-leaf__title {
+    font-size: 1.6rem;
+  }
+  .splash-leaf:is(:hover, :focus-within) .splash-leaf__detail {
+    max-height: 12rem;
+    opacity: 1;
+  }
+  .splash-leaf:is(:hover, :focus-within) .splash-leaf__gilt {
+    opacity: 1;
+  }
+  .splash-leaf:is(:hover, :focus-within) .splash-leaf__crease {
+    opacity: 0;
+  }
+  .splash-leaf:is(:hover, :focus-within) .splash-leaf__art {
+    opacity: 0.22;
+  }
+  /* 삽화의 hover 모션은 기존 키프레임을 그대로 쓴다. 선택자만 낱장으로 바꾼다. */
+  .splash-leaf:is(:hover, :focus-within) .art-object {
+    animation: splash-art-object-hover 1.1s cubic-bezier(0.2, 0.7, 0.25, 1) infinite alternate;
+  }
+  .splash-leaf:is(:hover, :focus-within) .art-drifter {
+    animation: splash-art-drifter-hover 1.6s cubic-bezier(0.2, 0.7, 0.25, 1) infinite alternate;
+  }
+  .splash-leaf:is(:hover, :focus-within) .art-ribbon {
+    animation: splash-art-ribbon-hover 1.25s ease-in-out infinite alternate;
+  }
+  .splash-leaf:is(:hover, :focus-within) .art-letter {
+    animation: splash-art-letter-hover 1.5s cubic-bezier(0.2, 0.7, 0.25, 1) infinite alternate;
+  }
+  .splash-leaf:is(:hover, :focus-within) .art-orbit {
+    animation: splash-orbit 8s linear infinite;
+  }
 }
 .splash-colophon {
   display: flex;
@@ -620,9 +627,6 @@
     min-height: 11rem;
     clip-path: none;
   }
-  .splash-leaf + .splash-leaf {
-    margin-left: 0;
-  }
   .splash-leaf__copy {
     position: static;
     padding: 1.6rem 1.4rem;
@@ -637,6 +641,12 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
+  /* @supports 규칙이 표지를 sticky 로 고정한다. 애니메이션만 꺼서는 표지가
+     화면에 그대로 눌어붙어 낱장을 가린다. 표지를 문서 흐름으로 되돌린다. */
+  .book-splash__face {
+    position: relative;
+    top: auto;
+  }
   .book-splash__face::before,
   .book-splash__crest,
   .book-splash__center,
@@ -660,11 +670,6 @@
   }
   .splash-leaf:is(:hover, :focus-within) :is(.art-object, .art-drifter, .art-ribbon, .art-letter, .art-orbit) {
     animation: none;
-  }
-}
-@media (max-width: 1100px) and (min-width: 761px) {
-  .splash-colophon {
-    padding-inline: 12rem 2rem;
   }
 }
 @media (max-width: 760px) {
