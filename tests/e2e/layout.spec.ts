@@ -280,7 +280,15 @@ test('splash leaves stack and stay open on narrow screens', async ({ page }) => 
 
     // 전부 펼쳐져 있다.
     for (const chapter of splashChapters) {
-      await expect(page.locator(`a.splash-leaf#${chapter.id} .splash-leaf__description`)).toBeVisible();
+      const detail = page.locator(`a.splash-leaf#${chapter.id} .splash-leaf__detail`);
+      // toBeVisible() 은 opacity 와 조상의 overflow 클리핑을 보지 않는다.
+      // 접힘/펼침을 실제로 가르는 것은 이 둘이다.
+      expect(await detail.evaluate((element) => getComputedStyle(element).opacity)).toBe('1');
+      const unclipped = await page.locator(`a.splash-leaf#${chapter.id}`).evaluate((leaf) => {
+        const text = leaf.querySelector('.splash-leaf__description')!.getBoundingClientRect();
+        return text.height > 0 && text.bottom <= leaf.getBoundingClientRect().bottom + 1;
+      });
+      expect(unclipped).toBe(true);
     }
 
     expect(
@@ -296,6 +304,11 @@ test('splash drops its motion when the visitor asks for less', async ({ page }) 
 
   const leaf = page.locator('a.splash-leaf#works');
   expect(await leaf.evaluate((element) => getComputedStyle(element).transitionDuration)).toMatch(/^0s(, 0s)*$/);
+  expect(await opacityOf(page, '.book-splash__crest')).toBeCloseTo(1, 2);
+
+  // 표지 문장의 페이드 구간(0–42.6svh)을 지난 지점에서 봐야 구분이 된다.
+  // 모션을 끄지 않았다면 여기서 0 이다.
+  await scrollTo(page, 450);
   expect(await opacityOf(page, '.book-splash__crest')).toBeCloseTo(1, 2);
 
   // 움직임을 줄여도 목적지는 그대로 열린다.
