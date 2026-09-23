@@ -213,9 +213,12 @@
   --leaf-ease: cubic-bezier(0.22, 0.9, 0.24, 1);
   --leaf-face: linear-gradient(97deg, #2c3a4b 0%, #1e2835 46%, #111925 100%);
   --leaf-face-open: linear-gradient(180deg, #33435a 0%, #243041 48%, #18202c 100%);
+  /* 낱장이 화면 높이를 다 먹으면 17px 기울기가 수직선처럼 보이고 겹침도 안 읽힌다.
+     가로에 가까운 비율로 묶어야 뭉치로 읽힌다. */
+  --leaf-height: clamp(260px, 36svh, 380px);
 
   display: flex;
-  align-items: stretch;
+  align-items: center;
   min-height: 100svh;
   padding: clamp(4rem, 12svh, 9rem) clamp(1.5rem, 5vw, 5rem);
 }
@@ -223,6 +226,7 @@
   position: relative;
   flex: 1 1 0;
   min-width: 0;
+  height: var(--leaf-height);
   color: inherit;
   text-decoration: none;
   /* 오른쪽으로 좁아지는 사다리꼴. 모든 낱장이 같은 방향으로 기운다. */
@@ -293,12 +297,17 @@
 }
 /* 삽화는 글자 위 빈 자리에 뜬다. 접힌 낱장은 폭이 좁아 잘리므로 감춘다. */
 .splash-leaf__art {
-  inset: clamp(1.5rem, 6%, 3.5rem) auto auto 50%;
+  /* 폭이 아니라 높이에 맞춘다. 낱장 높이를 바꿔도 글자 영역을 침범하지 않는다. */
+  inset: 7% auto auto 50%;
   z-index: 0;
-  width: min(26rem, 64%);
+  height: 44%;
   translate: -50% 0;
   opacity: 0;
   transition: opacity var(--leaf-open) ease var(--leaf-hold);
+}
+.splash-leaf__art .chapter-art {
+  width: auto;
+  height: 100%;
 }
 /* 겹친 폭만큼 글자를 안쪽으로 민다. 모든 낱장이 같은 값을 써야 기준선이 맞는다. */
 .splash-leaf__copy {
@@ -619,11 +628,14 @@
     --leaf-lap: 0px;
 
     flex-direction: column;
+    /* 세로 배치에서 교차축은 가로다. center 로 두면 낱장이 내용 폭으로 줄어든다. */
+    align-items: stretch;
     gap: 1px;
     padding: clamp(3rem, 9svh, 6rem) clamp(1rem, 5vw, 2.5rem);
   }
   .splash-leaf {
     flex: 0 0 auto;
+    height: auto;
     min-height: 11rem;
     clip-path: none;
   }
