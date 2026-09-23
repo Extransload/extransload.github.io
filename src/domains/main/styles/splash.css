@@ -326,24 +326,6 @@
     animation: splash-orbit 8s linear infinite;
   }
 }
-.splash-colophon {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 2rem;
-  padding: 4rem clamp(3rem, 7vw, 8rem);
-  font-size: 0.68rem;
-  line-height: 1.9;
-  color: var(--cover-muted);
-}
-.splash-colophon a {
-  color: var(--cover-gold);
-  text-decoration: none;
-  white-space: nowrap;
-}
-.splash-colophon a span {
-  margin-left: 1rem;
-}
 .splash-sr-only {
   position: absolute;
   width: 1px;
@@ -488,12 +470,6 @@
     height: 5.5rem;
   }
   .book-splash__tagline {
-    font-size: 0.7rem;
-  }
-  .splash-colophon {
-    flex-direction: column;
-    align-items: center;
-    padding: 2rem 2.5rem 8rem;
     font-size: 0.7rem;
   }
   .book-splash__admin {

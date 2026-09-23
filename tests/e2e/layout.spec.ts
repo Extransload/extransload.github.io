@@ -13,17 +13,6 @@ const themeColor = (page: Page, token: string) =>
     return value;
   }, token);
 
-/**
- * 절대 오프셋으로 즉시 스크롤한 뒤, 스크롤 기반 애니메이션이 새 진행도로
- * 정착하도록 두 프레임 기다린다. 합성 스레드에서 도는 애니메이션이라
- * 스크롤 직후 한 프레임 동안은 이전 값이 읽힌다.
- */
-const scrollTo = async (page: Page, top: number) => {
-  await page.evaluate((y) => window.scrollTo({ top: y, behavior: 'instant' as ScrollBehavior }), top);
-  await page.evaluate(
-    () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))),
-  );
-};
 
 /** 요소가 지금 계산된 불투명도. */
 const opacityOf = (page: Page, selector: string) =>
@@ -348,17 +337,6 @@ test('splash drops its motion when the visitor asks for less', async ({ page }) 
   await expect(page).toHaveURL(/\/works\/$/);
 });
 
-test('splash colophon link returns the reader to the cover where the page scrolls', async ({ page }) => {
-  // 데스크톱은 한 화면에 다 들어가 스크롤이 없다. 낱장이 세로로 쌓이는 폭에서만 의미가 있다.
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/');
-  await scrollTo(page, 2000);
-  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(300);
-
-  await page.getByRole('link', { name: /표지로 돌아가기/ }).click();
-  await page.waitForFunction(() => window.scrollY < 2);
-  expect(await page.evaluate(() => window.scrollY)).toBeLessThan(2);
-});
 
 test('works presents a scannable contents page for every folio', async ({ page }) => {
   await page.goto('/works/');
