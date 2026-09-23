@@ -13,7 +13,6 @@ const themeColor = (page: Page, token: string) =>
     return value;
   }, token);
 
-
 /** 요소가 지금 계산된 불투명도. */
 const opacityOf = (page: Page, selector: string) =>
   page.locator(selector).evaluate((element) => parseFloat(getComputedStyle(element).opacity));
@@ -55,6 +54,35 @@ test('splash shows the whole book on one screen, without a script', async ({ pag
   expect(gaps.crestToMark).toBeLessThan(40);
   expect(gaps.markToTagline).toBeLessThan(40);
   expect(gaps.taglineToLeaf).toBeGreaterThan(gaps.markToTagline);
+});
+
+test('splash stacks crest, wordmark and tagline in that order at every width', async ({ page }) => {
+  // position: absolute 를 흐름으로 바꾸면서 좁은 화면에만 남아 있던 top 오프셋이
+  // 문장을 워드마크 위로 끌어내린 적이 있다. 폭마다 순서와 간격을 확인한다.
+  for (const [width, height] of [
+    [1512, 830],
+    [1440, 900],
+    [1024, 768],
+    [760, 900],
+    [390, 844],
+    [320, 720],
+  ]) {
+    await page.setViewportSize({ width, height });
+    await page.goto('/');
+    const gaps = await page.evaluate(() => {
+      const box = (selector: string) => document.querySelector(selector)!.getBoundingClientRect();
+      const crest = box('.book-splash__crest');
+      const mark = box('.book-splash__title-glyph');
+      const tagline = box('.book-splash__tagline');
+      return { crestToMark: mark.top - crest.bottom, markToTagline: tagline.top - mark.bottom };
+    });
+    // 음수는 아래 요소를 파고들었다는 뜻이다.
+    expect(gaps.crestToMark, `문장→워드마크 @${width}`).toBeGreaterThanOrEqual(0);
+    expect(gaps.markToTagline, `워드마크→태그라인 @${width}`).toBeGreaterThanOrEqual(0);
+    // 셋이 한 덩어리로 붙어 있어야 한다. 측정값은 어느 폭에서나 9~12px.
+    expect(gaps.crestToMark, `문장→워드마크 간격 @${width}`).toBeLessThan(48);
+    expect(gaps.markToTagline, `워드마크→태그라인 간격 @${width}`).toBeLessThan(48);
+  }
 });
 
 test('splash lays every chapter out as one row of leaves', async ({ page }) => {
@@ -336,7 +364,6 @@ test('splash drops its motion when the visitor asks for less', async ({ page }) 
   await leaf.click();
   await expect(page).toHaveURL(/\/works\/$/);
 });
-
 
 test('works presents a scannable contents page for every folio', async ({ page }) => {
   await page.goto('/works/');

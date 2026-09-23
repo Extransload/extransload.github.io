@@ -465,7 +465,6 @@
 }
 @media (max-width: 760px) {
   .book-splash__crest {
-    top: clamp(5rem, 17svh, 9rem);
     width: 5.5rem;
     height: 5.5rem;
   }
