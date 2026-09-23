@@ -5,13 +5,11 @@
   --color-accent: #c7a75a;
 }
 .book-splash {
-  --frame-inset: 1.75rem;
   --cover-ink: #07101c;
   --cover-ivory: #eee9dc;
   --cover-muted: #b3b9ba;
   --cover-gold: #c7a75a;
   --cover-gold-bright: #e0c77f;
-  --cover-gold-dim: rgb(199 167 90 / 30%);
   position: relative;
   isolation: isolate;
   color: var(--cover-ivory);
@@ -48,30 +46,6 @@
     linear-gradient(90deg, rgb(3 10 18 / 52%), transparent 40%);
   box-shadow: inset 0 0 7rem rgb(0 0 0 / 30%);
 }
-.book-splash__frame-mask {
-  position: fixed;
-  z-index: 9;
-  inset: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(ellipse at 65% 45%, transparent, rgb(1 5 10 / 35%)),
-    linear-gradient(90deg, rgb(3 10 18 / 52%), transparent 40%),
-    url('/splash-leather-cover-texture.webp') center / cover;
-  box-shadow: inset 0 0 7rem rgb(0 0 0 / 30%);
-  -webkit-mask:
-    linear-gradient(#000 0 0) top / 100% var(--frame-inset) no-repeat,
-    linear-gradient(#000 0 0) right / var(--frame-inset) 100% no-repeat,
-    linear-gradient(#000 0 0) bottom / 100% var(--frame-inset) no-repeat,
-    linear-gradient(#000 0 0) left / var(--frame-inset) 100% no-repeat;
-  mask:
-    linear-gradient(#000 0 0) top / 100% var(--frame-inset) no-repeat,
-    linear-gradient(#000 0 0) right / var(--frame-inset) 100% no-repeat,
-    linear-gradient(#000 0 0) bottom / 100% var(--frame-inset) no-repeat,
-    linear-gradient(#000 0 0) left / var(--frame-inset) 100% no-repeat;
-}
-.book-splash__frame-mask-bar {
-  display: none;
-}
 .book-splash__face {
   position: relative;
   z-index: 3;
@@ -79,29 +53,6 @@
   min-height: 100svh;
   overflow: hidden;
   pointer-events: none;
-}
-.book-splash__face::before {
-  position: absolute;
-  z-index: 0;
-  inset: 0;
-  content: '';
-  pointer-events: none;
-  opacity: 1;
-  background:
-    radial-gradient(ellipse at 65% 45%, transparent, rgb(1 5 10 / 35%)),
-    linear-gradient(90deg, rgb(3 10 18 / 52%), transparent 40%),
-    url('/splash-leather-cover-texture.webp') center / cover;
-  box-shadow: inset 0 0 7rem rgb(0 0 0 / 30%);
-}
-.book-splash__filigree {
-  position: fixed;
-  z-index: 10;
-  inset: var(--frame-inset);
-  pointer-events: none;
-  border: 1px solid var(--cover-gold-dim);
-  box-shadow:
-    inset 0 0 0 0.3rem rgb(7 16 28 / 32%),
-    inset 0 0 0 0.38rem rgb(199 167 90 / 15%);
 }
 .book-splash__crest {
   position: absolute;
@@ -546,14 +497,6 @@
     scale: var(--cover-exit-scale, 1);
   }
 }
-@keyframes cover-veil {
-  from {
-    opacity: 1;
-  }
-  to {
-    opacity: 0;
-  }
-}
 @keyframes sheaf-arrive {
   from {
     opacity: 0;
@@ -571,7 +514,6 @@
     position: sticky;
     top: 0;
   }
-  .book-splash__face::before,
   .book-splash__crest,
   .book-splash__center,
   .book-splash__tagline,
@@ -579,11 +521,6 @@
   .book-splash__admin {
     animation: cover-exit both cubic-bezier(0.32, 0, 0.67, 0);
     animation-timeline: scroll(root block);
-  }
-  .book-splash__face::before {
-    animation-name: cover-veil;
-    animation-timing-function: linear;
-    animation-range: 0 82svh;
   }
   .book-splash__crest {
     --cover-exit-offset: -2.5rem;
@@ -659,7 +596,6 @@
     position: relative;
     top: auto;
   }
-  .book-splash__face::before,
   .book-splash__crest,
   .book-splash__center,
   .book-splash__tagline,
@@ -685,9 +621,6 @@
   }
 }
 @media (max-width: 760px) {
-  .book-splash {
-    --frame-inset: 1rem;
-  }
   .book-splash__crest {
     top: clamp(5rem, 17svh, 9rem);
     width: 5.5rem;
