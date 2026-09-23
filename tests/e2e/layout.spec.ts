@@ -111,7 +111,7 @@ test('splash lays every chapter out as one row of leaves', async ({ page }) => {
   }
 });
 
-test('splash leaves lean the same way and overlap their neighbour', async ({ page }) => {
+test('splash leaves turn on a shared vanishing point and overlap their neighbour', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
 
@@ -120,61 +120,43 @@ test('splash leaves lean the same way and overlap their neighbour', async ({ pag
     .evaluate((element) => parseFloat(getComputedStyle(element).getPropertyValue('--leaf-lap')));
   expect(lap).toBeGreaterThan(0);
 
-  const boxes = await page
+  // 겹침은 레이아웃 치수로 본다. 회전 뒤의 화면 사각형은 원근 때문에 밀린다.
+  const layout = await page
     .locator('.splash-sheaf .splash-leaf')
     .evaluateAll((elements) =>
-      elements.map((element) => element.getBoundingClientRect()).map((b) => [b.left, b.right]),
+      (elements as HTMLElement[]).map((element) => ({ left: element.offsetLeft, width: element.offsetWidth })),
     );
-
-  // 이웃한 낱장은 --leaf-lap 만큼 겹친다.
-  for (let index = 1; index < boxes.length; index += 1) {
-    const overlap = boxes[index - 1][1] - boxes[index][0];
+  for (let index = 1; index < layout.length; index += 1) {
+    const overlap = layout[index - 1].left + layout[index - 1].width - layout[index].left;
     expect(Math.abs(overlap - lap)).toBeLessThanOrEqual(1);
   }
 
-  // 모든 낱장이 같은 방향으로 기운다: clip-path 가 오른쪽으로 좁아지는 사다리꼴이다.
-  const shapes = await page
+  // 낱장은 진짜로 돌아가 있다. 변수가 아니라 계산된 행렬을 읽는다 —
+  // 규칙이 그 변수를 실제로 쓰는지까지 검사해야 한다.
+  const transforms = await page
     .locator('.splash-sheaf .splash-leaf')
-    .evaluateAll((elements) => elements.map((element) => getComputedStyle(element).clipPath));
-  for (const shape of shapes) {
-    expect(shape).toContain('polygon');
-    expect(shape).toBe(shapes[0]);
+    .evaluateAll((elements) => [...new Set(elements.map((element) => getComputedStyle(element).transform))]);
+  expect(transforms).toHaveLength(1);
+  expect(transforms[0]).toMatch(/^matrix3d\(/);
+  expect(transforms[0]).not.toBe('matrix3d(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)');
+
+  // 하나의 소실점을 공유한다는 증거: 투영 폭 대 레이아웃 폭의 비가 왼쪽에서
+  // 오른쪽으로 단조 증가한다. 원근이 빠지면 다섯 개가 모두 1 로 같아진다.
+  const ratios = await page
+    .locator('.splash-sheaf .splash-leaf')
+    .evaluateAll((elements) =>
+      (elements as HTMLElement[]).map((element) => element.getBoundingClientRect().width / element.offsetWidth),
+    );
+  for (let index = 1; index < ratios.length; index += 1) {
+    expect(ratios[index], `투영비 ${index}`).toBeGreaterThan(ratios[index - 1]);
   }
+  expect(ratios[ratios.length - 1] - ratios[0]).toBeGreaterThan(0.05);
 
   // 뒤 낱장이 앞 낱장 위에 그려진다: z-index 를 쓰지 않고 문서 순서로.
   const stacking = await page
     .locator('.splash-sheaf .splash-leaf')
     .evaluateAll((elements) => elements.map((element) => getComputedStyle(element).zIndex));
   for (const value of stacking) expect(value).toBe('auto');
-
-  // 기울기는 변수가 아니라 실제로 계산된 폴리곤에서 읽어야 한다.
-  // --leaf-tilt 를 읽으면 규칙이 그 변수를 쓰는지 여부를 검사하지 못한다.
-  // 계산된 clip-path 는 px/%/calc() 가 섞여 직렬화되므로(예: "polygon(0px 0px, 100%
-  // 17px, 100% calc(100% - 17px), 0px 100%)"), 각 점의 y 성분을 DOM 으로 실제
-  // 해석해 픽셀 값을 얻는다.
-  const resting = await page.locator('a.splash-leaf#journal').evaluate((element) => {
-    const height = element.getBoundingClientRect().height;
-    const clip = getComputedStyle(element).clipPath;
-    const points = clip.slice(clip.indexOf('(') + 1, clip.lastIndexOf(')')).split(',');
-    const container = document.createElement('div');
-    container.style.cssText = `position:absolute; visibility:hidden; height:${height}px; width:0; top:0;`;
-    document.body.append(container);
-    const ys = points.map((point) => {
-      const yExpr = point.trim().replace(/^\S+\s+/, '');
-      const probe = document.createElement('div');
-      probe.style.cssText = `position:absolute; top:${yExpr}; left:0; height:0; width:0;`;
-      container.append(probe);
-      const y = probe.getBoundingClientRect().top - container.getBoundingClientRect().top;
-      probe.remove();
-      return y;
-    });
-    container.remove();
-    return ys;
-  });
-  expect(resting).toHaveLength(4);
-  // 오른쪽으로 좁아진다: 오른쪽 위가 더 낮고, 오른쪽 아래가 더 높다.
-  expect(resting[1]).toBeGreaterThan(resting[0]);
-  expect(resting[2]).toBeLessThan(resting[3]);
 });
 
 test('splash leaves carry their number, title and destination from the data', async ({ page }) => {
@@ -193,8 +175,13 @@ test('splash leaves carry their number, title and destination from the data', as
 
   // 목차는 사라졌다.
   await expect(page.locator('.splash-toc')).toHaveCount(0);
-  // 워드마크 이미지는 쓰지 않는다.
-  await expect(page.locator('.splash-sheaf img')).toHaveCount(0);
+  // 제목은 자수 워드마크다. 읽히는 이름은 sr-only 텍스트가 맡는다.
+  for (const chapter of splashChapters) {
+    const wordmark = page.locator(`a.splash-leaf#${chapter.id} .splash-leaf__wordmark`);
+    await expect(wordmark).toHaveAttribute('src', chapter.wordmark.src);
+    await expect(wordmark).toHaveAttribute('aria-hidden', 'true');
+  }
+  await expect(page.locator('.splash-leaf__wordmark')).toHaveCount(splashChapters.length);
 });
 
 test('splash sections link to each independent space', async ({ page }) => {
@@ -247,18 +234,32 @@ test('splash leaf reacts at once and only widens after the hold', async ({ page 
   expect(await widthOf()).toBeGreaterThan(resting * 1.5);
 });
 
-test('splash leaf straightens into a rectangle when it opens', async ({ page }) => {
+test('splash leaf turns face-on when it opens', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
 
   const leaf = page.locator('a.splash-leaf#works');
-  const tiltOf = () =>
-    leaf.evaluate((element) => parseFloat(getComputedStyle(element).getPropertyValue('--leaf-tilt')));
+  const transformOf = () => leaf.evaluate((element) => getComputedStyle(element).transform);
 
-  expect(await tiltOf()).toBeGreaterThan(0);
+  const resting = await transformOf();
+  expect(resting).toMatch(/^matrix3d\(/);
+
   await leaf.hover();
   await page.waitForTimeout(1400);
-  expect(await tiltOf()).toBe(0);
+
+  // 회전이 풀리고 앞으로 나온다: 3×3 부분이 단위행렬이고 z 이동만 남는다.
+  const opened = await transformOf();
+  expect(opened).not.toBe(resting);
+  const numbers = opened
+    .slice(opened.indexOf('(') + 1, -1)
+    .split(',')
+    .map(Number);
+  expect(numbers).toHaveLength(16);
+  expect(numbers[0]).toBeCloseTo(1, 3);
+  expect(numbers[2]).toBeCloseTo(0, 3);
+  expect(numbers[8]).toBeCloseTo(0, 3);
+  expect(numbers[14]).toBeGreaterThan(0);
+
   await expect(leaf.locator('.splash-leaf__description')).toBeVisible();
   await expect(leaf.locator('.splash-leaf__invitation')).toBeVisible();
 });
@@ -331,11 +332,13 @@ test('splash leaves stack and stay open on narrow screens', async ({ page }) => 
       expect(Math.abs(boxes[index][1] - boxes[0][1])).toBeLessThanOrEqual(1);
     }
 
-    // 기울기와 겹침이 풀린다.
-    const tilt = await page
-      .locator('.splash-sheaf')
-      .evaluate((element) => parseFloat(getComputedStyle(element).getPropertyValue('--leaf-tilt')));
-    expect(tilt).toBe(0);
+    // 기울기와 겹침이 풀린다. 변수가 아니라 렌더 결과로 확인한다.
+    const flat = await page
+      .locator('.splash-sheaf .splash-leaf')
+      .evaluateAll((elements) =>
+        (elements as HTMLElement[]).map((element) => element.getBoundingClientRect().width / element.offsetWidth),
+      );
+    for (const ratio of flat) expect(ratio).toBeCloseTo(1, 2);
 
     // 전부 펼쳐져 있다.
     for (const chapter of splashChapters) {
