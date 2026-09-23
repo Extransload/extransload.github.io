@@ -54,6 +54,7 @@ const adminOrigin = adminUrl?.replace(/\/+$/, '').replace(/\/admin$/, '') || '';
         class="splash-leaf"
         id={chapter.id}
         href={chapter.href}
+        aria-labelledby={`${chapter.id}-title`}
         aria-describedby={`${chapter.id}-description`}
       >
         <span class="splash-leaf__gilt" aria-hidden="true"></span>
@@ -61,7 +62,7 @@ const adminOrigin = adminUrl?.replace(/\/+$/, '').replace(/\/admin$/, '') || '';
         <span class="splash-leaf__art" aria-hidden="true"><SplashArtwork chapter={chapter.id} /></span>
         <span class="splash-leaf__copy">
           <span class="splash-leaf__number" aria-hidden="true">{chapter.number}</span>
-          <h2 class="splash-leaf__title">{chapter.label}</h2>
+          <h2 class="splash-leaf__title" id={`${chapter.id}-title`}>{chapter.label}</h2>
           <span class="splash-leaf__detail">
             <span class="splash-leaf__description" id={`${chapter.id}-description`}>{chapter.description}</span>
             <span class="splash-leaf__invitation" aria-hidden="true">{chapter.invitation}<span>↗</span></span>

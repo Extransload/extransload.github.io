@@ -94,6 +94,9 @@ test('splash leaves carry their number, title and destination from the data', as
     await expect(leaf.locator('.splash-leaf__number')).toHaveText(chapter.number);
     await expect(leaf.locator('.splash-leaf__title')).toHaveText(chapter.label);
     await expect(leaf.locator('.splash-leaf__description')).toHaveText(chapter.description);
+    // 링크 이름은 제목뿐이다. 설명은 aria-describedby 로만, 한 번 전달된다.
+    await expect(leaf).toHaveAccessibleName(chapter.label);
+    await expect(leaf).toHaveAccessibleDescription(chapter.description);
   }
 
   // 목차는 사라졌다.
