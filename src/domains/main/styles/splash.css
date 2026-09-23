@@ -55,8 +55,10 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  /* 문장 · 워드마크 · 태그라인이 한 덩어리로 위쪽에 모인다. */
-  gap: clamp(0.9rem, 2.2svh, 1.6rem);
+  /* 균일한 gap 을 쓰면 안 된다. 워드마크 이미지가 위 10.7% · 아래 4.2% 를
+     투명 여백으로 갖고 있어, 박스가 같은 간격이어도 눈에는 어긋나 보인다.
+     문장은 떼고, 태그라인은 워드마크에 붙여 한 벌로 읽히게 한다. */
+  gap: 0;
   padding: clamp(3.5rem, 9svh, 6.5rem) 1.5rem 0;
   pointer-events: none;
 }
@@ -75,6 +77,7 @@
 .book-splash__center {
   position: relative;
   z-index: 2;
+  margin-top: clamp(2.2rem, 4.8svh, 3.4rem);
 }
 .book-splash__title {
   margin: 0;
@@ -89,7 +92,7 @@
   position: relative;
   z-index: 2;
   width: min(32rem, 100%);
-  margin: 0;
+  margin: clamp(0.15rem, 0.6svh, 0.45rem) 0 0;
   color: var(--cover-muted);
   font-size: 0.74rem;
   letter-spacing: 0.08em;
@@ -136,7 +139,8 @@
   align-items: center;
   /* 표지 덩어리는 위, 낱장은 아래. 남는 높이는 둘 사이가 가져간다. */
   margin-top: auto;
-  padding: clamp(2rem, 5svh, 3.5rem) clamp(1.5rem, 5vw, 5rem) clamp(2.5rem, 7svh, 5rem);
+  /* 아래 여백은 표지의 위 여백과 같은 값이다. 남는 높이는 그 사이가 가져간다. */
+  padding: clamp(2rem, 5svh, 3.5rem) clamp(1.5rem, 5vw, 5rem) clamp(3.5rem, 9svh, 6.5rem);
 }
 .splash-leaf {
   position: relative;

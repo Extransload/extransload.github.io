@@ -51,9 +51,10 @@ test('splash shows the whole book on one screen, without a script', async ({ pag
     };
   });
   expect(gaps.crestTop).toBeLessThan(120);
-  expect(gaps.crestToMark).toBeLessThan(40);
-  expect(gaps.markToTagline).toBeLessThan(40);
-  expect(gaps.taglineToLeaf).toBeGreaterThan(gaps.markToTagline);
+  // 태그라인은 워드마크에 붙어 한 벌로 읽히고, 문장은 그보다 확실히 떨어진다.
+  expect(gaps.markToTagline).toBeLessThanOrEqual(16);
+  expect(gaps.crestToMark).toBeGreaterThan(gaps.markToTagline * 3);
+  expect(gaps.taglineToLeaf).toBeGreaterThan(gaps.crestToMark);
 });
 
 test('splash stacks crest, wordmark and tagline in that order at every width', async ({ page }) => {
@@ -79,9 +80,11 @@ test('splash stacks crest, wordmark and tagline in that order at every width', a
     // 음수는 아래 요소를 파고들었다는 뜻이다.
     expect(gaps.crestToMark, `문장→워드마크 @${width}`).toBeGreaterThanOrEqual(0);
     expect(gaps.markToTagline, `워드마크→태그라인 @${width}`).toBeGreaterThanOrEqual(0);
-    // 셋이 한 덩어리로 붙어 있어야 한다. 측정값은 어느 폭에서나 9~12px.
-    expect(gaps.crestToMark, `문장→워드마크 간격 @${width}`).toBeLessThan(48);
-    expect(gaps.markToTagline, `워드마크→태그라인 간격 @${width}`).toBeLessThan(48);
+    // 워드마크와 태그라인은 한 벌이다. 붙어 있어야 한다.
+    expect(gaps.markToTagline, `워드마크→태그라인 간격 @${width}`).toBeLessThanOrEqual(16);
+    // 문장은 그 한 벌과 뚜렷이 떨어진다. 균일하면 셋이 따로 노는 것으로 읽힌다.
+    expect(gaps.crestToMark, `문장 분리 @${width}`).toBeGreaterThan(gaps.markToTagline * 3);
+    expect(gaps.crestToMark, `문장→워드마크 간격 @${width}`).toBeLessThan(80);
   }
 });
 
