@@ -159,6 +159,78 @@ test('splash sections link to each independent space', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Works', exact: true })).toBeVisible();
 });
 
+test('splash leaf reacts at once and only widens after the hold', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+
+  const leaf = page.locator('a.splash-leaf#works');
+  const widthOf = () => leaf.evaluate((element) => element.getBoundingClientRect().width);
+  const resting = await widthOf();
+
+  const timing = await page.locator('.splash-sheaf').evaluate((element) => {
+    const style = getComputedStyle(element);
+    // getComputedStyle of an unregistered custom property re-serializes a lone
+    // <time> literal in its canonical unit (seconds), e.g. "340ms" -> ".34s".
+    // Read the unit rather than assuming it stayed "ms".
+    const ms = (name: string) => {
+      const raw = style.getPropertyValue(name).trim();
+      const value = parseFloat(raw) || 0;
+      return raw.endsWith('ms') ? value : value * 1000;
+    };
+    return { hold: ms('--leaf-hold'), open: ms('--leaf-open'), react: ms('--leaf-react') };
+  });
+  expect(timing.hold).toBeGreaterThan(0);
+
+  await leaf.hover();
+
+  // 반응 단계: 배경이 바뀌었지만 폭은 아직 그대로다.
+  await page.waitForTimeout(timing.react / 2);
+  expect(Math.abs((await widthOf()) - resting)).toBeLessThanOrEqual(2);
+
+  // 펼침 단계: 지연이 지나면 넓어진다.
+  await page.waitForTimeout(timing.hold + timing.open);
+  expect(await widthOf()).toBeGreaterThan(resting * 1.5);
+});
+
+test('splash leaf straightens into a rectangle when it opens', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+
+  const leaf = page.locator('a.splash-leaf#works');
+  const tiltOf = () =>
+    leaf.evaluate((element) => parseFloat(getComputedStyle(element).getPropertyValue('--leaf-tilt')));
+
+  expect(await tiltOf()).toBeGreaterThan(0);
+  await leaf.hover();
+  await page.waitForTimeout(1400);
+  expect(await tiltOf()).toBe(0);
+  await expect(leaf.locator('.splash-leaf__description')).toBeVisible();
+  await expect(leaf.locator('.splash-leaf__invitation')).toBeVisible();
+});
+
+test('splash leaf navigates immediately whether or not it has opened', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+
+  // 펼쳐지기를 기다리지 않고 바로 누른다.
+  await page.locator('a.splash-leaf#playroom').click({ noWaitAfter: false });
+  await expect(page).toHaveURL(/\/playroom\/$/);
+});
+
+test('splash leaf opens on keyboard focus alone', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+
+  const leaf = page.locator('a.splash-leaf#journal');
+  const resting = await leaf.evaluate((element) => element.getBoundingClientRect().width);
+
+  await leaf.focus();
+  await page.waitForTimeout(1400);
+
+  expect(await leaf.evaluate((element) => element.getBoundingClientRect().width)).toBeGreaterThan(resting * 1.5);
+  await expect(leaf.locator('.splash-leaf__description')).toBeVisible();
+});
+
 test('works presents a scannable contents page for every folio', async ({ page }) => {
   await page.goto('/works/');
 

@@ -231,6 +231,13 @@
   /* 오른쪽으로 좁아지는 사다리꼴. 모든 낱장이 같은 방향으로 기운다. */
   clip-path: polygon(0 0, 100% var(--leaf-tilt), 100% calc(100% - var(--leaf-tilt)), 0 100%);
   background: var(--leaf-face);
+  /* 반응은 지연 0, 펼침은 --leaf-hold 뒤. 선택자는 하나다. */
+  transition:
+    background var(--leaf-react) ease,
+    transform var(--leaf-react) ease,
+    flex-grow var(--leaf-open) var(--leaf-ease) var(--leaf-hold),
+    clip-path var(--leaf-open) var(--leaf-ease) var(--leaf-hold),
+    margin-left var(--leaf-open) var(--leaf-ease) var(--leaf-hold);
 }
 /* 다음 장이 앞 장의 좁아진 오른쪽 변을 덮는다. 겹치지 않으면 쐐기 빈틈이 생긴다.
    쌓임 순서는 문서 순서다 — z-index 를 주면 낱장 수에 묶인다. */
@@ -243,6 +250,7 @@
   inset: 0;
   z-index: 1;
   opacity: 0.6;
+  transition: opacity var(--leaf-react) ease;
 }
 .splash-leaf__gilt::before,
 .splash-leaf__gilt::after {
@@ -250,6 +258,7 @@
   inset: 0;
   content: '';
   background: var(--cover-gold-bright);
+  transition: clip-path var(--leaf-open) var(--leaf-ease) var(--leaf-hold);
 }
 .splash-leaf__gilt::before {
   clip-path: polygon(0 0, 100% var(--leaf-tilt), 100% calc(var(--leaf-tilt) + 2px), 0 2px);
@@ -268,6 +277,7 @@
   z-index: 1;
   width: 22px;
   background: linear-gradient(90deg, transparent, rgb(0 0 0 / 50%));
+  transition: opacity var(--leaf-react) ease;
 }
 .splash-leaf:last-child .splash-leaf__crease {
   opacity: 0;
@@ -281,6 +291,7 @@
   flex-direction: column;
   gap: 0.55rem;
   padding: 0 1.4rem 2rem calc(1.4rem + var(--leaf-lap));
+  transition: padding-left var(--leaf-open) var(--leaf-ease) var(--leaf-hold);
 }
 .splash-leaf__number {
   font-size: 0.68rem;
@@ -295,10 +306,16 @@
   line-height: 1.4;
   white-space: nowrap;
   color: var(--cover-ivory);
+  transition: font-size var(--leaf-open) var(--leaf-ease) var(--leaf-hold);
 }
 .splash-leaf__detail {
   display: block;
   overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition:
+    max-height var(--leaf-open) var(--leaf-ease) var(--leaf-hold),
+    opacity var(--leaf-react) ease var(--leaf-hold);
 }
 .splash-leaf__description {
   display: block;
@@ -321,6 +338,38 @@
 .splash-leaf__art {
   position: absolute;
   pointer-events: none;
+}
+/* 마우스와 키보드가 같은 규칙을 탄다. */
+.splash-leaf:is(:hover, :focus-within) {
+  /* 펼침: 기울기를 0으로 두면 낱장과 금박 띠가 한꺼번에 펴진다. */
+  --leaf-tilt: 0px;
+
+  z-index: 1;
+  flex-grow: var(--leaf-grow);
+  margin-left: 0;
+  /* 반응: 즉시 뜨고 밝아진다. */
+  transform: translateY(-6px);
+  background: var(--leaf-face-open);
+}
+/* 펼쳐진 낱장을 다음 장이 덮지 않게 한다. */
+.splash-leaf:is(:hover, :focus-within) + .splash-leaf {
+  margin-left: 0;
+}
+.splash-leaf:is(:hover, :focus-within) .splash-leaf__copy {
+  padding-left: 1.4rem;
+}
+.splash-leaf:is(:hover, :focus-within) .splash-leaf__title {
+  font-size: 1.6rem;
+}
+.splash-leaf:is(:hover, :focus-within) .splash-leaf__detail {
+  max-height: 12rem;
+  opacity: 1;
+}
+.splash-leaf:is(:hover, :focus-within) .splash-leaf__gilt {
+  opacity: 1;
+}
+.splash-leaf:is(:hover, :focus-within) .splash-leaf__crease {
+  opacity: 0;
 }
 .splash-colophon {
   display: flex;
