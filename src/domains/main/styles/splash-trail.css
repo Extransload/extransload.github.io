@@ -1,0 +1,329 @@
+.splash-trail {
+  --trail-ink: #eee9dc;
+  --trail-react: 250ms;
+  --trail-open: 550ms;
+  --trail-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --stop-width: 25%;
+  --stop-art-width: 64%;
+  --stop-wordmark: clamp(1.2rem, 2.85cqw, 2rem);
+
+  position: relative;
+  width: clamp(44rem, calc((100svh - 16.4rem) * var(--trail-aspect)), 82rem);
+  max-width: calc(100% - 4rem);
+  margin: auto auto clamp(1.25rem, 3svh, 2rem);
+  padding-top: 1rem;
+  color: var(--trail-ink);
+}
+
+.splash-trail__canvas {
+  position: relative;
+  isolation: isolate;
+  container-type: inline-size;
+  aspect-ratio: var(--trail-ratio);
+}
+
+.splash-stop {
+  position: absolute;
+  isolation: isolate;
+  left: var(--stop-x);
+  top: var(--stop-y);
+  width: var(--stop-width);
+  translate: -50% 0;
+  color: inherit;
+  text-decoration: none;
+  text-align: center;
+  border-radius: 0.5rem;
+}
+
+.book-splash .splash-stop:focus-visible {
+  outline: 1px dashed var(--cover-gold-bright);
+  outline-offset: 5px;
+}
+
+.splash-stop__tray {
+  position: absolute;
+  z-index: -1;
+  inset: 10% 7% auto;
+  width: 86%;
+  height: auto;
+  aspect-ratio: 2.1;
+  transform: perspective(850px) rotateX(42deg);
+  pointer-events: none;
+}
+
+.splash-stop__tray-shadow {
+  position: absolute;
+  inset: 8% 2% 0;
+  border-radius: 6px;
+  box-shadow: 0 11px 12px -9px #000a;
+}
+
+.splash-stop__contour {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  fill: none;
+}
+
+.splash-stop__contour-rest {
+  stroke: #c0ae86;
+  stroke-width: 0.7px;
+  stroke-opacity: 0.14;
+}
+
+.splash-stop__contour-trace {
+  stroke: #c9b080;
+  stroke-width: 1.05px;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  opacity: 0;
+  transition:
+    stroke-dashoffset 450ms ease,
+    opacity 180ms ease;
+}
+
+.splash-stop:is(:hover, :focus-visible) .splash-stop__contour-trace {
+  stroke-dashoffset: 0;
+  opacity: 0.88;
+  transition:
+    stroke-dashoffset 1100ms cubic-bezier(0.3, 0.1, 0.35, 1),
+    opacity 150ms ease;
+}
+
+.splash-stop__contact {
+  position: absolute;
+  top: 44%;
+  left: 24%;
+  width: 52%;
+  height: 12px;
+  border-radius: 50%;
+  background: #01060bc9;
+  filter: blur(6px);
+  opacity: 0.38;
+  pointer-events: none;
+  transition:
+    scale var(--trail-open) ease,
+    opacity var(--trail-open) ease;
+}
+
+.splash-stop:is(:hover, :focus-visible) .splash-stop__contact {
+  scale: 0.78 1.3;
+  opacity: 0.26;
+}
+
+.splash-stop__art {
+  display: block;
+  width: var(--stop-art-width);
+  position: relative;
+  margin: 0 auto 12px;
+  pointer-events: none;
+  transform: perspective(700px) rotateX(12deg) rotateZ(var(--stop-turn)) translateY(-10px);
+  transform-origin: 50% 85%;
+  filter: drop-shadow(0 9px 6px #0008);
+  transition:
+    transform var(--trail-open) var(--trail-ease),
+    filter var(--trail-open) ease;
+}
+
+.splash-stop .chapter-art {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.splash-stop :is(.art-drifter, .art-ribbon, .art-orbit, .art-letter, .art-stars) {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform var(--trail-open) var(--trail-ease);
+}
+
+.splash-stop__copy {
+  position: relative;
+  z-index: 1;
+  text-shadow: 0 1px 2px #02070c;
+}
+
+.splash-stop__title {
+  position: relative;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto;
+  line-height: 0;
+}
+
+.splash-stop__wordmark {
+  display: block;
+  width: calc(var(--stop-wordmark) * var(--wordmark-aspect));
+  height: calc(var(--stop-wordmark) * 1.55);
+  overflow: visible;
+}
+
+.splash-stop__description {
+  display: block;
+  margin-top: 0.25rem;
+  color: #bcb6a8;
+  font-size: clamp(0.65rem, 1.2cqw, 0.82rem);
+  line-height: 1.8;
+  word-break: keep-all;
+}
+
+.splash-stop__invitation {
+  display: block;
+  margin-top: 0.65rem;
+  color: var(--cover-gold-bright);
+  font-size: clamp(0.65rem, 1.1cqw, 0.75rem);
+  line-height: 1.8;
+  opacity: 0;
+  translate: 0 5px;
+  transition:
+    opacity var(--trail-react) ease,
+    translate var(--trail-open) var(--trail-ease);
+}
+
+.splash-stop__invitation > span {
+  margin-left: 0.4rem;
+}
+
+.splash-stop:is(:hover, :focus-visible) .splash-stop__art {
+  transform: perspective(700px) translateY(-20px) rotateX(0deg) rotateZ(0deg) scale(1.025);
+  filter: drop-shadow(0 18px 9px #0007);
+}
+
+.splash-stop:is(:hover, :focus-visible) .splash-stop__invitation {
+  opacity: 1;
+  translate: 0 0;
+}
+
+.splash-stop:is(:hover, :focus-visible) .chapter-art--journal .art-drifter {
+  transform: translate(9px, -12px) rotate(-8deg);
+}
+
+.splash-stop:is(:hover, :focus-visible) .art-ribbon {
+  transform: rotate(4deg);
+}
+
+.splash-stop:is(:hover, :focus-visible) .chapter-art--works .art-drifter {
+  transform: rotate(5deg) translate(5px, -5px);
+}
+
+.splash-stop:is(:hover, :focus-visible) .art-orbit {
+  transform: rotate(23deg);
+}
+
+.splash-stop:is(:hover, :focus-visible) .art-stars {
+  transform: rotate(-9deg) scale(1.06);
+}
+
+.splash-stop:is(:hover, :focus-visible) .chapter-art--about .art-drifter {
+  transform: rotate(-3deg) scale(1.04);
+}
+
+.splash-stop:is(:hover, :focus-visible) .art-letter {
+  transform: translateY(-38px) rotate(-3deg);
+}
+
+/* Let rows grow when the viewport cannot fit the spacious composition. */
+@media (861px <= width <= 1100px), (min-width: 861px) and (max-height: 760px) {
+  .splash-trail {
+    width: calc(100% - 4rem);
+    margin: 2rem auto;
+  }
+
+  .splash-trail__canvas {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 2rem 3%;
+    aspect-ratio: auto;
+  }
+
+  .splash-stop {
+    position: relative;
+    inset: auto;
+    width: 30%;
+    translate: none;
+  }
+}
+
+@media (max-width: 860px) {
+  .splash-trail {
+    --stop-art-width: 10rem;
+    --stop-wordmark: 1.8rem;
+
+    width: calc(100% - 2rem);
+    max-width: 40rem;
+    margin: 0 auto 2rem;
+    padding-top: 2.5rem;
+  }
+
+  .splash-trail__canvas {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2.25rem;
+    aspect-ratio: auto;
+    padding: 0 0 1rem;
+  }
+
+  .splash-stop {
+    position: relative;
+    inset: auto;
+    width: min(100%, 20rem);
+    translate: none;
+  }
+
+  .splash-stop__tray {
+    inset: 0.75rem auto auto 50%;
+    width: 13.5rem;
+    height: 7rem;
+    translate: -50% 0;
+    transform: perspective(600px) rotateX(38deg);
+  }
+
+  .splash-stop__art {
+    margin-bottom: -0.25rem;
+  }
+
+  .splash-stop__contact {
+    top: 7.5rem;
+    left: 30%;
+    width: 40%;
+  }
+
+  .splash-stop__description {
+    font-size: 0.78rem;
+  }
+
+  .splash-stop__invitation {
+    font-size: 0.72rem;
+  }
+}
+
+@media (hover: none), (max-width: 860px) {
+  .splash-stop__invitation {
+    opacity: 1;
+    translate: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .splash-trail *,
+  .splash-trail *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+
+  .splash-stop .splash-stop__art,
+  .splash-stop:is(:hover, :focus-visible) .splash-stop__art,
+  .splash-stop:is(:hover, :focus-visible) :is(.art-drifter, .art-ribbon, .art-orbit, .art-letter, .art-stars) {
+    transform: none !important;
+  }
+
+  .splash-stop__invitation {
+    translate: none;
+  }
+}

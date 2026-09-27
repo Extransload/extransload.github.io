@@ -1,8 +1,7 @@
 ---
 import SplashLayout from '../domains/main/layouts/SplashLayout.astro';
 import '../domains/main/styles/splash.css';
-import SplashArtwork from '../domains/main/components/SplashArtwork.astro';
-import { splashChapters } from '../domains/main/data/splash-chapters';
+import SplashTrail from '../domains/main/components/SplashTrail.astro';
 const adminUrl = import.meta.env.PUBLIC_ADMIN_URL?.trim();
 const adminOrigin = adminUrl?.replace(/\/+$/, '').replace(/\/admin$/, '') || '';
 ---
@@ -38,39 +37,7 @@ const adminOrigin = adminUrl?.replace(/\/+$/, '').replace(/\/admin$/, '') || '';
         </a>
       </div>}
     </section>
-    <section class="splash-sheaf" id="contents" aria-label="장서 목차">
-      {splashChapters.map((chapter) => <a
-        class="splash-leaf"
-        id={chapter.id}
-        href={chapter.href}
-        aria-labelledby={`${chapter.id}-title`}
-        aria-describedby={`${chapter.id}-description`}
-      >
-        <span class="splash-leaf__gilt" aria-hidden="true"></span>
-        <span class="splash-leaf__crease" aria-hidden="true"></span>
-        <span class="splash-leaf__art" aria-hidden="true"><SplashArtwork chapter={chapter.id} /></span>
-        <div class="splash-leaf__copy">
-          <span class="splash-leaf__number" aria-hidden="true">{chapter.number}</span>
-          <h2 class="splash-leaf__title" id={`${chapter.id}-title`}>
-            <span class="splash-sr-only">{chapter.label}</span>
-            <img
-              class="splash-leaf__wordmark"
-              src={chapter.wordmark.src}
-              width={chapter.wordmark.width}
-              height={chapter.wordmark.height}
-              alt=""
-              aria-hidden="true"
-              loading="lazy"
-              decoding="async"
-            />
-          </h2>
-          <span class="splash-leaf__detail">
-            <span class="splash-leaf__description" id={`${chapter.id}-description`}>{chapter.description}</span>
-            <span class="splash-leaf__invitation" aria-hidden="true">{chapter.invitation}<span>↗</span></span>
-          </span>
-        </div>
-      </a>)}
-    </section>
+    <SplashTrail />
   </main>
 </SplashLayout>
 {adminUrl && <script is:inline define:vars={{ adminOrigin }}>

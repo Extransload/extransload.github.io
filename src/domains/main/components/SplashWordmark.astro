@@ -1,0 +1,34 @@
+---
+import type { SplashChapter } from '../data/splash-chapters';
+interface Props { chapter: SplashChapter }
+const { chapter } = Astro.props;
+const { wordmark } = chapter;
+const filterId = `thread-tone-${chapter.id}`;
+// Match shadow / midtone / highlight levels while retaining the photographed stitches.
+const input = [0, ...wordmark.luminance, 1];
+const output = [0, 0.2, 0.53, 0.78, 1];
+const tones = Array.from({ length: 33 }, (_, i) => {
+  const value = i / 32;
+  const right = Math.min(4, Math.max(1, input.findIndex(point => point >= value)));
+  const t = (value - input[right - 1]) / (input[right] - input[right - 1]);
+  return (output[right - 1] + t * (output[right] - output[right - 1])).toFixed(5);
+}).join(' ');
+---
+<svg class="splash-stop__wordmark" viewBox={`0 ${-wordmark.capHeight * 0.12} ${wordmark.width} ${wordmark.capHeight * 1.55}`} style={`--wordmark-aspect: ${wordmark.width / wordmark.capHeight}`} aria-hidden="true">
+  <defs>
+    <filter id={filterId} color-interpolation-filters="sRGB" x="-2%" y="-5%" width="104%" height="110%">
+      <feColorMatrix type="saturate" values="0" />
+      <feComponentTransfer>
+        <feFuncR type="table" tableValues={tones} />
+        <feFuncG type="table" tableValues={tones} />
+        <feFuncB type="table" tableValues={tones} />
+      </feComponentTransfer>
+      <feComponentTransfer>
+        <feFuncR type="linear" slope="1.16" />
+        <feFuncG type="linear" slope="0.97" />
+        <feFuncB type="linear" slope="0.61" />
+      </feComponentTransfer>
+    </filter>
+  </defs>
+  <image href={wordmark.src} width={wordmark.width} height={wordmark.height} y={-wordmark.capTop} filter={`url(#${filterId})`} />
+</svg>

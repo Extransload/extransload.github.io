@@ -17,49 +17,26 @@ const themeColor = (page: Page, token: string) =>
 const opacityOf = (page: Page, selector: string) =>
   page.locator(selector).evaluate((element) => parseFloat(getComputedStyle(element).opacity));
 
-test('splash shows the whole book on one screen, without a script', async ({ page }) => {
+test('splash shows the whole book on one screen without a new splash client script', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
-
-  // 스크롤 스크립트가 심던 상태가 어디에도 없다.
   await expect(
     page.locator('[data-enhanced], [data-chapter-locked], [data-chapter-visible], [data-cover-ready]'),
   ).toHaveCount(0);
-
-  // 표지와 낱장이 한 화면에 함께 있다. 스크롤할 것이 남지 않는다.
-  expect(await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight)).toBeLessThanOrEqual(1);
-
+  expect(await page.evaluate(() => document.documentElement.scrollHeight - innerHeight)).toBeLessThanOrEqual(1);
   for (const selector of ['.book-splash__crest', '.book-splash__title-glyph', '.book-splash__tagline']) {
     await expect(page.locator(selector)).toBeInViewport();
-    expect(await opacityOf(page, selector)).toBeCloseTo(1, 2);
+    expect(await opacityOf(page, selector)).toBe(1);
   }
-  for (const chapter of splashChapters) {
-    await expect(page.locator(`a.splash-leaf#${chapter.id}`)).toBeInViewport();
-  }
-
-  // 문장 · 워드마크 · 태그라인은 한 덩어리로 붙고, 낱장과는 그보다 벌어진다.
-  const gaps = await page.evaluate(() => {
-    const box = (selector: string) => document.querySelector(selector)!.getBoundingClientRect();
-    const crest = box('.book-splash__crest');
-    const mark = box('.book-splash__title-glyph');
-    const tagline = box('.book-splash__tagline');
-    return {
-      crestTop: crest.top,
-      crestToMark: mark.top - crest.bottom,
-      markToTagline: tagline.top - mark.bottom,
-      taglineToLeaf: box('a.splash-leaf#journal').top - tagline.bottom,
-    };
-  });
-  expect(gaps.crestTop).toBeLessThan(120);
-  // 태그라인은 워드마크에 붙어 한 벌로 읽히고, 문장은 그보다 확실히 떨어진다.
-  expect(gaps.markToTagline).toBeLessThanOrEqual(16);
-  expect(gaps.crestToMark).toBeGreaterThan(gaps.markToTagline * 3);
-  expect(gaps.taglineToLeaf).toBeGreaterThan(gaps.crestToMark);
+  for (const chapter of splashChapters)
+    await expect(page.locator(`a.splash-stop#${chapter.id}`)).toBeInViewport({ ratio: 1 });
+  await expect(page.locator('.splash-trail script')).toHaveCount(0);
+  // The pre-existing shared lightbox remains; the trail itself adds no runtime.
+  await expect(page.locator('script[src]')).toHaveCount(1);
+  await expect(page.locator('script[src]')).toHaveAttribute('src', /\/_astro\/ImageLightbox\./);
 });
 
-test('splash stacks crest, wordmark and tagline in that order at every width', async ({ page }) => {
-  // position: absolute 를 흐름으로 바꾸면서 좁은 화면에만 남아 있던 top 오프셋이
-  // 문장을 워드마크 위로 끌어내린 적이 있다. 폭마다 순서와 간격을 확인한다.
+test('splash keeps the original branding in a compact header at every width', async ({ page }) => {
   for (const [width, height] of [
     [1512, 830],
     [1440, 900],
@@ -70,304 +47,282 @@ test('splash stacks crest, wordmark and tagline in that order at every width', a
   ]) {
     await page.setViewportSize({ width, height });
     await page.goto('/');
+    await expect(page.locator('.book-splash__crest-img')).toHaveAttribute(
+      'src',
+      '/images/splash-crest-embroidered.webp',
+    );
+    await expect(page.locator('.book-splash__title-glyph')).toHaveAttribute(
+      'src',
+      '/images/extransload-wordmark-crest-tone.webp',
+    );
+    await expect(page.locator('.book-splash__tagline')).toHaveText(
+      '기록과 작업, 취향과 놀이를 보관하는 한 권의 개인 장서',
+    );
     const gaps = await page.evaluate(() => {
       const box = (selector: string) => document.querySelector(selector)!.getBoundingClientRect();
       const crest = box('.book-splash__crest');
       const mark = box('.book-splash__title-glyph');
       const tagline = box('.book-splash__tagline');
-      return { crestToMark: mark.top - crest.bottom, markToTagline: tagline.top - mark.bottom };
+      return {
+        crestToMark: mark.top - crest.bottom,
+        markToTagline: tagline.top - mark.bottom,
+        canvasGap: box('.splash-trail__canvas').top - tagline.bottom,
+        headerBottom: box('.book-splash__face').bottom,
+      };
     });
-    // 음수는 아래 요소를 파고들었다는 뜻이다.
-    expect(gaps.crestToMark, `문장→워드마크 @${width}`).toBeGreaterThanOrEqual(0);
-    expect(gaps.markToTagline, `워드마크→태그라인 @${width}`).toBeGreaterThanOrEqual(0);
-    // 워드마크와 태그라인은 한 벌이다. 붙어 있어야 한다.
-    expect(gaps.markToTagline, `워드마크→태그라인 간격 @${width}`).toBeLessThanOrEqual(16);
-    // 문장은 그 한 벌과 뚜렷이 떨어진다. 균일하면 셋이 따로 노는 것으로 읽힌다.
-    expect(gaps.crestToMark, `문장 분리 @${width}`).toBeGreaterThan(gaps.markToTagline * 3);
-    expect(gaps.crestToMark, `문장→워드마크 간격 @${width}`).toBeLessThan(80);
+    expect(gaps.markToTagline).toBeGreaterThanOrEqual(0);
+    expect(gaps.markToTagline).toBeLessThanOrEqual(16);
+    expect(gaps.crestToMark).toBeGreaterThan(gaps.markToTagline * 3);
+    expect(gaps.crestToMark).toBeLessThan(80);
+    expect(gaps.canvasGap).toBeGreaterThanOrEqual(16);
+    expect(gaps.headerBottom).toBeLessThan(240);
   }
 });
 
-test('splash lays every chapter out as one row of leaves', async ({ page }) => {
+test('splash gives the enlarged contents the space saved by the compact header', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
-
-  const leaves = page.locator('.splash-sheaf .splash-leaf');
-  await expect(leaves).toHaveCount(splashChapters.length);
-
-  const boxes = await leaves.evaluateAll((elements) =>
-    elements.map((element) => {
-      const box = element.getBoundingClientRect();
-      return { left: box.left, right: box.right, top: box.top, width: box.width };
-    }),
-  );
-
-  for (const box of boxes) expect(box.width).toBeGreaterThan(40);
-  // 한 줄이다: 모든 낱장의 윗변이 같은 높이에 있다.
-  for (const box of boxes) expect(Math.abs(box.top - boxes[0].top)).toBeLessThanOrEqual(1);
-  // 왼쪽에서 오른쪽으로 순서대로 놓인다.
-  for (let index = 1; index < boxes.length; index += 1) {
-    expect(boxes[index].left).toBeGreaterThan(boxes[index - 1].left);
-  }
+  const sizes = await page.evaluate(() => ({
+    crest: document.querySelector('.book-splash__crest')!.getBoundingClientRect().width,
+    title: document.querySelector('.book-splash__title-glyph')!.getBoundingClientRect().width,
+    contents: document.querySelector('.splash-trail__canvas')!.getBoundingClientRect().width,
+    art: document.querySelector('.splash-stop__art')!.getBoundingClientRect().width,
+  }));
+  expect(sizes.crest).toBeLessThan(80);
+  expect(sizes.title).toBeLessThan(340);
+  expect(sizes.contents).toBeGreaterThan(1100);
+  expect(sizes.art).toBeGreaterThan(180);
 });
 
-test('splash leaves turn on a shared vanishing point and overlap their neighbour', async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/');
-
-  const lap = await page
-    .locator('.splash-sheaf')
-    .evaluate((element) => parseFloat(getComputedStyle(element).getPropertyValue('--leaf-lap')));
-  expect(lap).toBeGreaterThan(0);
-
-  // 겹침은 레이아웃 치수로 본다. 회전 뒤의 화면 사각형은 원근 때문에 밀린다.
-  const layout = await page
-    .locator('.splash-sheaf .splash-leaf')
-    .evaluateAll((elements) =>
-      (elements as HTMLElement[]).map((element) => ({ left: element.offsetLeft, width: element.offsetWidth })),
-    );
-  for (let index = 1; index < layout.length; index += 1) {
-    const overlap = layout[index - 1].left + layout[index - 1].width - layout[index].left;
-    expect(Math.abs(overlap - lap)).toBeLessThanOrEqual(1);
-  }
-
-  // 낱장은 진짜로 돌아가 있다. 변수가 아니라 계산된 행렬을 읽는다 —
-  // 규칙이 그 변수를 실제로 쓰는지까지 검사해야 한다.
-  const transforms = await page
-    .locator('.splash-sheaf .splash-leaf')
-    .evaluateAll((elements) => [...new Set(elements.map((element) => getComputedStyle(element).transform))]);
-  expect(transforms).toHaveLength(1);
-  expect(transforms[0]).toMatch(/^matrix3d\(/);
-  expect(transforms[0]).not.toBe('matrix3d(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)');
-
-  // 하나의 소실점을 공유한다는 증거: 투영 폭 대 레이아웃 폭의 비가 왼쪽에서
-  // 오른쪽으로 단조 증가한다. 원근이 빠지면 다섯 개가 모두 1 로 같아진다.
-  const ratios = await page
-    .locator('.splash-sheaf .splash-leaf')
-    .evaluateAll((elements) =>
-      (elements as HTMLElement[]).map((element) => element.getBoundingClientRect().width / element.offsetWidth),
-    );
-  for (let index = 1; index < ratios.length; index += 1) {
-    expect(ratios[index], `투영비 ${index}`).toBeGreaterThan(ratios[index - 1]);
-  }
-  expect(ratios[ratios.length - 1] - ratios[0]).toBeGreaterThan(0.05);
-
-  // 뒤 낱장이 앞 낱장 위에 그려진다: z-index 를 쓰지 않고 문서 순서로.
-  const stacking = await page
-    .locator('.splash-sheaf .splash-leaf')
-    .evaluateAll((elements) => elements.map((element) => getComputedStyle(element).zIndex));
-  for (const value of stacking) expect(value).toBe('auto');
-});
-
-test('splash leaves carry their number, title and destination from the data', async ({ page }) => {
-  await page.goto('/');
-
-  for (const chapter of splashChapters) {
-    const leaf = page.locator(`a.splash-leaf#${chapter.id}`);
-    await expect(leaf).toHaveAttribute('href', chapter.href);
-    await expect(leaf.locator('.splash-leaf__number')).toHaveText(chapter.number);
-    await expect(leaf.locator('.splash-leaf__title')).toHaveText(chapter.label);
-    await expect(leaf.locator('.splash-leaf__description')).toHaveText(chapter.description);
-    // 링크 이름은 제목뿐이다. 설명은 aria-describedby 로만, 한 번 전달된다.
-    await expect(leaf).toHaveAccessibleName(chapter.label);
-    await expect(leaf).toHaveAccessibleDescription(chapter.description);
-  }
-
-  // 목차는 사라졌다.
-  await expect(page.locator('.splash-toc')).toHaveCount(0);
-  // 제목은 자수 워드마크다. 읽히는 이름은 sr-only 텍스트가 맡는다.
-  for (const chapter of splashChapters) {
-    const wordmark = page.locator(`a.splash-leaf#${chapter.id} .splash-leaf__wordmark`);
-    await expect(wordmark).toHaveAttribute('src', chapter.wordmark.src);
-    await expect(wordmark).toHaveAttribute('aria-hidden', 'true');
-  }
-  await expect(page.locator('.splash-leaf__wordmark')).toHaveCount(splashChapters.length);
-});
-
-test('splash sections link to each independent space', async ({ page }) => {
-  await page.goto('/');
-  for (const [id, href, label] of [
-    ['journal', '/blog/', 'Journal'],
-    ['works', '/works/', 'Works'],
-    ['playroom', '/playroom/', 'Playroom'],
-    ['about', '/about/', 'About'],
-    ['guestbook', '/guestbook/', 'Guestbook'],
+test('splash trays and chapter targets fit the canvas without overlapping', async ({ page }) => {
+  for (const [width, height] of [
+    [1440, 900],
+    [1512, 830],
+    [1024, 768],
+    [861, 700],
   ]) {
-    await expect(page.locator(`a.splash-leaf#${id}`)).toHaveAttribute('href', href);
-    await expect(page.locator(`a.splash-leaf#${id} .splash-leaf__title`)).toHaveText(label);
+    await page.setViewportSize({ width, height });
+    await page.goto('/');
+    const layout = await page.evaluate(() => ({
+      canvas: document.querySelector('.splash-trail__canvas')!.getBoundingClientRect().toJSON(),
+      stops: [...document.querySelectorAll('.splash-stop')].map((e) => e.getBoundingClientRect().toJSON()),
+    }));
+    for (const box of layout.stops) {
+      expect(box.left, `left @${width}`).toBeGreaterThanOrEqual(layout.canvas.left);
+      expect(box.right, `right @${width}`).toBeLessThanOrEqual(layout.canvas.right);
+      expect(box.bottom, `bottom @${width}`).toBeLessThanOrEqual(layout.canvas.bottom);
+      expect(box.width).toBeGreaterThan(150);
+    }
+    for (let i = 0; i < layout.stops.length; i++)
+      for (let j = i + 1; j < layout.stops.length; j++) {
+        const a = layout.stops[i],
+          b = layout.stops[j];
+        expect(
+          a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top,
+          `targets ${i}/${j} overlap @${width}`,
+        ).toBe(true);
+      }
   }
-  await page.locator('a.splash-leaf#works').click();
-  await expect(page).toHaveURL(/\/works\/$/);
-  await expect(page.getByRole('heading', { name: 'Works', exact: true })).toBeVisible();
 });
 
-test('splash leaf reacts at once and only widens after the hold', async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
+test('splash leaves the leather exposed behind unfilled individual trays', async ({ page }) => {
   await page.goto('/');
-
-  const leaf = page.locator('a.splash-leaf#works');
-  const widthOf = () => leaf.evaluate((element) => element.getBoundingClientRect().width);
-  const resting = await widthOf();
-
-  const timing = await page.locator('.splash-sheaf').evaluate((element) => {
-    const style = getComputedStyle(element);
-    // getComputedStyle of an unregistered custom property re-serializes a lone
-    // <time> literal in its canonical unit (seconds), e.g. "340ms" -> ".34s".
-    // Read the unit rather than assuming it stayed "ms".
-    const ms = (name: string) => {
-      const raw = style.getPropertyValue(name).trim();
-      const value = parseFloat(raw) || 0;
-      return raw.endsWith('ms') ? value : value * 1000;
-    };
-    return { hold: ms('--leaf-hold'), open: ms('--leaf-open'), react: ms('--leaf-react') };
-  });
-  expect(timing.hold).toBeGreaterThan(0);
-
-  await leaf.hover();
-
-  // 반응 단계: 배경이 바뀌었지만 폭은 아직 그대로다.
-  await page.waitForTimeout(timing.react / 2);
-  expect(Math.abs((await widthOf()) - resting)).toBeLessThanOrEqual(2);
-
-  // 펼침 단계: 지연이 지나면 넓어진다.
-  await page.waitForTimeout(timing.hold + timing.open);
-  expect(await widthOf()).toBeGreaterThan(resting * 1.5);
+  await expect(page.locator('[data-trail-path], .splash-stop__mobile-path, .splash-stop__sketch')).toHaveCount(0);
+  await expect(page.locator('.splash-stop__tray')).toHaveCount(splashChapters.length);
+  for (const tray of await page.locator('.splash-stop__tray').all()) {
+    expect(await tray.evaluate((e) => getComputedStyle(e).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
+    expect(await tray.locator('svg').evaluate((e) => getComputedStyle(e).fill)).toBe('none');
+    expect(await tray.locator('.splash-stop__tray-shadow').evaluate((e) => getComputedStyle(e).boxShadow)).not.toBe(
+      'none',
+    );
+  }
+  await expect(page.locator('.splash-stop__art svg.chapter-art')).toHaveCount(splashChapters.length);
 });
 
-test('splash leaf turns face-on when it opens', async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/');
-
-  const leaf = page.locator('a.splash-leaf#works');
-  const transformOf = () => leaf.evaluate((element) => getComputedStyle(element).transform);
-
-  const resting = await transformOf();
-  expect(resting).toMatch(/^matrix3d\(/);
-
-  await leaf.hover();
-  await page.waitForTimeout(1400);
-
-  // 회전이 풀리고 앞으로 나온다: 3×3 부분이 단위행렬이고 z 이동만 남는다.
-  const opened = await transformOf();
-  expect(opened).not.toBe(resting);
-  const numbers = opened
-    .slice(opened.indexOf('(') + 1, -1)
-    .split(',')
-    .map(Number);
-  expect(numbers).toHaveLength(16);
-  expect(numbers[0]).toBeCloseTo(1, 3);
-  expect(numbers[2]).toBeCloseTo(0, 3);
-  expect(numbers[8]).toBeCloseTo(0, 3);
-  expect(numbers[14]).toBeGreaterThan(0);
-
-  await expect(leaf.locator('.splash-leaf__description')).toBeVisible();
-  await expect(leaf.locator('.splash-leaf__invitation')).toBeVisible();
+test('splash preserves actual embroidery with matched capital height and one gold palette', async ({ page }) => {
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/');
+    const heights = [];
+    for (const chapter of splashChapters) {
+      const mark = page.locator(`#${chapter.id} .splash-stop__wordmark`);
+      await expect(mark.locator('image')).toHaveAttribute('href', chapter.wordmark.src);
+      await expect(mark).toHaveAttribute('aria-hidden', 'true');
+      const rendered = (await mark.boundingBox())!;
+      heights.push((rendered.width / chapter.wordmark.width) * chapter.wordmark.capHeight);
+      const color = mark.locator('feComponentTransfer').last();
+      await expect(color.locator('feFuncR')).toHaveAttribute('slope', '1.16');
+      await expect(color.locator('feFuncG')).toHaveAttribute('slope', '0.97');
+      await expect(color.locator('feFuncB')).toHaveAttribute('slope', '0.61');
+      await expect(mark.locator('feFuncA')).toHaveCount(0);
+    }
+    expect(Math.max(...heights) - Math.min(...heights)).toBeLessThan(0.1);
+  }
 });
 
-test('splash leaf navigates immediately whether or not it has opened', async ({ page }) => {
+test('splash chapters retain their data, accessible names and destinations', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('a.splash-stop')).toHaveCount(splashChapters.length);
+  for (const chapter of splashChapters) {
+    const stop = page.locator(`a.splash-stop#${chapter.id}`);
+    await expect(stop).toHaveAttribute('href', chapter.href);
+    await expect(stop).toHaveAccessibleName(chapter.label);
+    await expect(stop).toHaveAccessibleDescription(chapter.description);
+    await expect(stop.locator('.splash-stop__title')).toHaveText(chapter.label);
+    await expect(stop.locator('.splash-stop__wordmark image')).toHaveAttribute('href', chapter.wordmark.src);
+  }
+});
+
+test('splash hover draws only its own contour without moving the link target', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
+  const stop = page.locator('#works');
+  const trace = stop.locator('.splash-stop__contour-trace');
+  const before = await stop.boundingBox();
+  expect(await trace.evaluate((e) => getComputedStyle(e).strokeDashoffset)).toBe('1px');
+  await stop.hover();
+  await expect.poll(() => trace.evaluate((e) => getComputedStyle(e).strokeDashoffset)).toBe('0px');
+  expect(await trace.evaluate((e) => getComputedStyle(e).opacity)).toBe('0.88');
+  for (const other of await page.locator('.splash-stop:not(#works) .splash-stop__contour-trace').all())
+    expect(await other.evaluate((e) => getComputedStyle(e).opacity)).toBe('0');
+  expect(await stop.boundingBox()).toEqual(before);
+  await page.mouse.move(10, 10);
+  await expect.poll(() => trace.evaluate((e) => getComputedStyle(e).strokeDashoffset)).toBe('1px');
+  await expect.poll(() => opacityOf(page, '#works .splash-stop__invitation')).toBe(0);
+});
 
-  // 펼쳐지기를 기다리지 않고 바로 누른다.
-  await page.locator('a.splash-leaf#playroom').click({ noWaitAfter: false });
+test('splash gives each illustration its own hover response', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  for (const [id, detail] of [
+    ['journal', '.art-drifter'],
+    ['works', '.art-drifter'],
+    ['playroom', '.art-orbit'],
+    ['about', '.art-drifter'],
+    ['guestbook', '.art-letter'],
+  ]) {
+    const stop = page.locator(`#${id}`);
+    const part = stop.locator(detail);
+    const before = await part.evaluate((e) => getComputedStyle(e).transform);
+    await stop.hover();
+    await expect.poll(() => part.evaluate((e) => getComputedStyle(e).transform)).not.toBe(before);
+    await expect.poll(() => opacityOf(page, `#${id} .splash-stop__invitation`)).toBe(1);
+  }
+});
+
+test('splash follows the link immediately without waiting for hover', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('a.splash-stop#playroom').click();
   await expect(page).toHaveURL(/\/playroom\/$/);
 });
 
-test('splash leaf opens on keyboard focus alone', async ({ page }) => {
+test('splash keyboard focus follows editorial order and draws the same contour', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
-
-  const leaf = page.locator('a.splash-leaf#journal');
-  const resting = await leaf.evaluate((element) => element.getBoundingClientRect().width);
-
-  await leaf.focus();
-  await page.waitForTimeout(1400);
-
-  expect(await leaf.evaluate((element) => element.getBoundingClientRect().width)).toBeGreaterThan(resting * 1.5);
-  await expect(leaf.locator('.splash-leaf__description')).toBeVisible();
-
-  // clip-path 가 바깥으로 그린 outline 을 잘라낸다. 링이 남으려면 offset 이 음수여야 한다.
-  const outlineOffset = await leaf.evaluate((element) => parseFloat(getComputedStyle(element).outlineOffset));
-  expect(outlineOffset).toBeLessThan(0);
+  await page.locator('a.splash-stop').first().focus();
+  for (const chapter of splashChapters) {
+    const stop = page.locator(`#${chapter.id}`);
+    await expect(stop).toBeFocused();
+    await expect.poll(() => opacityOf(page, `#${chapter.id} .splash-stop__invitation`)).toBe(1);
+    expect(await stop.evaluate((e) => getComputedStyle(e).outlineStyle)).toBe('dashed');
+    await expect
+      .poll(() =>
+        page
+          .locator(`#${chapter.id} .splash-stop__contour-trace`)
+          .first()
+          .evaluate((e) => getComputedStyle(e).opacity),
+      )
+      .toBe('0.88');
+    await page.keyboard.press('Tab');
+  }
+  await page.locator('#works').focus();
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/\/works\/$/);
 });
 
-test('splash artwork appears only in the leaf that has opened', async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/');
-
-  // 삽화는 인라인 SVG다. 이미지 요청이 늘지 않는다.
-  await expect(page.locator('.splash-leaf__art svg.chapter-art')).toHaveCount(splashChapters.length);
-
-  const art = (id: string) => page.locator(`a.splash-leaf#${id} .splash-leaf__art`);
-  expect(await art('works').evaluate((element) => parseFloat(getComputedStyle(element).opacity))).toBe(0);
-
-  await page.locator('a.splash-leaf#works').hover();
-  await page.waitForTimeout(1400);
-
-  const opened = await art('works').evaluate((element) => parseFloat(getComputedStyle(element).opacity));
-  expect(opened).toBeGreaterThan(0.1);
-  expect(opened).toBeLessThan(0.5);
-
-  // 이웃은 그대로 감춰져 있다.
-  expect(await art('about').evaluate((element) => parseFloat(getComputedStyle(element).opacity))).toBe(0);
-
-  // 삽화가 링크 판정에 끼어들지 않는다.
-  expect(await art('works').evaluate((element) => getComputedStyle(element).pointerEvents)).toBe('none');
-});
-
-test('splash leaves stack and stay open on narrow screens', async ({ page }) => {
+test('splash uses the same links as a readable illustrated list on narrow screens', async ({ page }) => {
   for (const width of [320, 390, 760, 860]) {
     await page.setViewportSize({ width, height: 844 });
     await page.goto('/');
-
+    await expect(page.locator('a.splash-stop')).toHaveCount(splashChapters.length);
     const boxes = await page
-      .locator('.splash-sheaf .splash-leaf')
-      .evaluateAll((elements) =>
-        elements.map((element) => element.getBoundingClientRect()).map((b) => [b.top, b.left]),
-      );
-
-    // 세로로 쌓인다.
-    for (let index = 1; index < boxes.length; index += 1) {
-      expect(boxes[index][0]).toBeGreaterThan(boxes[index - 1][0]);
-      expect(Math.abs(boxes[index][1] - boxes[0][1])).toBeLessThanOrEqual(1);
+      .locator('a.splash-stop')
+      .evaluateAll((es) => es.map((e) => e.getBoundingClientRect().toJSON()));
+    for (let i = 1; i < boxes.length; i++) {
+      expect(boxes[i].top).toBeGreaterThan(boxes[i - 1].bottom);
+      expect(boxes[i].left).toBe(boxes[0].left);
     }
-
-    // 기울기와 겹침이 풀린다. 변수가 아니라 렌더 결과로 확인한다.
-    const flat = await page
-      .locator('.splash-sheaf .splash-leaf')
-      .evaluateAll((elements) =>
-        (elements as HTMLElement[]).map((element) => element.getBoundingClientRect().width / element.offsetWidth),
-      );
-    for (const ratio of flat) expect(ratio).toBeCloseTo(1, 2);
-
-    // 전부 펼쳐져 있다.
     for (const chapter of splashChapters) {
-      const detail = page.locator(`a.splash-leaf#${chapter.id} .splash-leaf__detail`);
-      // toBeVisible() 은 opacity 를 보지 않는다. 접힘/펼침을 실제로 가르는 것은 이 값이다.
-      expect(await detail.evaluate((element) => getComputedStyle(element).opacity)).toBe('1');
+      await expect.poll(() => opacityOf(page, `#${chapter.id} .splash-stop__invitation`)).toBe(1);
+      expect(await opacityOf(page, `#${chapter.id} .splash-stop__art`)).toBe(1);
     }
-
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth),
     ).toBe(true);
+    const alignment = await page.locator('.splash-stop').evaluateAll((es) =>
+      es.map((e) => {
+        const art = e.querySelector('.splash-stop__art')!.getBoundingClientRect();
+        const copy = e.querySelector('.splash-stop__copy')!.getBoundingClientRect();
+        return { center: copy.x + copy.width / 2, artCenter: art.x + art.width / 2, gap: copy.top - art.bottom };
+      }),
+    );
+    for (const { center, artCenter, gap } of alignment) {
+      expect(Math.abs(center - width / 2)).toBeLessThan(1);
+      expect(Math.abs(artCenter - center)).toBeLessThan(3);
+      expect(gap).toBeGreaterThan(0);
+      expect(gap).toBeLessThan(24);
+    }
   }
 });
 
-test('splash drops its motion when the visitor asks for less', async ({ page }) => {
+test('splash touch navigation needs only one tap', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  const page = await context.newPage();
+  await page.goto(test.info().project.use.baseURL as string);
+  await expect.poll(() => opacityOf(page, '#works .splash-stop__invitation')).toBe(1);
+  await page.locator('#works').tap();
+  await expect(page).toHaveURL(/\/works\/$/);
+  await context.close();
+});
+
+test('splash contours and destinations work with JavaScript disabled', async ({ browser }) => {
+  const context = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  await page.goto(test.info().project.use.baseURL as string);
+  await page.locator('#works').hover();
+  await expect.poll(() => opacityOf(page, '#works .splash-stop__invitation')).toBe(1);
+  await expect
+    .poll(() =>
+      page
+        .locator('#works .splash-stop__contour-trace')
+        .first()
+        .evaluate((e) => getComputedStyle(e).opacity),
+    )
+    .toBe('0.88');
+  await page.locator('#works').click();
+  await expect(page).toHaveURL(/\/works\/$/);
+  await context.close();
+});
+
+test('splash reduced motion keeps contour feedback and navigation without transforms', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
-
-  const leaf = page.locator('a.splash-leaf#works');
-  expect(await leaf.evaluate((element) => getComputedStyle(element).transitionDuration)).toMatch(/^0s(, 0s)*$/);
-
-  // 모션을 꺼도 표지와 낱장이 모두 온전히 보인다.
-  expect(await opacityOf(page, '.book-splash__crest')).toBeCloseTo(1, 2);
-  expect(await opacityOf(page, '.splash-sheaf')).toBeCloseTo(1, 2);
-  await expect(leaf).toBeInViewport();
-
-  // 움직임을 줄여도 목적지는 그대로 열린다.
-  await leaf.click();
+  const stop = page.locator('#works');
+  await stop.hover();
+  for (const selector of ['#works .splash-stop__art', '#works .art-drifter']) {
+    expect(await page.locator(selector).evaluate((e) => getComputedStyle(e).transform)).toBe('none');
+    expect(await page.locator(selector).evaluate((e) => getComputedStyle(e).transitionDuration)).toMatch(/^0s(, 0s)*$/);
+  }
+  expect(
+    await page
+      .locator('#works .splash-stop__contour-trace')
+      .first()
+      .evaluate((e) => getComputedStyle(e).transitionDuration),
+  ).toMatch(/^0s(, 0s)*$/);
+  expect(await opacityOf(page, '#works .splash-stop__invitation')).toBe(1);
+  await expect(stop).toBeInViewport();
+  await stop.click();
   await expect(page).toHaveURL(/\/works\/$/);
 });
 

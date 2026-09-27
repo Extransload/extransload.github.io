@@ -1,19 +1,28 @@
 ---
 import type { ChapterId } from '../data/splash-chapters';
-interface Props { chapter: ChapterId }
-const { chapter } = Astro.props;
+interface Props { chapter: ChapterId; paper?: boolean }
+const { chapter, paper = false } = Astro.props;
 const paperId = `paper-${chapter}`;
 const foilId = `foil-${chapter}`;
+const toneId = `paper-tone-${chapter}`;
 ---
 
 <svg class={`chapter-art chapter-art--${chapter}`} viewBox="0 0 640 540" fill="none" aria-hidden="true">
   <defs>
+    {paper && <filter id={toneId} color-interpolation-filters="sRGB">
+      <feColorMatrix type="saturate" values="0" />
+      <feComponentTransfer>
+        <feFuncR type="table" tableValues=".35 .94" />
+        <feFuncG type="table" tableValues=".31 .87" />
+        <feFuncB type="table" tableValues=".23 .70" />
+      </feComponentTransfer>
+    </filter>}
     <pattern id={paperId} width="640" height="540" patternUnits="userSpaceOnUse">
-      <image href="/article-manuscript-paper-texture.webp" width="640" height="540" preserveAspectRatio="xMidYMid slice" />
+      <image href="/article-manuscript-paper-texture.webp" width="640" height="540" preserveAspectRatio="xMidYMid slice" filter={paper ? `url(#${toneId})` : undefined} />
     </pattern>
     <linearGradient id={foilId} x1="80" y1="60" x2="510" y2="460" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#8a6936" /><stop offset=".3" stop-color="#dfc98d" />
-      <stop offset=".55" stop-color="#a28040" /><stop offset=".8" stop-color="#e2ce93" /><stop offset="1" stop-color="#967039" />
+      <stop stop-color={paper ? '#796440' : '#8a6936'} /><stop offset=".3" stop-color={paper ? '#b09560' : '#dfc98d'} />
+      <stop offset=".55" stop-color={paper ? '#897044' : '#a28040'} /><stop offset=".8" stop-color={paper ? '#b9a373' : '#e2ce93'} /><stop offset="1" stop-color={paper ? '#806944' : '#967039'} />
     </linearGradient>
   </defs>
 
@@ -95,9 +104,9 @@ const foilId = `foil-${chapter}`;
       </g>
       <path d="M320 198v48m-28-32 28 16 28-16M252 244l68 39 68-39M252 320l68 39 68-39" stroke="#e2ce93" stroke-opacity=".55" stroke-width="1" />
     </g>
-    <g fill="#a99564" font-family="Georgia, serif" font-size="12" text-anchor="middle">
+    {!paper && <g fill="#a99564" font-family="Georgia, serif" font-size="12" text-anchor="middle">
       <text x="320" y="27">N</text><text x="320" y="520">S</text><text x="68" y="271">W</text><text x="572" y="271">E</text>
-    </g>
+    </g>}
   </>}
 
   {chapter === 'about' && <>

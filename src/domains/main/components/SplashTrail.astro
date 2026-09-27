@@ -1,0 +1,39 @@
+---
+import SplashArtwork from './SplashArtwork.astro';
+import SplashWordmark from './SplashWordmark.astro';
+import '../styles/splash-trail.css';
+import { splashChapters } from '../data/splash-chapters';
+import { createSplashTrail, TRAIL_WIDTH } from '../data/splash-trail';
+const { stops, height } = createSplashTrail(splashChapters);
+---
+
+<section class="splash-trail" id="contents" aria-label="장서 목차" style={`--trail-ratio: ${TRAIL_WIDTH} / ${height}; --trail-aspect: ${TRAIL_WIDTH / height}`}>
+  <div class="splash-trail__canvas">
+    {stops.map(({ chapter, x, y, turn }) => <a
+      class="splash-stop"
+      id={chapter.id}
+      href={chapter.href}
+      aria-labelledby={`${chapter.id}-title`}
+      aria-describedby={`${chapter.id}-description`}
+      style={`--stop-x: ${x / TRAIL_WIDTH * 100}%; --stop-y: ${y / height * 100}%; --stop-turn: ${turn}deg`}
+    >
+      <span class="splash-stop__tray" aria-hidden="true">
+        <span class="splash-stop__tray-shadow"></span>
+        <svg class="splash-stop__contour" viewBox="0 0 300 180" preserveAspectRatio="none">
+          <rect class="splash-stop__contour-rest" x="3" y="3" width="294" height="174" rx="7" pathLength="1" vector-effect="non-scaling-stroke" />
+          <rect class="splash-stop__contour-trace" x="3" y="3" width="294" height="174" rx="7" pathLength="1" vector-effect="non-scaling-stroke" />
+        </svg>
+      </span>
+      <span class="splash-stop__contact" aria-hidden="true"></span>
+      <span class="splash-stop__art" aria-hidden="true"><SplashArtwork chapter={chapter.id} paper /></span>
+      <div class="splash-stop__copy">
+        <h2 class="splash-stop__title" id={`${chapter.id}-title`}>
+          <span class="splash-sr-only">{chapter.label}</span>
+          <SplashWordmark chapter={chapter} />
+        </h2>
+        <span class="splash-stop__description" id={`${chapter.id}-description`}>{chapter.description}</span>
+        <span class="splash-stop__invitation" aria-hidden="true">{chapter.invitation}<span>↗</span></span>
+      </div>
+    </a>)}
+  </div>
+</section>
