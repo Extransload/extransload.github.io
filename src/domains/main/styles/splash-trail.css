@@ -5,7 +5,7 @@
   --trail-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
   --stop-width: 25%;
   --stop-art-width: 64%;
-  --stop-wordmark: clamp(1.2rem, 2.85cqw, 2rem);
+  --stop-wordmark: clamp(1.05rem, 2.5cqw, 1.75rem);
 
   position: relative;
   width: clamp(44rem, calc((100svh - 16.4rem) * var(--trail-aspect)), 82rem);
@@ -47,15 +47,18 @@
   width: 86%;
   height: auto;
   aspect-ratio: 2.1;
+  border-radius: 7px;
+  background: linear-gradient(180deg, rgb(7 16 28 / 38%), rgb(3 10 18 / 52%));
+  box-shadow: inset 0 1px 0 rgb(238 233 220 / 4%);
   transform: perspective(850px) rotateX(42deg);
   pointer-events: none;
 }
 
 .splash-stop__tray-shadow {
   position: absolute;
-  inset: 8% 2% 0;
+  inset: 5% -2% -4%;
   border-radius: 6px;
-  box-shadow: 0 11px 12px -9px #000a;
+  box-shadow: 0 17px 18px -11px rgb(0 0 0 / 88%);
 }
 
 .splash-stop__contour {
@@ -70,7 +73,7 @@
 .splash-stop__contour-rest {
   stroke: #c0ae86;
   stroke-width: 0.7px;
-  stroke-opacity: 0.14;
+  stroke-opacity: 0;
 }
 
 .splash-stop__contour-trace {
@@ -160,6 +163,15 @@
   width: calc(var(--stop-wordmark) * var(--wordmark-aspect));
   height: calc(var(--stop-wordmark) * 1.55);
   overflow: visible;
+}
+
+.splash-stop__wordmark-layer--gold {
+  opacity: 0;
+  transition: opacity var(--trail-react) ease;
+}
+
+.splash-stop:is(:hover, :focus-visible) .splash-stop__wordmark-layer--gold {
+  opacity: 1;
 }
 
 .splash-stop__description {
@@ -252,7 +264,7 @@
 @media (max-width: 860px) {
   .splash-trail {
     --stop-art-width: 10rem;
-    --stop-wordmark: 1.8rem;
+    --stop-wordmark: 1.55rem;
 
     width: calc(100% - 2rem);
     max-width: 40rem;
@@ -306,24 +318,6 @@
 @media (hover: none), (max-width: 860px) {
   .splash-stop__invitation {
     opacity: 1;
-    translate: none;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .splash-trail *,
-  .splash-trail *::after {
-    transition: none !important;
-    animation: none !important;
-  }
-
-  .splash-stop .splash-stop__art,
-  .splash-stop:is(:hover, :focus-visible) .splash-stop__art,
-  .splash-stop:is(:hover, :focus-visible) :is(.art-drifter, .art-ribbon, .art-orbit, .art-letter, .art-stars) {
-    transform: none !important;
-  }
-
-  .splash-stop__invitation {
     translate: none;
   }
 }

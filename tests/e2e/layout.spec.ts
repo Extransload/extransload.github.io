@@ -125,13 +125,18 @@ test('splash trays and chapter targets fit the canvas without overlapping', asyn
   }
 });
 
-test('splash leaves the leather exposed behind unfilled individual trays', async ({ page }) => {
+test('splash sets each illustration on a leather-blue tray without a resting gold outline', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('[data-trail-path], .splash-stop__mobile-path, .splash-stop__sketch')).toHaveCount(0);
   await expect(page.locator('.splash-stop__tray')).toHaveCount(splashChapters.length);
   for (const tray of await page.locator('.splash-stop__tray').all()) {
-    expect(await tray.evaluate((e) => getComputedStyle(e).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
+    const background = await tray.evaluate((e) => getComputedStyle(e).backgroundImage);
+    expect(background).toContain('rgba(7, 16, 28, 0.38)');
+    expect(background).toContain('rgba(3, 10, 18, 0.52)');
     expect(await tray.locator('svg').evaluate((e) => getComputedStyle(e).fill)).toBe('none');
+    expect(await tray.locator('.splash-stop__contour-rest').evaluate((e) => getComputedStyle(e).strokeOpacity)).toBe(
+      '0',
+    );
     expect(await tray.locator('.splash-stop__tray-shadow').evaluate((e) => getComputedStyle(e).boxShadow)).not.toBe(
       'none',
     );
@@ -139,24 +144,62 @@ test('splash leaves the leather exposed behind unfilled individual trays', async
   await expect(page.locator('.splash-stop__art svg.chapter-art')).toHaveCount(splashChapters.length);
 });
 
-test('splash preserves actual embroidery with matched capital height and one gold palette', async ({ page }) => {
+test('splash preserves actual embroidery with matched capital height and pewter-to-gold layers', async ({ page }) => {
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto('/');
     const heights = [];
     for (const chapter of splashChapters) {
       const mark = page.locator(`#${chapter.id} .splash-stop__wordmark`);
-      await expect(mark.locator('image')).toHaveAttribute('href', chapter.wordmark.src);
+      const layers = mark.locator('image');
+      await expect(layers).toHaveCount(2);
+      await expect(layers.first()).toHaveAttribute('href', chapter.wordmark.src);
+      await expect(layers.last()).toHaveAttribute('href', chapter.wordmark.src);
       await expect(mark).toHaveAttribute('aria-hidden', 'true');
       const rendered = (await mark.boundingBox())!;
       heights.push((rendered.width / chapter.wordmark.width) * chapter.wordmark.capHeight);
-      const color = mark.locator('feComponentTransfer').last();
-      await expect(color.locator('feFuncR')).toHaveAttribute('slope', '1.16');
-      await expect(color.locator('feFuncG')).toHaveAttribute('slope', '0.97');
-      await expect(color.locator('feFuncB')).toHaveAttribute('slope', '0.61');
+
+      const pewter = mark.locator('filter').first().locator('feComponentTransfer').last();
+      await expect(pewter.locator('feFuncR')).toHaveAttribute('slope', '0.78');
+      await expect(pewter.locator('feFuncG')).toHaveAttribute('slope', '0.79');
+      await expect(pewter.locator('feFuncB')).toHaveAttribute('slope', '0.76');
+
+      const gold = mark.locator('filter').last().locator('feComponentTransfer').last();
+      await expect(gold.locator('feFuncR')).toHaveAttribute('slope', '1.16');
+      await expect(gold.locator('feFuncG')).toHaveAttribute('slope', '0.97');
+      await expect(gold.locator('feFuncB')).toHaveAttribute('slope', '0.61');
       await expect(mark.locator('feFuncA')).toHaveCount(0);
     }
     expect(Math.max(...heights) - Math.min(...heights)).toBeLessThan(0.1);
+  }
+});
+
+test('splash wordmark rests in pewter silver and crossfades to gold on hover', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  const stop = page.locator('#works');
+  const base = stop.locator('.splash-stop__wordmark-layer--pewter');
+  const gold = stop.locator('.splash-stop__wordmark-layer--gold');
+
+  expect(await base.evaluate((e) => getComputedStyle(e).opacity)).toBe('1');
+  expect(await gold.evaluate((e) => getComputedStyle(e).opacity)).toBe('0');
+  expect(await gold.evaluate((e) => getComputedStyle(e).transitionDuration)).not.toMatch(/^0s(, 0s)*$/);
+
+  await stop.hover();
+  await expect.poll(() => gold.evaluate((e) => getComputedStyle(e).opacity)).toBe('1');
+});
+
+test('splash keeps the contents wordmarks subordinate to their artwork', async ({ page }) => {
+  for (const { width, maxHeight } of [
+    { width: 1440, maxHeight: 44 },
+    { width: 390, maxHeight: 39 },
+  ]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/');
+    const heights = await page
+      .locator('.splash-stop__wordmark')
+      .evaluateAll((marks) => marks.map((mark) => mark.getBoundingClientRect().height));
+    for (const height of heights) expect(height).toBeLessThanOrEqual(maxHeight);
   }
 });
 
@@ -169,7 +212,7 @@ test('splash chapters retain their data, accessible names and destinations', asy
     await expect(stop).toHaveAccessibleName(chapter.label);
     await expect(stop).toHaveAccessibleDescription(chapter.description);
     await expect(stop.locator('.splash-stop__title')).toHaveText(chapter.label);
-    await expect(stop.locator('.splash-stop__wordmark image')).toHaveAttribute('href', chapter.wordmark.src);
+    await expect(stop.locator('.splash-stop__wordmark image').first()).toHaveAttribute('href', chapter.wordmark.src);
   }
 });
 
@@ -304,23 +347,24 @@ test('splash contours and destinations work with JavaScript disabled', async ({ 
   await context.close();
 });
 
-test('splash reduced motion keeps contour feedback and navigation without transforms', async ({ page }) => {
+test('splash keeps hover animation enabled when the OS requests reduced motion', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
   const stop = page.locator('#works');
+  const art = stop.locator('.splash-stop__art');
+  const detail = stop.locator('.art-drifter');
+  const artBefore = await art.evaluate((e) => getComputedStyle(e).transform);
+  const detailBefore = await detail.evaluate((e) => getComputedStyle(e).transform);
   await stop.hover();
-  for (const selector of ['#works .splash-stop__art', '#works .art-drifter']) {
-    expect(await page.locator(selector).evaluate((e) => getComputedStyle(e).transform)).toBe('none');
-    expect(await page.locator(selector).evaluate((e) => getComputedStyle(e).transitionDuration)).toMatch(/^0s(, 0s)*$/);
-  }
+
+  await expect.poll(() => art.evaluate((e) => getComputedStyle(e).transform)).not.toBe(artBefore);
+  await expect.poll(() => detail.evaluate((e) => getComputedStyle(e).transform)).not.toBe(detailBefore);
+  expect(await art.evaluate((e) => getComputedStyle(e).transitionDuration)).not.toMatch(/^0s(, 0s)*$/);
   expect(
-    await page
-      .locator('#works .splash-stop__contour-trace')
-      .first()
-      .evaluate((e) => getComputedStyle(e).transitionDuration),
-  ).toMatch(/^0s(, 0s)*$/);
-  expect(await opacityOf(page, '#works .splash-stop__invitation')).toBe(1);
+    await stop.locator('.splash-stop__contour-trace').evaluate((e) => getComputedStyle(e).transitionDuration),
+  ).not.toMatch(/^0s(, 0s)*$/);
+  await expect.poll(() => opacityOf(page, '#works .splash-stop__invitation')).toBe(1);
   await expect(stop).toBeInViewport();
   await stop.click();
   await expect(page).toHaveURL(/\/works\/$/);

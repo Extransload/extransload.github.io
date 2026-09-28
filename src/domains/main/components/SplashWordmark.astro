@@ -3,7 +3,8 @@ import type { SplashChapter } from '../data/splash-chapters';
 interface Props { chapter: SplashChapter }
 const { chapter } = Astro.props;
 const { wordmark } = chapter;
-const filterId = `thread-tone-${chapter.id}`;
+const pewterFilterId = `thread-pewter-${chapter.id}`;
+const goldFilterId = `thread-gold-${chapter.id}`;
 // Match shadow / midtone / highlight levels while retaining the photographed stitches.
 const input = [0, ...wordmark.luminance, 1];
 const output = [0, 0.2, 0.53, 0.78, 1];
@@ -16,7 +17,20 @@ const tones = Array.from({ length: 33 }, (_, i) => {
 ---
 <svg class="splash-stop__wordmark" viewBox={`0 ${-wordmark.capHeight * 0.12} ${wordmark.width} ${wordmark.capHeight * 1.55}`} style={`--wordmark-aspect: ${wordmark.width / wordmark.capHeight}`} aria-hidden="true">
   <defs>
-    <filter id={filterId} color-interpolation-filters="sRGB" x="-2%" y="-5%" width="104%" height="110%">
+    <filter id={pewterFilterId} color-interpolation-filters="sRGB" x="-2%" y="-5%" width="104%" height="110%">
+      <feColorMatrix type="saturate" values="0" />
+      <feComponentTransfer>
+        <feFuncR type="table" tableValues={tones} />
+        <feFuncG type="table" tableValues={tones} />
+        <feFuncB type="table" tableValues={tones} />
+      </feComponentTransfer>
+      <feComponentTransfer>
+        <feFuncR type="linear" slope="0.78" />
+        <feFuncG type="linear" slope="0.79" />
+        <feFuncB type="linear" slope="0.76" />
+      </feComponentTransfer>
+    </filter>
+    <filter id={goldFilterId} color-interpolation-filters="sRGB" x="-2%" y="-5%" width="104%" height="110%">
       <feColorMatrix type="saturate" values="0" />
       <feComponentTransfer>
         <feFuncR type="table" tableValues={tones} />
@@ -30,5 +44,6 @@ const tones = Array.from({ length: 33 }, (_, i) => {
       </feComponentTransfer>
     </filter>
   </defs>
-  <image href={wordmark.src} width={wordmark.width} height={wordmark.height} y={-wordmark.capTop} filter={`url(#${filterId})`} />
+  <image class="splash-stop__wordmark-layer splash-stop__wordmark-layer--pewter" href={wordmark.src} width={wordmark.width} height={wordmark.height} y={-wordmark.capTop} filter={`url(#${pewterFilterId})`} />
+  <image class="splash-stop__wordmark-layer splash-stop__wordmark-layer--gold" href={wordmark.src} width={wordmark.width} height={wordmark.height} y={-wordmark.capTop} filter={`url(#${goldFilterId})`} />
 </svg>
