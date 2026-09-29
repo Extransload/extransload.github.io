@@ -53,6 +53,8 @@ export interface WorkMilestone {
 export interface WorkLogo {
   src: string;
   alt: string;
+  width?: number;
+  height?: number;
 }
 
 export interface WorkProject {
@@ -92,9 +94,168 @@ const citewellTenure = formatTenure(CITEWELL_START);
 
 export const works: WorkProject[] = [
   {
+    slug: 'notepane',
+    logo: { src: '/images/works/logo-notepane.png', alt: 'NotePane 로고', width: 1450, height: 400 },
+    folio: 'Folio 01',
+    title: 'NotePane',
+    subtitle: '한 창에 모아 쓰고, 바탕화면에 펼쳐 두는 블록 노트',
+    period: '2026.07.24 — 현재',
+    role: '데스크톱 앱 · 제품 개발',
+    context: '오픈소스 프로젝트',
+    summary:
+      '노트를 정리할 때는 하나의 창으로, 다른 일을 하며 참고할 때는 작은 메모 창으로. ' +
+      '같은 문서를 탭 세션과 스티키 윈도우로 오가며 사용하는 로컬 우선 데스크톱 앱. ' +
+      'Electron의 창 관리와 BlockNote의 블록 편집기를 연결하고, 계정이나 서버 없이 내 컴퓨터에 기록을 보관하도록 구성.',
+    metrics: [
+      { label: '플랫폼', value: 'macOS · Windows' },
+      { label: '저장', value: '로컬 우선' },
+      { label: '라이선스', value: 'MIT' },
+    ],
+    stack: 'Electron · React · BlockNote · Vite · Playwright · JSON',
+    links: [
+      { label: 'GitHub', href: 'https://github.com/Extransload/NotePane' },
+      { label: '사용 안내', href: 'https://github.com/Extransload/NotePane/blob/main/docs/usage.md' },
+    ],
+    gallery: [
+      {
+        src: '/images/works/notepane-desk-light.png',
+        kind: 'wide',
+        alt: 'NotePane의 사이드바 세션 목록과 체크리스트·표를 함께 보여 주는 블록 편집 화면',
+        caption: '탭 세션 모드 — 여러 노트를 사이드바에 모아 두고 하나의 편집 창에서 전환.',
+      },
+      {
+        src: '/images/works/notepane-scatter.png',
+        kind: 'wide',
+        alt: '서로 다른 파스텔 색상의 노트 세 개를 독립된 창으로 펼쳐 놓은 NotePane 소개 이미지',
+        caption: '스티키 윈도우 소개 이미지 — 같은 노트를 개별 창으로 펼쳐 두는 사용 방식.',
+      },
+    ],
+    milestones: [],
+    chapters: [
+      {
+        n: '01',
+        period: '2026.07',
+        title: '모아 쓰는 노트와 펼쳐 두는 메모',
+        lede:
+          '한 창에 모인 노트는 정리하기 쉽지만 다른 앱으로 이동하면 가려지고, ' +
+          '낱장의 메모는 눈앞에 두기 쉽지만 문서 구조를 갖추기 어려움. ' +
+          '같은 노트를 두 방식으로 사용할 수 있도록 창 모델부터 구성.',
+        requirements: [
+          { label: '두 가지 배치', value: '탭 세션과 독립 메모 창 사이에서 같은 노트를 이어서 편집' },
+          { label: '빠른 전환', value: '단축키와 드래그로 노트를 전환·분리·결합' },
+          { label: '작업 유지', value: '노트별 위치·크기·고정 상태를 저장' },
+        ],
+        build: [
+          {
+            head: '노트와 창의 역할 분리',
+            decision: true,
+            body: [
+              'Electron 메인 프로세스가 창의 생성과 배치를, React 렌더러가 문서 편집을 담당',
+              '탭 모드는 기본 창 하나에 세션을 모으고, 스티키 모드는 세션마다 작은 창을 열어 배치',
+              '모드 전환은 문서를 복제하거나 내보내는 과정 없이 같은 노트에 연결',
+            ],
+          },
+          {
+            head: '분리와 복귀가 가능한 작업 공간',
+            body: [
+              '사이드바 탭을 밖으로 끌어 독립 창으로 분리하고 다시 탭 창으로 결합',
+              '세션별 색상과 투명도를 탭과 스티키 창에서 공유',
+              '항상 위에 표시하기와 창 위치 저장으로 참고할 노트를 작업 화면에 유지',
+            ],
+          },
+        ],
+        hard: [
+          {
+            head: '닫은 창과 삭제한 노트의 구분',
+            body: '스티키 창을 닫는 동작과 노트 자체를 삭제하는 동작은 서로 다른 의미. 창 배치 과정에서 닫은 메모가 곧바로 다시 열리지 않아야 함.',
+            resolved:
+              '수동으로 닫은 스티키 창의 상태를 따로 기록하고, 전체 노트 표시나 스티키 모드 재진입 시 다시 열도록 구성.',
+          },
+        ],
+        outcome: [
+          '문서를 정리하는 작업과 옆에 띄워 두고 참고하는 작업을 하나의 앱에서 연결',
+          'macOS와 Windows용 패키징, WSL에서 Windows 앱을 실행하는 개발 경로 마련',
+        ],
+      },
+      {
+        n: '02',
+        period: '2026.08',
+        title: '메모 창 안에 블록 편집기를',
+        lede:
+          '짧은 메모에서도 제목·체크리스트·표·코드가 필요하고, 길어진 기록은 구조를 접거나 다시 정리할 수 있어야 함. ' +
+          'BlockNote를 기반으로 편집 동작과 데스크톱 창의 조작 영역을 연결.',
+        requirements: [
+          { label: '문서 구조', value: '슬래시 메뉴, 중첩 블록, 토글, 표, 코드 블록 지원' },
+          { label: '입력 일관성', value: '텍스트 선택과 블록 드래그가 창 이동과 충돌하지 않을 것' },
+          { label: '결과물 전달', value: 'Markdown 가져오기와 PNG·PDF 내보내기 제공' },
+        ],
+        build: [
+          {
+            head: '편집기와 앱 외곽의 경계',
+            decision: true,
+            body: [
+              'BlockNote의 기본 메뉴와 도구 모음을 사용하고 창 이동은 헤더 영역으로 한정',
+              '편집 표면과 버튼은 no-drag 영역으로 지정해 마우스 입력을 편집기에 전달',
+              '표의 셀 선택, 중첩 토글의 키보드 동작, 복사·붙여넣기를 다듬는 작업 진행',
+            ],
+          },
+          {
+            head: '읽기와 내보내기',
+            body: [
+              '노트별 글꼴·크기 설정과 목차, 코드 구문 강조, 이미지 자르기·다운로드 제공',
+              'Electron의 화면 캡처와 PDF 인쇄 기능으로 PNG·PDF 생성',
+              '내보낼 때 앱의 조작부와 메모 배경을 제외해 문서 내용만 전달',
+            ],
+          },
+        ],
+        hard: [],
+        outcome: [
+          '단순 텍스트 메모를 넘어 표·토글·이미지가 포함된 구조화된 기록 지원',
+          '앱 안의 기록을 이미지와 PDF로 꺼내 다른 작업에 활용할 수 있는 경로 확보',
+        ],
+      },
+      {
+        n: '03',
+        period: '2026.09',
+        title: '로컬 저장과 유지보수 경계 정리',
+        lede:
+          '창과 편집 동작이 늘어나면서 저장, 키보드 입력, 테마 처리가 하나의 화면 코드에 모이는 상황. ' +
+          '로컬 저장 구조를 문서화하고 렌더러를 책임별로 분리해 수정할 위치와 검증 범위를 명확하게 정리.',
+        requirements: [
+          { label: '로컬 소유', value: '로그인과 동기화 서버 없이 노트와 설정을 컴퓨터에 보관' },
+          { label: '복원 가능성', value: '구조화된 문서와 창 상태 저장, 전체 백업 가져오기·내보내기 지원' },
+          { label: '검증 범위', value: '저장소 단위 테스트와 렌더러·데스크톱 실행 검증을 분리' },
+        ],
+        build: [
+          {
+            head: '문서 저장 흐름',
+            body: [
+              'BlockNote 문서 JSON과 Markdown 보조 표현을 IPC로 전달하고 notes.json에 원자적으로 기록',
+              '노트 내용·창 배치·색상·글꼴과 앱 전체 테마·레이아웃 설정을 로컬에 보관',
+              '환경설정에서 전체 백업을 내보내거나 가져오는 경로 제공',
+            ],
+          },
+          {
+            head: '기능별 코드와 테스트',
+            body: [
+              '편집기, 저장 데이터 정규화, 색상 계산, UI, 상태 훅을 각자의 모듈로 분리',
+              '저장 동작을 단위 테스트로, 화면 입력과 Electron 창 동작을 별도 Playwright 테스트로 검증',
+              '정의되지 않은 참조 검사·빌드·테스트를 반복 실행 가능한 명령으로 묶고 코드 맵 작성',
+            ],
+          },
+        ],
+        hard: [],
+        outcome: [
+          '계정이나 서버 없이 사용할 수 있는 로컬 우선 노트 앱으로 범위 정립',
+          '기능별 코드 맵과 검증 명령을 갖춘 MIT 라이선스 오픈소스 프로젝트로 공개',
+        ],
+      },
+    ],
+  },
+  {
     slug: 'citewell',
     logo: { src: '/images/works/logo-citewell.webp', alt: 'CiteWell 로고' },
-    folio: 'Folio 01',
+    folio: 'Folio 02',
     title: 'CiteWell',
     subtitle: '의학 논문의 참고문헌을 검증하고 저널 형식으로 바꾸는 제품',
     period: '2023.12.11 — 현재',
@@ -661,8 +822,8 @@ export const works: WorkProject[] = [
   },
   {
     slug: 'degureure',
-    logo: { src: '/images/works/logo-degureure.webp', alt: '데구르르 로고' },
-    folio: 'Folio 02',
+    logo: { src: '/images/works/logo-degureure.webp', alt: '데구르르 심볼과 글자 로고' },
+    folio: 'Folio 03',
     title: '데구르르',
     subtitle: '1:1 웃음 참기 화상 대결',
     period: '2023.07.10 — 2023.11.17',
@@ -894,7 +1055,7 @@ export const works: WorkProject[] = [
   {
     slug: 'danchu',
     logo: { src: '/images/works/logo-danchu.webp', alt: 'DANCHU 로고' },
-    folio: 'Folio 03',
+    folio: 'Folio 04',
     title: 'DANCHU',
     subtitle: '지난 24시간의 뉴스를 단어 추측 게임으로 바꾸는 서비스',
     period: '2023.08.21 — 2023.10.06',

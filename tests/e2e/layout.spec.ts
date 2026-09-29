@@ -372,17 +372,22 @@ test('works presents a scannable contents page for every folio', async ({ page }
   await page.goto('/works/');
 
   const folios = page.locator('.works-index__item');
-  await expect(folios).toHaveCount(3);
+  await expect(folios).toHaveCount(4);
   // The contents page follows the archive's own order.
   await expect(page.locator('.works-index__name')).toHaveText(works.map((project) => project.title));
-  await expect(folios.first()).toContainText('2023.12.11 — 현재');
-  await expect(page.locator('.works-index__link').first()).toHaveAttribute('href', '/works/citewell/');
+  await expect(folios.first()).toContainText('2026.07.24 — 현재');
+  await expect(page.locator('.works-index__link').first()).toHaveAttribute('href', '/works/notepane/');
 
   const logos = page.locator('.works-index__logo');
-  await expect(logos).toHaveCount(3);
+  await expect(logos).toHaveCount(4);
   for (const logo of await logos.all()) {
     expect(await logo.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
-    expect(await logo.getAttribute('alt')).toBeTruthy();
+    if (await logo.evaluate((image) => image.closest('[data-project]')?.getAttribute('data-project') === 'citewell')) {
+      await expect(logo).toHaveAttribute('alt', '');
+      await expect(page.locator('.works-index__cover-wordmark')).toHaveText('CiteWell');
+    } else {
+      expect(await logo.getAttribute('alt')).toBeTruthy();
+    }
   }
 
   await expect(page.locator('.works-patents__item')).toHaveCount(2);
@@ -395,15 +400,19 @@ test('works opens a dedicated folio for each project', async ({ page }) => {
   await page.goto('/works/');
   await page.locator('.works-index__link').first().click();
 
-  await expect(page).toHaveURL(/\/works\/citewell\/$/);
-  await expect(page.getByRole('heading', { name: 'CiteWell', exact: true, level: 1 })).toBeVisible();
+  await expect(page).toHaveURL(/\/works\/notepane\/$/);
+  await expect(page.getByRole('heading', { name: 'NotePane', exact: true, level: 1 })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'GitHub', exact: false })).toHaveAttribute(
+    'href',
+    'https://github.com/Extransload/NotePane',
+  );
 
   const chapters = page.locator('section[data-chapter]');
-  await expect(chapters).toHaveCount(8);
+  await expect(chapters).toHaveCount(3);
   await expect(chapters.first()).toContainText('요구사항');
   await expect(chapters.first()).toContainText('구현');
   await expect(chapters.first()).toContainText('남긴 것');
-  await expect(page.locator('.work-doc__rail a[data-rail-link]')).toHaveCount(8);
+  await expect(page.locator('.work-doc__rail a[data-rail-link]')).toHaveCount(3);
 
   await page.locator('.work-doc__nav a').last().click();
   // From the first folio the last nav link is the one that follows it.
