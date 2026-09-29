@@ -10,7 +10,7 @@
   position: relative;
   width: clamp(44rem, calc((100svh - 16.4rem) * var(--trail-aspect)), 82rem);
   max-width: calc(100% - 4rem);
-  margin: auto auto clamp(1.25rem, 3svh, 2rem);
+  margin: auto auto clamp(1.25rem, calc(3svh - 0.5rem), 2rem);
   padding-top: 1rem;
   color: var(--trail-ink);
 }
@@ -238,26 +238,96 @@
   transform: translateY(-38px) rotate(-3deg);
 }
 
-/* Let rows grow when the viewport cannot fit the spacious composition. */
-@media (861px <= width <= 1100px), (min-width: 861px) and (max-height: 760px) {
+@media (prefers-reduced-motion: no-preference) {
+  .splash-stop:is(:hover, :focus-visible) .chapter-art--journal .art-drifter {
+    --detail-x: 5px;
+    --detail-y: -7px;
+
+    animation: splash-detail-drift 3.2s ease-in-out infinite;
+  }
+
+  .splash-stop:is(:hover, :focus-visible) .art-ribbon {
+    animation: splash-detail-sway 3.8s ease-in-out infinite;
+  }
+
+  .splash-stop:is(:hover, :focus-visible) .chapter-art--works .art-drifter {
+    --detail-x: -6px;
+    --detail-y: -5px;
+
+    animation: splash-detail-drift 3.5s ease-in-out infinite;
+  }
+
+  .splash-stop:is(:hover, :focus-visible) .art-orbit {
+    transform: none;
+    animation: splash-detail-orbit 18s linear infinite;
+  }
+
+  .splash-stop:is(:hover, :focus-visible) .art-stars {
+    animation: splash-detail-twinkle 3s ease-in-out infinite;
+  }
+
+  .splash-stop:is(:hover, :focus-visible) .chapter-art--about .art-drifter {
+    --detail-x: 5px;
+    --detail-y: -4px;
+
+    animation: splash-detail-drift 4s ease-in-out infinite;
+  }
+
+  .splash-stop:is(:hover, :focus-visible) .art-letter {
+    --detail-x: 0px;
+    --detail-y: -7px;
+
+    animation: splash-detail-drift 3.6s ease-in-out infinite;
+  }
+}
+
+@keyframes splash-detail-drift {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+
+  50% {
+    translate: var(--detail-x) var(--detail-y);
+  }
+}
+
+@keyframes splash-detail-sway {
+  0%,
+  100% {
+    rotate: -2deg;
+  }
+
+  50% {
+    rotate: 3deg;
+  }
+}
+
+@keyframes splash-detail-orbit {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes splash-detail-twinkle {
+  0%,
+  100% {
+    scale: 1;
+  }
+
+  50% {
+    scale: 1.12;
+  }
+}
+
+/* Keep nearby trays apart when the desktop canvas gets narrow or short. */
+@media (861px <= width <= 900px), (min-width: 861px) and (max-height: 760px) {
   .splash-trail {
-    width: calc(100% - 4rem);
-    margin: 2rem auto;
-  }
-
-  .splash-trail__canvas {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 2rem 3%;
-    aspect-ratio: auto;
-  }
-
-  .splash-stop {
-    position: relative;
-    inset: auto;
-    width: 30%;
-    translate: none;
+    --stop-width: 23%;
   }
 }
 
@@ -312,12 +382,5 @@
 
   .splash-stop__invitation {
     font-size: 0.72rem;
-  }
-}
-
-@media (hover: none), (max-width: 860px) {
-  .splash-stop__invitation {
-    opacity: 1;
-    translate: none;
   }
 }

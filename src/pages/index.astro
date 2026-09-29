@@ -6,7 +6,7 @@ const adminUrl = import.meta.env.PUBLIC_ADMIN_URL?.trim();
 const adminOrigin = adminUrl?.replace(/\/+$/, '').replace(/\/admin$/, '') || '';
 ---
 
-<SplashLayout title="Extransload" description="기록과 작업, 취향과 놀이를 보관하는 한 권의 개인 장서">
+<SplashLayout title="Extransload" description="쓰고 만들고 놀며, 한 장씩 채워갑니다.">
   <main class="book-splash">
     <section class="book-splash__face" id="cover" aria-labelledby="splash-title">
       <div class="book-splash__crest" aria-hidden="true">
@@ -27,7 +27,7 @@ const adminOrigin = adminUrl?.replace(/\/+$/, '').replace(/\/admin$/, '') || '';
           <img src="/images/extransload-wordmark-crest-tone.webp" class="book-splash__title-glyph" alt="" width="2100" height="402" fetchpriority="high" data-no-zoom />
         </h1>
       </div>
-      <p class="book-splash__tagline">기록과 작업, 취향과 놀이를 보관하는 한 권의 개인 장서</p>
+      <p class="book-splash__tagline">쓰고 만들고 놀며, 한 장씩 채워갑니다.</p>
       {adminUrl && <div class="book-splash__admin" aria-label="관리자 메뉴" data-admin-controls hidden>
         <a class="book-splash__admin-login" data-admin-login href={`${adminOrigin}/auth/github`} aria-label="관리자 로그인" title="관리자 로그인">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.2" /><path d="M5.5 20c.7-3.1 3-5 6.5-5s5.8 1.9 6.5 5" /></svg>

@@ -55,9 +55,7 @@ test('splash keeps the original branding in a compact header at every width', as
       'src',
       '/images/extransload-wordmark-crest-tone.webp',
     );
-    await expect(page.locator('.book-splash__tagline')).toHaveText(
-      '기록과 작업, 취향과 놀이를 보관하는 한 권의 개인 장서',
-    );
+    await expect(page.locator('.book-splash__tagline')).toHaveText('쓰고 만들고 놀며, 한 장씩 채워갑니다.');
     const gaps = await page.evaluate(() => {
       const box = (selector: string) => document.querySelector(selector)!.getBoundingClientRect();
       const crest = box('.book-splash__crest');
@@ -296,7 +294,7 @@ test('splash uses the same links as a readable illustrated list on narrow screen
       expect(boxes[i].left).toBe(boxes[0].left);
     }
     for (const chapter of splashChapters) {
-      await expect.poll(() => opacityOf(page, `#${chapter.id} .splash-stop__invitation`)).toBe(1);
+      await expect.poll(() => opacityOf(page, `#${chapter.id} .splash-stop__invitation`)).toBe(0);
       expect(await opacityOf(page, `#${chapter.id} .splash-stop__art`)).toBe(1);
     }
     expect(
@@ -322,7 +320,7 @@ test('splash touch navigation needs only one tap', async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
   const page = await context.newPage();
   await page.goto(test.info().project.use.baseURL as string);
-  await expect.poll(() => opacityOf(page, '#works .splash-stop__invitation')).toBe(1);
+  await expect.poll(() => opacityOf(page, '#works .splash-stop__invitation')).toBe(0);
   await page.locator('#works').tap();
   await expect(page).toHaveURL(/\/works\/$/);
   await context.close();
