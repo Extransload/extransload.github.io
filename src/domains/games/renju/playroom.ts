@@ -454,8 +454,11 @@ $('#help').addEventListener('click', () => {
 });
 mountRulesHelp();
 if (!api) status('대국 서버 설정이 필요합니다', 'error');
-else if (currentRoom) void openRoom(currentRoom);
 else {
-  status('새 대국을 시작하세요');
-  render();
+  $<HTMLButtonElement>('#create').disabled = false;
+  if (currentRoom) void openRoom(currentRoom);
+  else {
+    status('새 대국을 시작하세요');
+    render();
+  }
 }

@@ -624,6 +624,7 @@ test('playroom lists Gomoku, opens its board, and About remains standalone', asy
   await expect(page.locator('.top-home')).toHaveAttribute('href', '/playroom/');
   await expect(page.locator('.stage canvas')).toBeVisible();
   await expect(page.locator('#create')).toBeVisible();
+  await expect(page.locator('#create')).toBeEnabled();
   await page.locator('#rules').click();
   await expect(page.locator('#rules-dialog')).toBeVisible();
   await expect(page.locator('#rules-slide-title')).toHaveText('다섯 개를 잇기');
