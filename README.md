@@ -47,6 +47,8 @@ npm ci
 npm run dev
 ```
 
+`npm run dev`는 Astro와 Playroom 실시간 Worker를 함께 실행합니다. Playroom은 로컬 8787 포트를 사용합니다. Astro만 실행하려면 `npm run dev:site`를 사용하세요.
+
 프로덕션 빌드는 Astro 정적 사이트, RSS, sitemap, Pagefind 검색 색인을 모두 `dist/`에 생성합니다.
 
 ```bash
@@ -60,7 +62,7 @@ npm test -- --run
 npm run test:e2e
 ```
 
-## 댓글과 GA4 설정
+## 공개 서비스와 GA4 설정
 
 다음 값은 브라우저에 공개되는 배포 설정이므로 GitHub repository variables에 등록합니다. 소스 코드나 GitHub Secrets에 넣지 않습니다.
 
@@ -68,6 +70,7 @@ npm run test:e2e
 | --- | --- |
 | `PUBLIC_GA_MEASUREMENT_ID` | GA4 Measurement ID. 비워 두면 분석 스크립트를 로드하지 않습니다. |
 | `PUBLIC_COMMENTS_API_URL` | 댓글 Worker의 origin. 기본값은 기존 관리자 Worker 주소입니다. |
+| `PUBLIC_RENJU_API_URL` | 실시간 렌주 Worker의 origin. 비워 두면 대국 생성 대신 설정 안내가 표시됩니다. |
 | `PUBLIC_ADMIN_URL` | 별도 관리자 Worker의 HTTPS 주소입니다. 비워 두면 `/admin/` 설정 안내가 표시됩니다. |
 
 ## 관리자 기반

@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "astro dev",
+    "dev": "node scripts/dev.mjs",
+    "dev:site": "astro dev",
     "build": "astro build && pagefind --site dist",
     "preview": "astro preview",
     "typecheck": "astro check",
@@ -32,6 +33,7 @@
     "remark-rehype": "^11.1.2",
     "remark-smartypants": "^3.0.3",
     "shiki": "^3.23.0",
+    "three": "^0.186.1",
     "unified": "^11.0.5"
   },
   "devDependencies": {
@@ -39,6 +41,7 @@
     "@pagefind/default-ui": "^1.5.2",
     "@playwright/test": "^1.55.0",
     "@types/node": "^24.3.0",
+    "@types/three": "^0.186.0",
     "pagefind": "^1.5.2",
     "parse5": "^7.3.0",
     "prettier": "^3.9.8",

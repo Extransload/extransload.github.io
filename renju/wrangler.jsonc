@@ -1,0 +1,10 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "extransload-renju",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-09-30",
+  "durable_objects": {
+    "bindings": [{ "name": "ROOMS", "class_name": "RenjuRoom" }],
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["RenjuRoom"] }],
+}

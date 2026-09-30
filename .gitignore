@@ -9,6 +9,7 @@ playwright-report/
 .vscode/
 .env.development.local
 admin/.dev.vars
+renju/.wrangler/
 
 # Local AI agent instructions and working notes
 AGENTS.md

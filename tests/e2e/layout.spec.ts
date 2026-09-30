@@ -614,13 +614,18 @@ test('sidebar reading icons show collapse-style tooltips on hover and focus', as
   expect(await focusToggle.evaluate((element) => getComputedStyle(element).filter)).toBe('none');
 });
 
-test('independent spaces show a standalone coming soon page', async ({ page }) => {
-  for (const route of ['/playroom/', '/about/']) {
-    await page.goto(route);
-    await expect(page.locator('.main-space-page')).toBeVisible();
-    await expect(page.locator('.main-space-page')).toContainText('Coming soon');
-    await expect(page.locator('.site-header')).toHaveCount(0);
-  }
+test('playroom opens the 3D Renju board and About remains standalone', async ({ page }) => {
+  await page.goto('/playroom/');
+  await expect(page.locator('.stage canvas')).toBeVisible();
+  await expect(page.locator('#create')).toBeVisible();
+  await page.locator('#rules').click();
+  await expect(page.locator('#rules-dialog')).toBeVisible();
+  await expect(page.locator('#rules-slide-title')).toHaveText('다섯 개를 잇기');
+  await page.locator('#rules-next').click();
+  await expect(page.locator('#rules-slide-title')).toHaveText('장목 · 여섯 개 이상');
+  await page.goto('/about/');
+  await expect(page.locator('.main-space-page')).toContainText('Coming soon');
+  await expect(page.locator('.site-header')).toHaveCount(0);
 });
 
 test('blog sidebar home and posts links stay inside the blog', async ({ page }) => {
