@@ -2,6 +2,25 @@ import type { Move } from './rules';
 
 export type PlayerRole = 'black' | 'white';
 export type RoomRole = PlayerRole | 'spectator';
+export type PlayerIdentity = { name: string; country: string; maskedIp: string };
+export type ChatMessage = {
+  id: string;
+  name: string;
+  country: string;
+  maskedIp: string;
+  role: RoomRole;
+  text: string;
+  at: number;
+};
+export type PublicRoom = {
+  id: string;
+  status: GameStatus;
+  joined: boolean;
+  players: Record<PlayerRole, PlayerIdentity | null>;
+  spectators: number;
+  settings: GameSettings;
+  createdAt: number;
+};
 export type GameStatus = 'waiting' | 'playing' | 'finished';
 export type FinishReason = 'five' | 'resign' | 'full' | 'time' | 'disconnect';
 export type GameSettings = {
@@ -29,6 +48,9 @@ export type RoomSnapshot = {
   activeSince: number | null;
   disconnects: Partial<Record<PlayerRole, number>>;
   serverNow: number;
+  public: boolean;
+  players: Record<PlayerRole, PlayerIdentity | null>;
+  chat: ChatMessage[];
 };
 
 export const DEFAULT_SETTINGS: GameSettings = { mainMinutes: 10, byoSeconds: 30, byoPeriods: 3 };

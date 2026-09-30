@@ -1,8 +1,10 @@
 import { RenjuBoard, coordinate } from './board-3d';
 import { advanceClock } from './clock';
 import type { PlayerRole, RoomRole, RoomSnapshot, GameSettings } from './protocol';
+import type { PublicRoom } from './protocol';
 import type { Point } from './rules';
 import { mountRulesHelp } from './rules-help';
+import { guestName } from './identity';
 
 const $ = <T extends HTMLElement>(selector: string) => document.querySelector<T>(selector)!;
 const api = (
@@ -22,6 +24,10 @@ let overlayTimer = 0;
 let briefOverlay = false;
 let previousStatus: RoomSnapshot['status'] | null = null;
 let serverOffset = 0;
+let lastBoardSignature = '';
+const name = guestName();
+$('#guest-name').textContent = name;
+let lastChatId = '';
 
 function status(message: string, kind: 'ready' | 'error' | 'idle' = 'idle') {
   $('#status').textContent = message;
@@ -151,7 +157,11 @@ function render() {
   const turn: PlayerRole = (state?.moves.length || 0) % 2 === 0 ? 'black' : 'white';
   const myTurn = playing && role === turn && !offline && !Object.keys(state?.disconnects || {}).length;
   const moves = finished ? state!.moves.slice(0, replayMove) : state?.moves || [];
-  board.setState(moves, role === 'black' ? 1 : role === 'white' ? 2 : null, !!myTurn);
+  const boardSignature = `${moves.map((move) => `${move.x},${move.y}`).join(';')}|${role}|${myTurn}`;
+  if (boardSignature !== lastBoardSignature) {
+    board.setState(moves, role === 'black' ? 1 : role === 'white' ? 2 : null, !!myTurn);
+    lastBoardSignature = boardSignature;
+  }
   board.setSeats(role, playing ? turn : null);
   if (finished && state?.winner && state.winner !== 'draw') board.celebrate(state.winner);
   for (const seat of ['black', 'white'] as const) {
@@ -162,13 +172,7 @@ function render() {
     card.classList.toggle('active', !!playing && turn === seat && !Object.keys(state?.disconnects || {}).length);
     card.classList.toggle('ready', !!(waiting || finished) && !!state?.ready[seat]);
     card.style.order = mine ? '0' : seat === 'black' ? '1' : '2';
-    $(`#${seat}-name`).textContent = mine
-      ? '나'
-      : role === 'spectator' || !role
-        ? seat === 'black'
-          ? '흑'
-          : '백'
-        : '상대';
+    $(`#${seat}-name`).textContent = state?.players?.[seat]?.name ?? (mine ? name : seat === 'black' ? '흑' : '백');
     $(`#${seat}-badge`).textContent =
       `${seat === 'black' ? '흑' : '백'}${seat === 'black' ? ' · 방장' : ''}${mine ? ' · 나' : ''}`;
     $(`#${seat}-detail`).textContent = waiting
@@ -186,6 +190,9 @@ function render() {
         : playing && turn === seat
           ? '차례'
           : '대기 중';
+    const identity = state?.players?.[seat];
+    if (identity && state?.connected[seat])
+      $(`#${seat}-detail`).textContent += ` · ${identity.country} · ${identity.maskedIp || 'unknown'}`;
     $(`#${seat}-presence`).classList.toggle('online', !!state?.connected[seat]);
     $(`#${seat}-ready`).hidden = !(waiting || finished);
     $(`#${seat}-ready`).classList.toggle('is-ready', !!state?.ready[seat]);
@@ -196,6 +203,31 @@ function render() {
     status(!online ? '서버 연결 중' : role === 'spectator' ? '관전 중' : '대국 준비 중', online ? 'ready' : 'idle');
   else if (playing) status(role === 'spectator' ? '관전 중' : myTurn ? '내 차례' : '상대 차례', 'ready');
   $('#lobby').hidden = !!currentRoom;
+  $('#chat').hidden = !currentRoom;
+  $<HTMLInputElement>('#chat-input').disabled = !online;
+  $<HTMLButtonElement>('#chat-form button').disabled = !online;
+  if (state?.chat?.length) {
+    const newest = state.chat[state.chat.length - 1].id;
+    if (newest !== lastChatId) {
+      const log = $('#chat-messages');
+      log.replaceChildren();
+      for (const message of state.chat) {
+        const item = document.createElement('div');
+        item.className = 'chat-message';
+        const author = document.createElement('strong');
+        author.textContent = `${message.name} · ${message.country} · ${message.maskedIp || 'unknown'}`;
+        const content = document.createElement('span');
+        content.textContent = message.text;
+        item.append(author, content);
+        log.append(item);
+      }
+      log.scrollTop = log.scrollHeight;
+      lastChatId = newest;
+    }
+  } else if (lastChatId) {
+    $('#chat-messages').replaceChildren();
+    lastChatId = '';
+  }
   $('#create').hidden = !!currentRoom;
   $('#room-setup').hidden = !waiting && !finished;
   $('#settings').hidden = !(waiting || finished) || role !== 'black';
@@ -246,8 +278,12 @@ function render() {
   renderClocks();
   renderOverlay();
 }
-async function request(path: string, method = 'GET') {
-  const response = await fetch(`${api}${path}`, { method });
+async function request(path: string, method = 'GET', body?: object) {
+  const response = await fetch(`${api}${path}`, {
+    method,
+    headers: body ? { 'Content-Type': 'application/json' } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  });
   if (!response.ok) throw new Error(`서버 응답 ${response.status}`);
   return response.json();
 }
@@ -257,6 +293,7 @@ function connect() {
   const url = new URL(`${api}/api/rooms/${currentRoom}/ws`);
   url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
   if (secret) url.searchParams.set('token', secret);
+  url.searchParams.set('name', name);
   const ws = new WebSocket(url);
   socket = ws;
   ws.onopen = () => {
@@ -318,7 +355,7 @@ async function openRoom(id: string) {
       }
     }
     if (!role) {
-      const entered = (await request(`/api/rooms/${id}/enter`, 'POST')) as { token?: string; role: RoomRole };
+      const entered = (await request(`/api/rooms/${id}/enter`, 'POST', { name })) as { token?: string; role: RoomRole };
       if (entered.role === 'white' && entered.token) setToken(id, entered.token, 'white');
       else role = 'spectator';
     }
@@ -353,14 +390,14 @@ board.onForbidden = (point, verdict, screen) => {
   tip.style.left = `${Math.min(screen.x + 18, tip.parentElement!.clientWidth - tip.offsetWidth - 8)}px`;
   tip.style.top = `${Math.min(screen.y + 18, tip.parentElement!.clientHeight - tip.offsetHeight - 8)}px`;
 };
-$('#create').addEventListener('click', async () => {
+async function createRoom(path: string) {
   if (!api) {
     status('대국 서버 설정이 필요합니다', 'error');
     return;
   }
   try {
-    ($('#create') as HTMLButtonElement).disabled = true;
-    const created = (await request('/api/rooms', 'POST')) as { id: string; token: string; role: PlayerRole };
+    for (const button of ['#create', '#create-public', '#match']) $<HTMLButtonElement>(button).disabled = true;
+    const created = (await request(path, 'POST', { name })) as { id: string; token: string; role: PlayerRole };
     setToken(created.id, created.token, created.role);
     history.replaceState(null, '', `${location.pathname}?room=${created.id}`);
     await openRoom(created.id);
@@ -376,8 +413,53 @@ $('#create').addEventListener('click', async () => {
       $('#lobby-note').textContent = error instanceof Error ? error.message : '잠시 후 다시 시도해주세요.';
     }
   } finally {
-    ($('#create') as HTMLButtonElement).disabled = false;
+    for (const button of ['#create', '#create-public', '#match']) $<HTMLButtonElement>(button).disabled = false;
   }
+}
+$('#create').addEventListener('click', () => void createRoom('/api/rooms'));
+$('#create-public').addEventListener('click', () => void createRoom('/api/public/rooms'));
+$('#match').addEventListener('click', () => void createRoom('/api/public/match'));
+async function refreshRooms() {
+  if (!api || currentRoom) return;
+  const list = $('#public-rooms');
+  try {
+    const { rooms } = (await request('/api/public/rooms')) as { rooms: PublicRoom[] };
+    list.replaceChildren();
+    if (!rooms.length) {
+      list.textContent = '열린 대국이 없습니다. 새 방을 만들어 보세요.';
+      return;
+    }
+    for (const room of rooms) {
+      const button = document.createElement('button');
+      button.className = 'room-row';
+      const host = room.players.black;
+      const guest = room.players.white;
+      const title = document.createElement('strong');
+      title.textContent = `${host?.name ?? 'Guest'} ${guest ? `vs ${guest.name}` : '· 상대 대기'}`;
+      const detail = document.createElement('small');
+      detail.textContent = `${host?.country ?? 'XX'} · ${host?.maskedIp ?? 'unknown'} · ${room.status === 'playing' ? '대국 중 · 관전' : room.joined ? '준비 중 · 관전' : '참가 가능'} · ◉ ${room.spectators}`;
+      button.append(title, detail);
+      button.addEventListener('click', () => {
+        history.replaceState(null, '', `${location.pathname}?room=${room.id}`);
+        void openRoom(room.id);
+      });
+      list.append(button);
+    }
+  } catch {
+    list.textContent = '방 목록을 불러오지 못했습니다.';
+  }
+}
+$('#refresh-rooms').addEventListener('click', () => void refreshRooms());
+setInterval(() => {
+  if (!currentRoom) void refreshRooms();
+}, 10000);
+$('#chat-form').addEventListener('submit', (event) => {
+  event.preventDefault();
+  const input = $<HTMLInputElement>('#chat-input');
+  const text = input.value.trim();
+  if (!text || socket?.readyState !== WebSocket.OPEN) return;
+  socket.send(JSON.stringify({ type: 'chat', text }));
+  input.value = '';
 });
 $('#ready').addEventListener('click', () => {
   if (!state || !role || role === 'spectator' || socket?.readyState !== WebSocket.OPEN) return;
@@ -419,10 +501,13 @@ $('#new-game').addEventListener('click', () => {
   socket?.close();
   board.clearCelebration();
   board.reset();
+  lastBoardSignature = '';
   currentRoom = null;
   role = null;
   secret = null;
   state = null;
+  lastChatId = '';
+  $('#chat-messages').replaceChildren();
   previousStatus = null;
   offline = false;
   history.replaceState(null, '', location.pathname);
@@ -455,10 +540,11 @@ $('#help').addEventListener('click', () => {
 mountRulesHelp();
 if (!api) status('대국 서버 설정이 필요합니다', 'error');
 else {
-  $<HTMLButtonElement>('#create').disabled = false;
+  for (const button of ['#create', '#create-public', '#match']) $<HTMLButtonElement>(button).disabled = false;
   if (currentRoom) void openRoom(currentRoom);
   else {
     status('새 대국을 시작하세요');
     render();
+    void refreshRooms();
   }
 }

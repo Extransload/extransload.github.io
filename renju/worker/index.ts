@@ -12,11 +12,16 @@ import {
   type PlayerRole,
   type RoomRole,
   type RoomSnapshot,
+  type PlayerIdentity,
+  type ChatMessage,
+  type PublicRoom,
 } from '../../src/domains/games/renju/protocol';
 
 interface Env {
   ROOMS: DurableObjectNamespace;
+  LOBBY: DurableObjectNamespace;
 }
+type Visitor = PlayerIdentity & { ip: string };
 type Room = {
   hostHash: string;
   guestHash?: string;
@@ -30,18 +35,35 @@ type Room = {
   clocks: Record<PlayerRole, ClockState> | null;
   activeSince: number | null;
   disconnects: Partial<Record<PlayerRole, number>>;
+  public?: boolean;
+  players?: Record<PlayerRole, PlayerIdentity | null>;
+  chat?: ChatMessage[];
 };
-type SocketData = { role: RoomRole };
+type SocketData = { role: RoomRole; visitor: Visitor; lastChat: number };
 type Message = {
-  type?: 'ready' | 'settings' | 'move' | 'resign';
+  type?: 'ready' | 'settings' | 'move' | 'resign' | 'chat';
   ready?: boolean;
   settings?: unknown;
   x?: number;
   y?: number;
+  text?: string;
 };
 
 const json = (body: unknown, status = 200) => Response.json(body, { status });
 const token = () => crypto.randomUUID() + crypto.randomUUID();
+const publicIdentity = ({ name, country, maskedIp }: PlayerIdentity): PlayerIdentity => ({ name, country, maskedIp });
+function maskIp(ip: string) {
+  if (/^(\d{1,3}\.){3}\d{1,3}$/.test(ip)) return ip.replace(/\.\d+$/, '.xxx');
+  if (ip.includes(':')) return `${ip.split(':').slice(0, 3).join(':')}::****`;
+  return 'unknown';
+}
+function visitor(request: Request, name: unknown): Visitor {
+  const value = typeof name === 'string' && /^[A-Za-z][A-Za-z0-9 -]{2,29}$/.test(name.trim()) ? name.trim() : 'Guest';
+  const cf = request.cf as { country?: string } | undefined;
+  const country = cf?.country && /^[A-Z]{2}$/.test(cf.country) ? cf.country : 'XX';
+  const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+  return { name: value, country, ip, maskedIp: maskIp(ip) };
+}
 async function hash(value: string) {
   const bytes = new TextEncoder().encode(value);
   return [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))]
@@ -67,11 +89,34 @@ export default {
     if (!authorizedOrigin(origin)) return json({ error: 'origin' }, 403);
     if (request.method === 'OPTIONS') return cors(new Response(null, { status: 204 }), origin);
     const url = new URL(request.url);
+    if (url.pathname.startsWith('/api/public/')) {
+      const lobby = env.LOBBY.get(env.LOBBY.idFromName('global'));
+      if (url.pathname === '/api/public/rooms' && request.method === 'GET')
+        return cors(await lobby.fetch(new Request(`${url.origin}/rooms`)), origin);
+      if ((url.pathname === '/api/public/rooms' || url.pathname === '/api/public/match') && request.method === 'POST') {
+        const body = (await request.json().catch(() => ({}))) as { name?: unknown };
+        const target = url.pathname.endsWith('/match') ? '/match' : '/create';
+        return cors(
+          await lobby.fetch(
+            new Request(`${url.origin}${target}`, {
+              method: 'POST',
+              body: JSON.stringify({ visitor: visitor(request, body.name) }),
+            }),
+          ),
+          origin,
+        );
+      }
+      return cors(json({ error: 'not-found' }, 404), origin);
+    }
     if (url.pathname === '/api/rooms' && request.method === 'POST') {
+      const body = (await request.json().catch(() => ({}))) as { name?: unknown };
       const id = crypto.randomUUID();
       const secret = token();
       const response = await env.ROOMS.get(env.ROOMS.idFromName(id)).fetch(
-        new Request(`${url.origin}/init`, { method: 'POST', body: JSON.stringify({ secret }) }),
+        new Request(`${url.origin}/init`, {
+          method: 'POST',
+          body: JSON.stringify({ secret, visitor: visitor(request, body.name), public: false }),
+        }),
       );
       if (!response.ok) return cors(response, origin);
       return cors(json({ id, token: secret, role: 'black' }, 201), origin);
@@ -89,10 +134,100 @@ export default {
             : '/snapshot';
     const roomUrl = new URL(target, url.origin);
     roomUrl.search = url.search;
-    const response = await env.ROOMS.get(env.ROOMS.idFromName(id)).fetch(new Request(roomUrl, request));
+    let forwarded: Request;
+    if (operation === 'enter' && request.method === 'POST') {
+      const body = (await request.json().catch(() => ({}))) as { name?: unknown };
+      forwarded = new Request(roomUrl, {
+        method: 'POST',
+        body: JSON.stringify({ visitor: visitor(request, body.name) }),
+      });
+    } else {
+      forwarded = new Request(roomUrl, request);
+      if (operation === 'ws') {
+        const headers = new Headers(forwarded.headers);
+        const identity = visitor(request, url.searchParams.get('name'));
+        headers.set('X-Renju-Name', identity.name);
+        headers.set('X-Renju-Country', identity.country);
+        headers.set('X-Renju-IP', identity.ip);
+        forwarded = new Request(forwarded, { headers });
+      }
+    }
+    const response = await env.ROOMS.get(env.ROOMS.idFromName(id)).fetch(forwarded);
     return operation === 'ws' ? response : cors(response, origin);
   },
 };
+
+export class RenjuLobby {
+  constructor(
+    private ctx: DurableObjectState,
+    private env: Env,
+  ) {}
+  private async ids(): Promise<{ id: string; createdAt: number }[]> {
+    return (await this.ctx.storage.get<{ id: string; createdAt: number }[]>('rooms')) ?? [];
+  }
+  private async inspect(id: string): Promise<RoomSnapshot | null> {
+    const response = await this.env.ROOMS.get(this.env.ROOMS.idFromName(id)).fetch('https://room.internal/snapshot');
+    return response.ok ? response.json<RoomSnapshot>() : null;
+  }
+  private async create(visitor: Visitor) {
+    const id = crypto.randomUUID(),
+      secret = token();
+    const response = await this.env.ROOMS.get(this.env.ROOMS.idFromName(id)).fetch(
+      new Request('https://room.internal/init', {
+        method: 'POST',
+        body: JSON.stringify({ secret, visitor, public: true }),
+      }),
+    );
+    if (!response.ok) return json({ error: 'create-failed' }, 502);
+    const list = await this.ids();
+    list.unshift({ id, createdAt: Date.now() });
+    await this.ctx.storage.put('rooms', list.slice(0, 80));
+    return json({ id, token: secret, role: 'black' }, 201);
+  }
+  async fetch(request: Request): Promise<Response> {
+    const url = new URL(request.url);
+    if (url.pathname === '/rooms' && request.method === 'GET') {
+      const rooms: PublicRoom[] = [];
+      const list = await this.ids();
+      for (const entry of list.slice(0, 40)) {
+        const state = await this.inspect(entry.id);
+        if (!state?.public || state.status === 'finished') continue;
+        rooms.push({
+          id: entry.id,
+          status: state.status,
+          joined: state.joined,
+          players: state.players,
+          spectators: state.spectators,
+          settings: state.settings,
+          createdAt: entry.createdAt,
+        });
+      }
+      return json({ rooms });
+    }
+    if ((url.pathname === '/create' || url.pathname === '/match') && request.method === 'POST') {
+      return this.ctx.blockConcurrencyWhile(async () => {
+        const { visitor } = (await request.json()) as { visitor: Visitor };
+        if (url.pathname === '/match') {
+          for (const entry of (await this.ids()).slice(0, 40)) {
+            const state = await this.inspect(entry.id);
+            if (!state?.public || state.status !== 'waiting' || state.joined) continue;
+            const response = await this.env.ROOMS.get(this.env.ROOMS.idFromName(entry.id)).fetch(
+              new Request('https://room.internal/enter', {
+                method: 'POST',
+                body: JSON.stringify({ visitor }),
+              }),
+            );
+            if (!response.ok) continue;
+            const entered = await response.json<{ role: RoomRole; token?: string }>();
+            if (entered.role === 'white' && entered.token) return json({ id: entry.id, ...entered });
+          }
+        }
+        return this.create(visitor);
+      });
+    }
+    return json({ error: 'not-found' }, 404);
+  }
+}
 
 export class RenjuRoom {
   constructor(
@@ -111,6 +246,9 @@ export class RenjuRoom {
       clocks: stored.clocks ?? null,
       activeSince: stored.activeSince ?? null,
       disconnects: stored.disconnects ?? {},
+      public: stored.public ?? false,
+      players: stored.players ?? { black: null, white: null },
+      chat: stored.chat ?? [],
     };
   }
   private async write(room: Room) {
@@ -126,6 +264,7 @@ export class RenjuRoom {
     return this.sockets(except).some((ws) => this.roleOf(ws) === role);
   }
   private snapshot(room: Room): RoomSnapshot {
+    const players = room.players ?? { black: null, white: null };
     return {
       moves: room.moves,
       status: room.status,
@@ -141,6 +280,16 @@ export class RenjuRoom {
       activeSince: room.activeSince,
       disconnects: room.disconnects,
       serverNow: Date.now(),
+      public: !!room.public,
+      players: {
+        black: players.black
+          ? { name: players.black.name, country: players.black.country, maskedIp: players.black.maskedIp }
+          : null,
+        white: players.white
+          ? { name: players.white.name, country: players.white.country, maskedIp: players.white.maskedIp }
+          : null,
+      },
+      chat: room.chat ?? [],
     };
   }
   private broadcast(room: Room) {
@@ -204,6 +353,7 @@ export class RenjuRoom {
       !this.connected('white')
     ) {
       room.guestHash = undefined;
+      if (room.players) room.players.white = null;
       room.ready.white = false;
       delete room.disconnects.white;
       room.version++;
@@ -221,7 +371,11 @@ export class RenjuRoom {
     const url = new URL(request.url);
     if (url.pathname === '/init' && request.method === 'POST') {
       if (await this.read()) return json({ error: 'exists' }, 409);
-      const { secret } = (await request.json()) as { secret: string };
+      const {
+        secret,
+        visitor,
+        public: isPublic,
+      } = (await request.json()) as { secret: string; visitor?: Visitor; public?: boolean };
       await this.write({
         hostHash: await hash(secret),
         moves: [],
@@ -232,6 +386,9 @@ export class RenjuRoom {
         clocks: null,
         activeSince: null,
         disconnects: {},
+        public: !!isPublic,
+        players: { black: visitor ? publicIdentity(visitor) : null, white: null },
+        chat: [],
       });
       return json({ ok: true });
     }
@@ -247,12 +404,17 @@ export class RenjuRoom {
       return role ? json({ role }) : json({ error: 'unauthorized' }, 401);
     }
     if (url.pathname === '/enter' && request.method === 'POST') {
+      const { visitor } = (await request.json()) as { visitor?: Visitor };
       return this.ctx.blockConcurrencyWhile(async () => {
         const latest = (await this.read())!;
         this.expireDisconnects(latest, Date.now());
         if (latest.status === 'waiting' && !latest.guestHash) {
           const secret = token();
           latest.guestHash = await hash(secret);
+          latest.players = {
+            ...(latest.players ?? { black: null, white: null }),
+            white: visitor ? publicIdentity(visitor) : null,
+          };
           latest.ready.white = false;
           latest.disconnects.white = Date.now() + DISCONNECT_GRACE_MS;
           latest.version++;
@@ -285,7 +447,15 @@ export class RenjuRoom {
         const pair = new WebSocketPair();
         const [client, server] = Object.values(pair);
         this.ctx.acceptWebSocket(server);
-        server.serializeAttachment({ role } satisfies SocketData);
+        const identity: Visitor = {
+          name: request.headers.get('X-Renju-Name') || 'Guest',
+          country: request.headers.get('X-Renju-Country') || 'XX',
+          ip: request.headers.get('X-Renju-IP') || 'unknown',
+          maskedIp: maskIp(request.headers.get('X-Renju-IP') || 'unknown'),
+        };
+        const seatVisitor =
+          role === 'spectator' ? identity : { ...identity, name: latest.players?.[role]?.name ?? identity.name };
+        server.serializeAttachment({ role, visitor: seatVisitor, lastChat: 0 } satisfies SocketData);
         if (role !== 'spectator') {
           delete latest.disconnects[role];
           if (
@@ -311,7 +481,7 @@ export class RenjuRoom {
   private async applyMessage(socket: WebSocket, raw: string | ArrayBuffer) {
     const role = this.roleOf(socket);
     const room = await this.read();
-    if (!room || !role || role === 'spectator') return;
+    if (!room || !role) return;
     let message: Message;
     try {
       message = JSON.parse(String(raw));
@@ -321,6 +491,30 @@ export class RenjuRoom {
     }
     const now = Date.now();
     this.expireDisconnects(room, now);
+    if (message.type === 'chat') {
+      const data = socket.deserializeAttachment() as SocketData;
+      const value = typeof message.text === 'string' ? message.text.trim().replace(/[\u0000-\u001f\u007f]/g, '') : '';
+      if (!value || value.length > 200 || now - data.lastChat < 800) return;
+      data.lastChat = now;
+      socket.serializeAttachment(data);
+      room.chat = [
+        ...(room.chat ?? []),
+        {
+          id: crypto.randomUUID(),
+          name: data.visitor.name,
+          country: data.visitor.country,
+          maskedIp: data.visitor.maskedIp,
+          role,
+          text: value,
+          at: now,
+        },
+      ].slice(-50);
+      room.version++;
+      await this.write(room);
+      this.broadcast(room);
+      return;
+    }
+    if (role === 'spectator') return;
     if (room.status === 'finished' && message.type !== 'ready' && message.type !== 'settings') {
       await this.write(room);
       await this.schedule(room);

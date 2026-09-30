@@ -12,7 +12,10 @@ const PUBLISHED_ROUTES = [
   '/works/',
   '/games/',
   '/playroom/',
+  '/playroom/omokmaru/',
+  '/playroom/omokmaru/solo/',
   '/playroom/gomoku/',
+  '/playroom/gomoku/solo/',
   '/about/',
   '/guestbook/',
 ];

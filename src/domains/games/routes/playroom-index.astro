@@ -15,7 +15,7 @@ import '../styles/playroom-index.css';
     <link rel="icon" type="image/png" href="/favicon.png" />
     <script is:inline>
       if (new URLSearchParams(location.search).has('room'))
-        location.replace(`/playroom/gomoku/${location.search}${location.hash}`);
+        location.replace(`/playroom/omokmaru/${location.search}${location.hash}`);
     </script>
   </head>
   <body>
@@ -25,7 +25,7 @@ import '../styles/playroom-index.css';
       <section class="game-list" aria-label="Playroom 게임 목록">
         {playroomGames.map((game) => <a class="game-card" href={game.href} aria-label={`${game.name} 플레이하기`}>
           <div class="game-card-copy"><span class="game-card-number">{game.number} / PLAYROOM</span><h2>{game.name}</h2><strong>{game.subtitle}</strong><p>{game.description}</p><div class="game-card-tags">{game.meta.map((tag) => <span>{tag}</span>)}</div><span class="game-card-cta">플레이하기 <span aria-hidden="true">↗</span></span></div>
-          <div class="game-card-art" aria-hidden="true">{game.id === 'gomoku' ? <div class="game-card-board"><div class="game-card-grid"></div><i class="mini-stone mini-stone-black one"></i><i class="mini-stone mini-stone-white two"></i><i class="mini-stone mini-stone-black three"></i><i class="mini-stone mini-stone-white four"></i><i class="mini-stone mini-stone-black five"></i></div> : <span class="game-card-art-number">{game.number}</span>}</div>
+          <div class="game-card-art" aria-hidden="true">{game.id === 'omokmaru' ? <div class="game-card-board"><div class="game-card-grid"></div><i class="mini-stone mini-stone-black one"></i><i class="mini-stone mini-stone-white two"></i><i class="mini-stone mini-stone-black three"></i><i class="mini-stone mini-stone-white four"></i><i class="mini-stone mini-stone-black five"></i></div> : <span class="game-card-art-number">{game.number}</span>}</div>
         </a>)}
       </section>
       <p class="playroom-footnote">작은 놀이들이 이곳에 하나씩 쌓입니다.</p>

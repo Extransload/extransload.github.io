@@ -614,13 +614,13 @@ test('sidebar reading icons show collapse-style tooltips on hover and focus', as
   expect(await focusToggle.evaluate((element) => getComputedStyle(element).filter)).toBe('none');
 });
 
-test('playroom lists Gomoku, opens its board, and About remains standalone', async ({ page }) => {
+test('playroom lists Omokmaru, opens its board, and About remains standalone', async ({ page }) => {
   await page.goto('/playroom/');
   await expect(page.locator('.game-list')).toBeVisible();
   await expect(page.locator('.stage canvas')).toHaveCount(0);
-  await page.locator('a.game-card[href="/playroom/gomoku/"]').click();
-  await expect(page).toHaveURL(/\/playroom\/gomoku\/$/);
-  await expect(page.locator('.top-brand')).toHaveText('Gomoku');
+  await page.locator('a.game-card[href="/playroom/omokmaru/"]').click();
+  await expect(page).toHaveURL(/\/playroom\/omokmaru\/$/);
+  await expect(page.locator('.top-brand')).toHaveText('Omokmaru');
   await expect(page.locator('.top-home')).toHaveAttribute('href', '/playroom/');
   await expect(page.locator('.stage canvas')).toBeVisible();
   await expect(page.locator('#create')).toBeVisible();
@@ -635,9 +635,16 @@ test('playroom lists Gomoku, opens its board, and About remains standalone', asy
   await expect(page.locator('.site-header')).toHaveCount(0);
 });
 
-test('old Gomoku invitations keep their room when redirected to the game route', async ({ page }) => {
+test('old playroom invitations keep their room when redirected to Omokmaru', async ({ page }) => {
   await page.goto('/playroom/?room=old-room');
-  await expect(page).toHaveURL(/\/playroom\/gomoku\/\?room=old-room$/);
+  await expect(page).toHaveURL(/\/playroom\/omokmaru\/\?room=old-room$/);
+});
+
+test('old Gomoku links redirect to Omokmaru with their room', async ({ page }) => {
+  await page.goto('/playroom/gomoku/?room=old-room');
+  await expect(page).toHaveURL(/\/playroom\/omokmaru\/\?room=old-room$/);
+  await page.goto('/playroom/gomoku/solo/');
+  await expect(page).toHaveURL(/\/playroom\/omokmaru\/solo\/$/);
 });
 
 test('blog sidebar home and posts links stay inside the blog', async ({ page }) => {

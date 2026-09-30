@@ -10,12 +10,12 @@ const apiUrl = import.meta.env.PUBLIC_RENJU_API_URL ?? '';
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#101e2d" />
-    <title>Gomoku — Extransload</title>
-    <SeoHead title="Gomoku — Extransload" description="Extransload Playroom의 실시간 3D 렌주 대국" canonicalPath="/playroom/gomoku/" />
+    <title>오목마루 Omokmaru — Extransload</title>
+    <SeoHead title="오목마루 Omokmaru — Extransload" description="Extransload Playroom의 실시간 3D 오목 대국" canonicalPath="/playroom/omokmaru/" />
     <link rel="icon" type="image/png" href="/favicon.png" />
   </head>
   <body data-api-url={apiUrl}>
-    <header class="top"><span class="top-brand">Gomoku</span><a class="top-home" href="/playroom/" aria-label="Playroom 홈">⌂</a></header>
+    <header class="top"><span class="top-brand">Omokmaru</span><a class="top-home" href="/playroom/" aria-label="Playroom 홈">⌂</a></header>
     <main class="game">
       <section class="stage" aria-label="3D 렌주 바둑판">
         <div class="toolbar" role="toolbar" aria-label="바둑판 조작">
@@ -42,7 +42,15 @@ const apiUrl = import.meta.env.PUBLIC_RENJU_API_URL ?? '';
           <div id="black-player" class="player"><span class="piece black"></span><div class="player-copy"><span id="black-badge" class="player-badge">흑 · 방장</span><strong id="black-name">흑</strong><small id="black-detail">대기 중</small></div><span id="black-ready" class="seat-ready" hidden>✓<small>준비</small></span><span id="black-presence" class="presence"></span></div>
           <div id="white-player" class="player"><span class="piece white"></span><div class="player-copy"><span id="white-badge" class="player-badge">백</span><strong id="white-name">백</strong><small id="white-detail">대기 중</small></div><span id="white-ready" class="seat-ready" hidden>✓<small>준비</small></span><span id="white-presence" class="presence"></span></div>
         </div>
-        <div id="lobby" class="lobby"><button id="create" class="primary" disabled>새 대국 만들기</button><p id="lobby-note"></p></div>
+        <div id="lobby" class="lobby">
+          <div class="lobby-identity"><span>내 임시 이름</span><strong id="guest-name"></strong></div>
+          <a class="mode-link" href="/playroom/omokmaru/solo/"><span class="mode-icon">✦</span><span class="mode-link-copy"><strong>AI와 대국</strong><small>4단계 난이도 · 혼자 연습하기</small></span><span>↗</span></a>
+          <button id="match" class="primary" disabled>⚡ 빠른 매칭</button>
+          <div class="lobby-actions"><button id="create-public" class="secondary" disabled>공개 방 만들기</button><button id="create" class="secondary" disabled>비공개 방 만들기</button></div>
+          <div class="room-list-heading"><strong>공개 대국</strong><button id="refresh-rooms" class="room-list-refresh" aria-label="방 목록 새로고침" title="새로고침">↻</button></div>
+          <div id="public-rooms" class="public-rooms" aria-live="polite"></div>
+          <p id="lobby-note"></p>
+        </div>
         <div id="room-setup" class="room-setup" hidden>
           <div class="setup-heading"><strong>대국 설정</strong><span id="setup-note">방장이 설정합니다</span></div>
           <div id="settings" class="settings" hidden><label>기본 시간<select id="main-minutes"><option value="0">없음</option><option value="3">3분</option><option value="5">5분</option><option value="10">10분</option><option value="15">15분</option><option value="30">30분</option></select></label><label>초읽기<select id="byo-seconds"><option value="0">없음</option><option value="10">10초</option><option value="20">20초</option><option value="30">30초</option><option value="60">60초</option></select></label><label>횟수<select id="byo-periods"><option value="0">0회</option><option value="1">1회</option><option value="3">3회</option><option value="5">5회</option></select></label></div>
@@ -51,6 +59,7 @@ const apiUrl = import.meta.env.PUBLIC_RENJU_API_URL ?? '';
           <p id="ready-note" class="ready-note"></p>
         </div>
         <div id="replay" class="replay" hidden><div class="replay-title"><span>기보</span><span id="move-count">0 / 0</span></div><div class="replay-controls"><button id="prev" title="이전 수" aria-label="이전 수">‹</button><strong id="move-label">시작</strong><button id="next" title="다음 수" aria-label="다음 수">›</button></div></div>
+        <section id="chat" class="room-chat" hidden aria-label="대국 채팅"><div class="chat-heading"><strong>채팅</strong><small>최대 200자</small></div><div id="chat-messages" class="chat-messages" role="log" aria-live="polite"></div><form id="chat-form" class="chat-form"><input id="chat-input" maxlength="200" autocomplete="off" placeholder="메시지를 입력하세요" aria-label="채팅 메시지" /><button class="chat-send" type="submit" aria-label="채팅 보내기">➤</button></form></section>
         <div class="side-spacer"></div>
         <button id="share" class="primary" hidden><span aria-hidden="true">↗</span> 초대 링크 복사</button>
         <button id="resign" class="secondary" hidden>기권</button>

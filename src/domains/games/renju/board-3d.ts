@@ -16,6 +16,11 @@ export class RenjuBoard {
   private controls: OrbitControls;
   private board = new THREE.Group();
   private stones = new THREE.Group();
+  private stoneGeometry = new THREE.SphereGeometry(0.36, 32, 22);
+  private stoneMaterials = {
+    black: new THREE.MeshPhysicalMaterial({ color: 0x09131d, roughness: 0.21, metalness: 0.15, clearcoat: 0.9 }),
+    white: new THREE.MeshPhysicalMaterial({ color: 0xf2e9d2, roughness: 0.28, metalness: 0.04, clearcoat: 0.68 }),
+  };
   private highlights = new THREE.Group();
   private lastMove = new THREE.Group();
   private avatars: Record<Seat, AvatarRig>;
@@ -429,16 +434,11 @@ export class RenjuBoard {
       (child as THREE.Mesh).geometry.dispose();
       ((child as THREE.Mesh).material as THREE.Material).dispose();
     }
-    const black = new THREE.MeshPhysicalMaterial({ color: 0x09131d, roughness: 0.21, metalness: 0.15, clearcoat: 0.9 });
-    const white = new THREE.MeshPhysicalMaterial({
-      color: 0xf2e9d2,
-      roughness: 0.28,
-      metalness: 0.04,
-      clearcoat: 0.68,
-    });
-    const geometry = new THREE.SphereGeometry(0.36, 32, 22);
     for (const move of moves) {
-      const stone = new THREE.Mesh(geometry, move.color === 1 ? black : white);
+      const stone = new THREE.Mesh(
+        this.stoneGeometry,
+        move.color === 1 ? this.stoneMaterials.black : this.stoneMaterials.white,
+      );
       stone.scale.y = 0.5;
       stone.position.set(START + move.x * STEP, 0.51, START + move.y * STEP);
       stone.castShadow = true;
