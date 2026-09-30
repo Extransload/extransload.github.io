@@ -6,6 +6,8 @@ import { analyzeMove, boardFromMoves, index, inside, type Color, type Move, type
 const START = -6.3,
   STEP = 0.9,
   SURFACE = 0.37;
+type Seat = 'black' | 'white';
+type AvatarRig = { group: THREE.Group; halo: THREE.Mesh; head: THREE.Mesh; arms: THREE.Mesh[] };
 export const coordinate = (x: number, y: number) => `${'ABCDEFGHJKLMNOP'[x]}${y + 1}`;
 export class RenjuBoard {
   private scene = new THREE.Scene();
@@ -16,8 +18,11 @@ export class RenjuBoard {
   private stones = new THREE.Group();
   private highlights = new THREE.Group();
   private lastMove = new THREE.Group();
-  private avatars: Record<'black' | 'white', THREE.Group>;
-  private halos: Record<'black' | 'white', THREE.Mesh>;
+  private avatars: Record<Seat, AvatarRig>;
+  private seatRole: Seat | 'spectator' | null | undefined;
+  private celebrating: Seat | null = null;
+  private celebrationFrame = 0;
+  private celebrationStarted = 0;
   private pointer = new THREE.Vector2();
   private ray = new THREE.Raycaster();
   private plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -SURFACE);
@@ -25,7 +30,9 @@ export class RenjuBoard {
   private moves: Move[] = [];
   private color: Color | null = null;
   private interactive = false;
-  private down?: { x: number; y: number };
+  private down?: { x: number; y: number; pointerId: number };
+  private activeTouches = new Set<number>();
+  private multiTouch = false;
   private hoverKey: string | null = null;
   private topView = false;
   private saved?: { position: THREE.Vector3; target: THREE.Vector3 };
@@ -51,8 +58,11 @@ export class RenjuBoard {
     this.controls.maxDistance = 58;
     this.controls.minPolarAngle = 0.06;
     this.controls.maxPolarAngle = Math.PI - 0.06;
-    this.controls.touches.ONE = THREE.TOUCH.ROTATE;
-    this.controls.touches.TWO = THREE.TOUCH.DOLLY_PAN;
+    this.controls.mouseButtons.LEFT = null;
+    this.controls.mouseButtons.MIDDLE = THREE.MOUSE.ROTATE;
+    this.controls.mouseButtons.RIGHT = THREE.MOUSE.PAN;
+    this.controls.touches.ONE = null;
+    this.controls.touches.TWO = THREE.TOUCH.DOLLY_ROTATE;
     this.controls.addEventListener('change', () => this.render());
     this.scene.add(new THREE.AmbientLight(0xf4e9d6, 1.2));
     const key = new THREE.DirectionalLight(0xffe5b4, 4.3);
@@ -73,12 +83,18 @@ export class RenjuBoard {
     this.board.add(this.stones, this.highlights, this.lastMove);
     const black = this.makeAvatar('black');
     const white = this.makeAvatar('white');
-    this.avatars = { black: black.group, white: white.group };
-    this.halos = { black: black.halo, white: white.halo };
+    this.avatars = { black, white };
     this.scene.add(black.group, white.group);
     this.setSeats(null, null);
     this.renderer.domElement.addEventListener('pointerdown', (e) => {
-      this.down = { x: e.clientX, y: e.clientY };
+      if (e.pointerType === 'touch') {
+        this.activeTouches.add(e.pointerId);
+        if (this.activeTouches.size > 1) {
+          this.multiTouch = true;
+          this.down = undefined;
+        }
+      }
+      if (e.button === 0 && !this.multiTouch) this.down = { x: e.clientX, y: e.clientY, pointerId: e.pointerId };
     });
     this.renderer.domElement.addEventListener('pointermove', (e) => {
       if (e.buttons || e.pointerType === 'touch') {
@@ -88,12 +104,31 @@ export class RenjuBoard {
       this.inspect(e);
     });
     this.renderer.domElement.addEventListener('pointerup', (e) => {
-      if (!this.down || Math.hypot(e.clientX - this.down.x, e.clientY - this.down.y) > 8) {
+      if (e.pointerType === 'touch') this.activeTouches.delete(e.pointerId);
+      if (this.multiTouch) {
+        this.down = undefined;
+        if (!this.activeTouches.size) this.multiTouch = false;
+        return;
+      }
+      if (
+        e.button !== 0 ||
+        !this.down ||
+        this.down.pointerId !== e.pointerId ||
+        Math.hypot(e.clientX - this.down.x, e.clientY - this.down.y) > 8
+      ) {
         this.down = undefined;
         return;
       }
       this.down = undefined;
       this.inspect(e, true);
+    });
+    this.renderer.domElement.addEventListener('pointercancel', (e) => {
+      this.activeTouches.delete(e.pointerId);
+      this.down = undefined;
+      if (!this.activeTouches.size) this.multiTouch = false;
+    });
+    this.renderer.domElement.addEventListener('auxclick', (e) => {
+      if (e.button === 1) e.preventDefault();
     });
     this.renderer.domElement.addEventListener('pointerleave', (event) => {
       if (event.pointerType !== 'touch') this.clearHighlight();
@@ -217,9 +252,11 @@ export class RenjuBoard {
     belly.scale.set(1, 0.82, 0.38);
     const head = add(new THREE.SphereGeometry(0.73, 32, 22), shell, 0, 1.84, 0.12);
     head.scale.set(1, 0.91, 0.84);
+    const arms: THREE.Mesh[] = [];
     for (const side of [-1, 1]) {
       const arm = add(new THREE.SphereGeometry(0.25, 20, 16), shell, side * 0.78, 1.07, 0.22);
       arm.scale.set(0.85, 1.45, 0.9);
+      arms.push(arm);
       const eyeMesh = add(new THREE.SphereGeometry(0.078, 16, 12), eye, side * 0.24, 1.93, 0.69);
       eyeMesh.scale.z = 0.35;
       add(new THREE.SphereGeometry(0.16, 18, 14), accent, side * 0.41, 2.46, -0.06);
@@ -227,17 +264,82 @@ export class RenjuBoard {
     const halo = add(new THREE.TorusGeometry(1.3, 0.035, 8, 64), accent, 0, 0.04, 0);
     halo.rotation.x = Math.PI / 2;
     halo.visible = false;
-    return { group, halo };
+    return { group, halo, head, arms };
   }
   setSeats(role: 'black' | 'white' | 'spectator' | null, turn: 'black' | 'white' | null) {
-    const front = role === 'white' ? 'white' : 'black';
+    if (role !== this.seatRole) {
+      const front = role === 'white' ? 'white' : 'black';
+      for (const color of ['black', 'white'] as const) {
+        const near = color === front;
+        const avatar = this.avatars[color].group;
+        avatar.position.set(near ? -5.0 : 5.0, -0.08, near ? 9.0 : -9.0);
+        avatar.rotation.y = near ? 0 : Math.PI;
+        avatar.scale.setScalar(near ? 0.85 : 0.78);
+      }
+      this.seatRole = role;
+    }
+    for (const color of ['black', 'white'] as const)
+      this.avatars[color].halo.visible = turn === color || this.celebrating === color;
+    this.render();
+  }
+  celebrate(winner: Seat) {
+    if (this.celebrating === winner) return;
+    this.clearCelebration();
+    this.celebrating = winner;
+    this.avatars[winner === 'black' ? 'white' : 'black'].group.visible = false;
+    this.celebrationStarted = performance.now();
+    const rig = this.avatars[winner];
+    const center = rig.group.position.clone().add(new THREE.Vector3(0, 1.35, 0));
+    const cameraEnd = center.clone().add(new THREE.Vector3(0, 2.9, rig.group.position.z > 0 ? 6.5 : -6.5));
+    const cameraStart = this.camera.position.clone();
+    const targetStart = this.controls.target.clone();
+    const baseY = rig.group.position.y;
+    const baseRotation = rig.group.rotation.y;
+    const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reducedMotion) {
+      this.camera.position.copy(cameraEnd);
+      this.controls.target.copy(center);
+      rig.halo.visible = true;
+      this.controls.update();
+      return;
+    }
+    let lastFrame = 0;
+    const frame = (now: number) => {
+      if (this.celebrating !== winner) return;
+      this.celebrationFrame = requestAnimationFrame(frame);
+      if (now - lastFrame < 30) return;
+      lastFrame = now;
+      const elapsed = now - this.celebrationStarted;
+      const progress = Math.min(1, elapsed / 1350);
+      const eased = 1 - (1 - progress) ** 3;
+      if (progress < 1 || elapsed < 1400) {
+        this.camera.position.copy(cameraStart).lerp(cameraEnd, eased);
+        this.controls.target.copy(targetStart).lerp(center, eased);
+        this.controls.update();
+      }
+      const beat = Math.max(0, (elapsed - 450) / 1000);
+      rig.group.position.y = baseY + Math.abs(Math.sin(beat * 7)) * 0.28;
+      rig.group.rotation.y = baseRotation + Math.sin(beat * 4) * 0.3;
+      rig.head.rotation.z = Math.sin(beat * 5) * 0.15;
+      rig.arms[0].rotation.z = -0.55 - Math.sin(beat * 7) * 0.45;
+      rig.arms[1].rotation.z = 0.55 + Math.sin(beat * 7 + Math.PI) * 0.45;
+      rig.halo.scale.setScalar(1 + Math.sin(beat * 6) * 0.08);
+      this.render();
+    };
+    this.celebrationFrame = requestAnimationFrame(frame);
+  }
+  clearCelebration() {
+    cancelAnimationFrame(this.celebrationFrame);
+    this.celebrating = null;
     for (const color of ['black', 'white'] as const) {
-      const near = color === front;
-      const avatar = this.avatars[color];
-      avatar.position.set(near ? -5.0 : 5.0, -0.08, near ? 9.0 : -9.0);
-      avatar.rotation.y = near ? 0 : Math.PI;
-      avatar.scale.setScalar(near ? 0.85 : 0.78);
-      this.halos[color].visible = turn === color;
+      const rig = this.avatars[color];
+      rig.group.visible = true;
+      rig.group.position.y = -0.08;
+      rig.group.rotation.y = color === (this.seatRole === 'white' ? 'white' : 'black') ? 0 : Math.PI;
+      rig.head.rotation.z = 0;
+      for (const arm of rig.arms) arm.rotation.z = 0;
+      rig.halo.scale.setScalar(1);
+      rig.halo.visible = false;
     }
     this.render();
   }

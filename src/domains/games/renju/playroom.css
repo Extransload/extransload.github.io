@@ -782,3 +782,113 @@ button:disabled {
     animation: none !important;
   }
 }
+
+.player.ready {
+  border-color: #79ac89;
+  background: #e8f3e9;
+  box-shadow:
+    inset 3px 0 #63a77a,
+    0 0 0 2px #94c49a40;
+}
+.seat-ready {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  flex: 0 0 45px;
+  height: 43px;
+  border: 1px solid #d5cec1;
+  border-radius: 12px;
+  background: #eee9df;
+  color: #948c7e;
+  font-size: 20px;
+  font-weight: 850;
+  line-height: 1;
+}
+.seat-ready small {
+  margin: 3px 0 0;
+  color: inherit;
+  font-size: 9px;
+  font-weight: 800;
+}
+.seat-ready:not(.is-ready) {
+  font-size: 0;
+}
+.seat-ready:not(.is-ready)::before {
+  content: '○';
+  font-size: 20px;
+  line-height: 1;
+}
+.seat-ready.is-ready {
+  border-color: #60a875;
+  background: #4d9b6b;
+  color: white;
+  box-shadow: 0 0 0 4px #8dcea64d;
+  animation: ready-pop 0.32s cubic-bezier(0.17, 1.5, 0.35, 1) both;
+}
+.stage-overlay[data-mode='result'] {
+  align-items: end;
+  padding-bottom: 26px;
+  background: radial-gradient(circle at center 45%, #f8e4a944, transparent 60%);
+}
+.stage-overlay[data-mode='result'] .overlay-card {
+  width: min(390px, calc(100% - 36px));
+  padding: 14px 22px 16px;
+  border-color: #d9b979;
+  background: #102333db;
+}
+.stage-overlay[data-mode='result'] .overlay-card strong {
+  font-size: clamp(28px, 4vw, 42px);
+}
+.stage-overlay[data-mode='result'] .overlay-card small {
+  font-size: 11px;
+}
+@keyframes ready-pop {
+  from {
+    transform: scale(0.6);
+    opacity: 0.3;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+@media (max-width: 580px) {
+  .seat-ready {
+    flex-basis: 34px;
+    height: 36px;
+    font-size: 17px;
+  }
+  .seat-ready small {
+    font-size: 8px;
+  }
+  .presence {
+    width: 7px;
+    height: 7px;
+    box-shadow: none;
+  }
+  .stage-overlay[data-mode='result'] {
+    padding-bottom: 12px;
+  }
+  .stage-overlay[data-mode='result'] .overlay-card {
+    padding: 10px 12px;
+    gap: 5px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .seat-ready.is-ready {
+    animation: none;
+  }
+}
+
+@media (min-width: 971px) {
+  .game {
+    height: calc(100svh - 82px);
+  }
+  .stage {
+    min-height: 0;
+  }
+  .side {
+    min-height: 0;
+    overflow-y: auto;
+  }
+}

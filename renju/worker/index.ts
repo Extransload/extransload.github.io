@@ -179,9 +179,19 @@ export class RenjuRoom {
     return advanced.expired;
   }
   private startIfReady(room: Room, now: number) {
-    if (room.status !== 'waiting' || !room.guestHash || !room.ready.black || !room.ready.white) return;
+    if (
+      (room.status !== 'waiting' && room.status !== 'finished') ||
+      !room.guestHash ||
+      !room.ready.black ||
+      !room.ready.white
+    )
+      return;
     if (!this.connected('black') || !this.connected('white')) return;
     room.status = 'playing';
+    room.moves = [];
+    room.winner = undefined;
+    room.reason = undefined;
+    room.ready = { black: false, white: false };
     room.clocks = { black: freshClock(room.settings), white: freshClock(room.settings) };
     room.activeSince = now;
     room.disconnects = {};
@@ -311,18 +321,24 @@ export class RenjuRoom {
     }
     const now = Date.now();
     this.expireDisconnects(room, now);
-    if (room.status === 'finished') {
+    if (room.status === 'finished' && message.type !== 'ready' && message.type !== 'settings') {
       await this.write(room);
+      await this.schedule(room);
       this.broadcast(room);
       return;
     }
     if (message.type === 'settings') {
-      if (role !== 'black' || room.status !== 'waiting' || !validSettings(message.settings)) return;
+      if (
+        role !== 'black' ||
+        (room.status !== 'waiting' && room.status !== 'finished') ||
+        !validSettings(message.settings)
+      )
+        return;
       room.settings = message.settings;
       room.ready = { black: false, white: false };
       room.version++;
     } else if (message.type === 'ready') {
-      if (room.status !== 'waiting' || typeof message.ready !== 'boolean') return;
+      if ((room.status !== 'waiting' && room.status !== 'finished') || typeof message.ready !== 'boolean') return;
       room.ready[role] = message.ready;
       this.startIfReady(room, now);
       room.version++;
@@ -381,9 +397,9 @@ export class RenjuRoom {
       const role = this.roleOf(socket);
       const now = Date.now();
       if (role && role !== 'spectator' && !this.connected(role, socket)) {
-        if (room.status === 'waiting') {
+        if (room.status === 'waiting' || room.status === 'finished') {
           room.ready[role] = false;
-          if (role === 'white') room.disconnects.white = now + DISCONNECT_GRACE_MS;
+          if (role === 'white' && room.status === 'waiting') room.disconnects.white = now + DISCONNECT_GRACE_MS;
         } else if (room.status === 'playing') {
           this.settleTurn(room, now);
           if (room.status === 'playing') room.disconnects[role] = now + DISCONNECT_GRACE_MS;

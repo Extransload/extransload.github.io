@@ -117,16 +117,19 @@ function renderOverlay() {
         } as Record<string, string>
       )[state.reason || ''] || '대국이 끝났습니다';
     kicker = 'GAME OVER';
-    mode = state.winner === role ? 'win' : 'finished';
+    const readyCount = Number(state.ready.black) + Number(state.ready.white);
+    subtitle += ` · 재대국 ${readyCount}/2 준비`;
+    mode = state.winner === 'draw' ? 'finished' : 'result';
   } else if (state?.status === 'waiting') {
     title = role === 'spectator' ? '관전 중' : '대국 준비';
+    const readyCount = Number(state.ready.black) + Number(state.ready.white);
     subtitle =
       role === 'black' && !state.joined
         ? '초대 링크를 보내 상대를 불러보세요'
         : !state.connected.black || !state.connected.white
           ? '플레이어가 연결되기를 기다립니다'
-          : '두 사람이 준비하면 자동으로 시작합니다';
-    kicker = role === 'spectator' ? 'SPECTATOR' : 'READY?';
+          : `${readyCount}/2 준비 · 모두 준비하면 자동 시작`;
+    kicker = role === 'spectator' ? 'SPECTATOR' : `READY ${readyCount}/2`;
     mode = 'waiting';
   } else if (briefOverlay) {
     title = '대국 시작';
@@ -149,12 +152,14 @@ function render() {
   const moves = finished ? state!.moves.slice(0, replayMove) : state?.moves || [];
   board.setState(moves, role === 'black' ? 1 : role === 'white' ? 2 : null, !!myTurn);
   board.setSeats(role, playing ? turn : null);
+  if (finished && state?.winner && state.winner !== 'draw') board.celebrate(state.winner);
   for (const seat of ['black', 'white'] as const) {
     const card = $(`#${seat}-player`);
     const mine = role === seat;
     card.classList.toggle('self', mine);
     card.classList.toggle('opponent', role !== 'spectator' && !!role && !mine);
     card.classList.toggle('active', !!playing && turn === seat && !Object.keys(state?.disconnects || {}).length);
+    card.classList.toggle('ready', !!(waiting || finished) && !!state?.ready[seat]);
     card.style.order = mine ? '0' : seat === 'black' ? '1' : '2';
     $(`#${seat}-name`).textContent = mine
       ? '나'
@@ -181,6 +186,8 @@ function render() {
           ? '차례'
           : '대기 중';
     $(`#${seat}-presence`).classList.toggle('online', !!state?.connected[seat]);
+    $(`#${seat}-ready`).hidden = !(waiting || finished);
+    $(`#${seat}-ready`).classList.toggle('is-ready', !!state?.ready[seat]);
   }
   if (finished) status('대국 종료', 'ready');
   else if (offline) status('연결 복구 중', 'error');
@@ -188,8 +195,9 @@ function render() {
   else if (playing) status(role === 'spectator' ? '관전 중' : myTurn ? '내 차례' : '상대 차례', 'ready');
   $('#lobby').hidden = !!currentRoom;
   $('#create').hidden = !!currentRoom;
-  $('#room-setup').hidden = !waiting;
-  $('#settings').hidden = !waiting || role !== 'black';
+  $('#room-setup').hidden = !waiting && !finished;
+  $('#settings').hidden = !(waiting || finished) || role !== 'black';
+  $('.setup-heading strong').textContent = finished ? '다시 대국' : '대국 설정';
   $('#settings-summary').textContent = state ? settingText(state.settings) : '';
   $('#setup-note').textContent =
     role === 'black'
@@ -197,7 +205,7 @@ function render() {
       : role === 'spectator'
         ? '관전자는 설정할 수 없습니다'
         : '방장이 설정합니다';
-  $('#ready').hidden = !waiting || role === 'spectator' || !role;
+  $('#ready').hidden = !(waiting || finished) || role === 'spectator' || !role;
   $('#ready').textContent = role && role !== 'spectator' && state?.ready[role] ? '✓ 준비 완료 · 취소' : '준비하기';
   $('#ready').classList.toggle('is-ready', !!role && role !== 'spectator' && !!state?.ready[role]);
   $('#ready-note').textContent =
@@ -206,7 +214,7 @@ function render() {
       : role === 'black' && !state?.joined
         ? '상대가 들어오면 함께 준비해 주세요'
         : '양쪽이 준비되면 바로 시작합니다';
-  $('#share').hidden = !currentRoom || role !== 'black' || !waiting;
+  $('#share').hidden = !currentRoom || role !== 'black' || (!waiting && !finished);
   $('#resign').hidden = !playing || role === 'spectator' || !role;
   $('#new-game').hidden = !finished && role !== 'spectator';
   $('#replay').hidden = !finished;
@@ -214,7 +222,7 @@ function render() {
   $('#spectators').textContent = `◉ ${state?.spectators || 0}`;
   $('#stage-hint').textContent =
     !state?.moves.length && playing ? '첫 수는 중앙에서 시작합니다' : finished ? '화살표로 기보를 넘겨보세요' : '';
-  if (state && waiting) {
+  if (state && (waiting || finished)) {
     $<HTMLSelectElement>('#main-minutes').value = String(state.settings.mainMinutes);
     $<HTMLSelectElement>('#byo-seconds').value = String(state.settings.byoSeconds);
     $<HTMLSelectElement>('#byo-periods').value = String(state.settings.byoPeriods);
@@ -254,7 +262,12 @@ function connect() {
       state = message.state;
       serverOffset = state.serverNow - Date.now();
       if (state.status === 'finished') replayMove = state.moves.length;
-      if (was === 'waiting' && state.status === 'playing') {
+      if (was === 'finished' && state.status === 'playing') {
+        board.clearCelebration();
+        board.reset();
+        replayMove = 0;
+      }
+      if ((was === 'waiting' || was === 'finished') && state.status === 'playing') {
         briefOverlay = true;
         window.clearTimeout(overlayTimer);
         overlayTimer = window.setTimeout(() => {
@@ -395,6 +408,8 @@ $('#resign').addEventListener('click', () => {
 });
 $('#new-game').addEventListener('click', () => {
   socket?.close();
+  board.clearCelebration();
+  board.reset();
   currentRoom = null;
   role = null;
   secret = null;
