@@ -269,12 +269,13 @@ export class RenjuBoard {
   setSeats(role: 'black' | 'white' | 'spectator' | null, turn: 'black' | 'white' | null) {
     if (role !== this.seatRole) {
       const front = role === 'white' ? 'white' : 'black';
+      const compact = this.host.clientWidth < 600;
       for (const color of ['black', 'white'] as const) {
         const near = color === front;
         const avatar = this.avatars[color].group;
-        avatar.position.set(near ? -5.0 : 5.0, -0.08, near ? 9.0 : -9.0);
-        avatar.rotation.y = near ? 0 : Math.PI;
-        avatar.scale.setScalar(near ? 0.85 : 0.78);
+        avatar.position.set(near ? -4.8 : 4.8, -0.08, near ? 9.1 : -9.1);
+        avatar.rotation.y = Math.atan2(-avatar.position.x, -avatar.position.z);
+        avatar.scale.setScalar(compact ? (near ? 1 : 0.93) : near ? 1.16 : 1.07);
       }
       this.seatRole = role;
     }
@@ -290,7 +291,11 @@ export class RenjuBoard {
     this.celebrationStarted = performance.now();
     const rig = this.avatars[winner];
     const center = rig.group.position.clone().add(new THREE.Vector3(0, 1.35, 0));
-    const cameraEnd = center.clone().add(new THREE.Vector3(0, 2.9, rig.group.position.z > 0 ? 6.5 : -6.5));
+    const outwardRotation = rig.group.rotation.y + Math.PI;
+    const distance = this.host.clientWidth < 600 ? 8.2 : 7.5;
+    const cameraEnd = center
+      .clone()
+      .add(new THREE.Vector3(Math.sin(outwardRotation) * distance, 2.9, Math.cos(outwardRotation) * distance));
     const cameraStart = this.camera.position.clone();
     const targetStart = this.controls.target.clone();
     const baseY = rig.group.position.y;
@@ -299,6 +304,7 @@ export class RenjuBoard {
     if (reducedMotion) {
       this.camera.position.copy(cameraEnd);
       this.controls.target.copy(center);
+      rig.group.rotation.y = outwardRotation;
       rig.halo.visible = true;
       this.controls.update();
       return;
@@ -310,20 +316,23 @@ export class RenjuBoard {
       if (now - lastFrame < 30) return;
       lastFrame = now;
       const elapsed = now - this.celebrationStarted;
-      const progress = Math.min(1, elapsed / 1350);
+      const progress = Math.min(1, Math.max(0, (elapsed - 600) / 1150));
       const eased = 1 - (1 - progress) ** 3;
-      if (progress < 1 || elapsed < 1400) {
+      if (progress < 1 || elapsed < 1800) {
         this.camera.position.copy(cameraStart).lerp(cameraEnd, eased);
         this.controls.target.copy(targetStart).lerp(center, eased);
         this.controls.update();
       }
-      const beat = Math.max(0, (elapsed - 450) / 1000);
-      rig.group.position.y = baseY + Math.abs(Math.sin(beat * 7)) * 0.28;
-      rig.group.rotation.y = baseRotation + Math.sin(beat * 4) * 0.3;
-      rig.head.rotation.z = Math.sin(beat * 5) * 0.15;
-      rig.arms[0].rotation.z = -0.55 - Math.sin(beat * 7) * 0.45;
-      rig.arms[1].rotation.z = 0.55 + Math.sin(beat * 7 + Math.PI) * 0.45;
-      rig.halo.scale.setScalar(1 + Math.sin(beat * 6) * 0.08);
+      const turn = 1 - (1 - Math.min(1, elapsed / 650)) ** 3;
+      const beat = Math.max(0, (elapsed - 650) / 1000);
+      rig.group.rotation.y = baseRotation + Math.PI * turn + (elapsed > 650 ? Math.sin(beat * 4) * 0.3 : 0);
+      if (elapsed > 650) {
+        rig.group.position.y = baseY + Math.abs(Math.sin(beat * 7)) * 0.28;
+        rig.head.rotation.z = Math.sin(beat * 5) * 0.15;
+        rig.arms[0].rotation.z = -0.55 - Math.sin(beat * 7) * 0.45;
+        rig.arms[1].rotation.z = 0.55 + Math.sin(beat * 7 + Math.PI) * 0.45;
+        rig.halo.scale.setScalar(1 + Math.sin(beat * 6) * 0.08);
+      }
       this.render();
     };
     this.celebrationFrame = requestAnimationFrame(frame);
@@ -335,7 +344,7 @@ export class RenjuBoard {
       const rig = this.avatars[color];
       rig.group.visible = true;
       rig.group.position.y = -0.08;
-      rig.group.rotation.y = color === (this.seatRole === 'white' ? 'white' : 'black') ? 0 : Math.PI;
+      rig.group.rotation.y = Math.atan2(-rig.group.position.x, -rig.group.position.z);
       rig.head.rotation.z = 0;
       for (const arm of rig.arms) arm.rotation.z = 0;
       rig.halo.scale.setScalar(1);

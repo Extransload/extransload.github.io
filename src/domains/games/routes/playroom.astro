@@ -10,12 +10,12 @@ const apiUrl = import.meta.env.PUBLIC_RENJU_API_URL ?? '';
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#101e2d" />
-    <title>Playroom — Extransload</title>
-    <SeoHead title="Playroom — Extransload" description="Extransload Playroom의 실시간 3D 렌주 대국" canonicalPath="/playroom/" />
+    <title>Gomoku — Extransload</title>
+    <SeoHead title="Gomoku — Extransload" description="Extransload Playroom의 실시간 3D 렌주 대국" canonicalPath="/playroom/gomoku/" />
     <link rel="icon" type="image/png" href="/favicon.png" />
   </head>
   <body data-api-url={apiUrl}>
-    <header class="top"><a href="/playroom/" aria-label="Playroom 홈">Playroom</a><a class="top-home" href="/" aria-label="홈으로">⌂</a></header>
+    <header class="top"><span class="top-brand">Gomoku</span><a class="top-home" href="/playroom/" aria-label="Playroom 홈">⌂</a></header>
     <main class="game">
       <section class="stage" aria-label="3D 렌주 바둑판">
         <div class="toolbar" role="toolbar" aria-label="바둑판 조작">

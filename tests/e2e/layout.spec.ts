@@ -614,8 +614,14 @@ test('sidebar reading icons show collapse-style tooltips on hover and focus', as
   expect(await focusToggle.evaluate((element) => getComputedStyle(element).filter)).toBe('none');
 });
 
-test('playroom opens the 3D Renju board and About remains standalone', async ({ page }) => {
+test('playroom lists Gomoku, opens its board, and About remains standalone', async ({ page }) => {
   await page.goto('/playroom/');
+  await expect(page.locator('.game-list')).toBeVisible();
+  await expect(page.locator('.stage canvas')).toHaveCount(0);
+  await page.locator('a.game-card[href="/playroom/gomoku/"]').click();
+  await expect(page).toHaveURL(/\/playroom\/gomoku\/$/);
+  await expect(page.locator('.top-brand')).toHaveText('Gomoku');
+  await expect(page.locator('.top-home')).toHaveAttribute('href', '/playroom/');
   await expect(page.locator('.stage canvas')).toBeVisible();
   await expect(page.locator('#create')).toBeVisible();
   await page.locator('#rules').click();
@@ -626,6 +632,11 @@ test('playroom opens the 3D Renju board and About remains standalone', async ({ 
   await page.goto('/about/');
   await expect(page.locator('.main-space-page')).toContainText('Coming soon');
   await expect(page.locator('.site-header')).toHaveCount(0);
+});
+
+test('old Gomoku invitations keep their room when redirected to the game route', async ({ page }) => {
+  await page.goto('/playroom/?room=old-room');
+  await expect(page).toHaveURL(/\/playroom\/gomoku\/\?room=old-room$/);
 });
 
 test('blog sidebar home and posts links stay inside the blog', async ({ page }) => {

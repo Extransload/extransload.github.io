@@ -1,0 +1,34 @@
+---
+import SeoHead from '../../../shared/components/SeoHead.astro';
+import { playroomGames } from '../data/playroom-games';
+import '../styles/playroom-index.css';
+---
+
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#101e2d" />
+    <title>Playroom — Extransload</title>
+    <SeoHead title="Playroom — Extransload" description="Extransload Playroom의 게임 목록" canonicalPath="/playroom/" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <script is:inline>
+      if (new URLSearchParams(location.search).has('room'))
+        location.replace(`/playroom/gomoku/${location.search}${location.hash}`);
+    </script>
+  </head>
+  <body>
+    <header class="playroom-top"><a class="playroom-brand" href="/playroom/">Playroom</a><a class="playroom-home" href="/" aria-label="사이트 홈">⌂</a></header>
+    <main class="playroom-index">
+      <div class="playroom-intro"><p class="playroom-eyebrow">A LITTLE SPACE TO PLAY</p><h1>어떤 게임을 해볼까요?</h1><p>마음에 드는 게임을 골라 시작해 보세요.</p></div>
+      <section class="game-list" aria-label="Playroom 게임 목록">
+        {playroomGames.map((game) => <a class="game-card" href={game.href} aria-label={`${game.name} 플레이하기`}>
+          <div class="game-card-copy"><span class="game-card-number">{game.number} / PLAYROOM</span><h2>{game.name}</h2><strong>{game.subtitle}</strong><p>{game.description}</p><div class="game-card-tags">{game.meta.map((tag) => <span>{tag}</span>)}</div><span class="game-card-cta">플레이하기 <span aria-hidden="true">↗</span></span></div>
+          <div class="game-card-art" aria-hidden="true">{game.id === 'gomoku' ? <div class="game-card-board"><div class="game-card-grid"></div><i class="mini-stone mini-stone-black one"></i><i class="mini-stone mini-stone-white two"></i><i class="mini-stone mini-stone-black three"></i><i class="mini-stone mini-stone-white four"></i><i class="mini-stone mini-stone-black five"></i></div> : <span class="game-card-art-number">{game.number}</span>}</div>
+        </a>)}
+      </section>
+      <p class="playroom-footnote">작은 놀이들이 이곳에 하나씩 쌓입니다.</p>
+    </main>
+  </body>
+</html>

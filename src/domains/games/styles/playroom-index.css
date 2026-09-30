@@ -1,0 +1,316 @@
+:root {
+  font-family:
+    system-ui,
+    -apple-system,
+    'Noto Sans KR',
+    sans-serif;
+  color: #102333;
+  background: #f3eee3;
+  font-synthesis: none;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  min-height: 100svh;
+}
+a {
+  color: inherit;
+  text-decoration: none;
+}
+.playroom-top {
+  height: 82px;
+  padding: 0 clamp(20px, 3.8vw, 58px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #101e2d;
+  border-bottom: 1px solid #b5965938;
+}
+.playroom-top a {
+  color: #f2ead8;
+}
+.playroom-brand {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 0.025em;
+}
+.playroom-home {
+  font-size: 30px;
+  font-weight: 400;
+}
+.playroom-index {
+  min-height: calc(100svh - 82px);
+  padding: clamp(52px, 8vh, 90px) clamp(24px, 6vw, 90px) 42px;
+  background: radial-gradient(ellipse at 68% 20%, #fffdfa 0%, #f5efe4 51%, #eae1d2 100%);
+}
+.playroom-intro,
+.game-list,
+.playroom-footnote {
+  max-width: 1130px;
+  margin-inline: auto;
+}
+.playroom-eyebrow {
+  margin: 0 0 12px;
+  color: #9b8057;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.23em;
+}
+.playroom-intro h1 {
+  margin: 0;
+  font-size: clamp(33px, 4.6vw, 58px);
+  font-weight: 760;
+  letter-spacing: -0.065em;
+  line-height: 1.2;
+}
+.playroom-intro > :where(p:last-child) {
+  margin: 18px 0 0;
+  color: #6c716d;
+  font-size: 14px;
+}
+.game-list {
+  display: grid;
+  gap: 18px;
+  margin-top: clamp(34px, 6vh, 62px);
+}
+.game-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(290px, 0.86fr);
+  min-height: 360px;
+  overflow: hidden;
+  border: 1px solid #d8cbbb;
+  border-radius: 27px;
+  background: #fffcf5;
+  box-shadow: 0 16px 54px #25323b14;
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease,
+    border-color 0.25s ease;
+}
+.game-card:hover,
+.game-card:focus-visible {
+  transform: translateY(-5px);
+  border-color: #b89660;
+  box-shadow: 0 26px 66px #25323b26;
+}
+.game-card:focus-visible {
+  outline: 3px solid #a3814c;
+  outline-offset: 4px;
+}
+.game-card-copy {
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: clamp(27px, 4vw, 52px);
+}
+.game-card-number {
+  color: #9b8057;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+}
+.game-card h2 {
+  margin: 25px 0 0;
+  color: #122a3a;
+  font-family: Georgia, serif;
+  font-size: clamp(46px, 5.3vw, 75px);
+  font-weight: 700;
+  letter-spacing: -0.06em;
+  line-height: 1;
+}
+.game-card-copy > strong {
+  margin-top: 17px;
+  font-size: 18px;
+  letter-spacing: -0.045em;
+}
+.game-card-copy > p {
+  margin: 9px 0 0;
+  color: #73796f;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.game-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 17px;
+}
+.game-card-tags span {
+  padding: 6px 10px;
+  border: 1px solid #e4dac9;
+  border-radius: 99px;
+  color: #63716e;
+  background: #f7f2e9;
+  font-size: 10px;
+  font-weight: 700;
+}
+.game-card-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 25px;
+  color: #1a4a52;
+  font-size: 13px;
+  font-weight: 800;
+}
+.game-card-cta span {
+  display: grid;
+  place-items: center;
+  width: 29px;
+  height: 29px;
+  border-radius: 50%;
+  background: #203f4a;
+  color: #fff7e8;
+  font-size: 16px;
+  transition: transform 0.25s ease;
+}
+.game-card:hover .game-card-cta span {
+  transform: translate(3px, -3px);
+}
+.game-card-art {
+  position: relative;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: radial-gradient(circle at 54% 46%, #365868, #1a3242 70%);
+}
+.game-card-art::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.42;
+  background-image: radial-gradient(#e8d6ae4c 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+.game-card-board {
+  position: relative;
+  width: min(76%, 305px);
+  aspect-ratio: 1;
+  border: 11px solid #e7d8b5;
+  border-bottom-width: 17px;
+  border-radius: 7px;
+  background: #f2ead6;
+  box-shadow:
+    0 16px 0 #24423f,
+    0 27px 38px #05131bb0;
+  transform: perspective(650px) rotateX(24deg) rotateZ(-13deg);
+  transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.game-card:hover .game-card-board {
+  transform: perspective(650px) rotateX(17deg) rotateZ(-9deg) scale(1.04);
+}
+.game-card-grid {
+  position: absolute;
+  inset: 8%;
+  background-image:
+    linear-gradient(#a9967488 1px, transparent 1px), linear-gradient(90deg, #a9967488 1px, transparent 1px);
+  background-size: 12.5% 12.5%;
+  border-right: 1px solid #a9967488;
+  border-bottom: 1px solid #a9967488;
+}
+.mini-stone {
+  position: absolute;
+  display: block;
+  width: 9%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  box-shadow: 2px 5px 5px #14242f5c;
+}
+.mini-stone-black {
+  background: radial-gradient(circle at 30% 24%, #506573, #0c1924 76%);
+}
+.mini-stone-white {
+  background: radial-gradient(circle at 30% 24%, #fff, #d6c9aa 80%);
+  border: 1px solid #baae96;
+}
+.mini-stone.one {
+  left: 46%;
+  top: 46%;
+}
+.mini-stone.two {
+  left: 57%;
+  top: 46%;
+}
+.mini-stone.three {
+  left: 46%;
+  top: 57%;
+}
+.mini-stone.four {
+  left: 57%;
+  top: 57%;
+}
+.mini-stone.five {
+  left: 46%;
+  top: 35%;
+  box-shadow:
+    0 0 0 5px #d1ad6f96,
+    2px 5px 5px #14242f5c;
+}
+.playroom-footnote {
+  margin-top: 24px;
+  color: #8c8a7f;
+  font-size: 11px;
+  text-align: right;
+}
+@media (max-width: 720px) {
+  .playroom-top {
+    height: 65px;
+    padding: 0 16px;
+  }
+  .playroom-brand {
+    font-size: 20px;
+  }
+  .playroom-index {
+    min-height: calc(100svh - 65px);
+    padding: 46px 17px 38px;
+  }
+  .playroom-intro > :where(p:last-child) {
+    font-size: 12px;
+  }
+  .game-list {
+    margin-top: 32px;
+  }
+  .game-card {
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
+  .game-card-copy {
+    padding: 29px 27px 27px;
+  }
+  .game-card h2 {
+    margin-top: 20px;
+    font-size: 56px;
+  }
+  .game-card-cta {
+    padding-top: 24px;
+  }
+  .game-card-art {
+    min-height: 230px;
+  }
+  .game-card-board {
+    width: min(58%, 200px);
+  }
+  .playroom-footnote {
+    text-align: left;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .game-card,
+  .game-card-board,
+  .game-card-cta span {
+    transition: none;
+  }
+}
+.game-card-art-number {
+  position: relative;
+  color: #e6d2ab;
+  font-family: Georgia, serif;
+  font-size: clamp(110px, 14vw, 190px);
+  line-height: 1;
+  text-shadow: 0 14px 34px #08192399;
+}
