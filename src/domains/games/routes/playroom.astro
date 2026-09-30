@@ -27,17 +27,29 @@ const apiUrl = import.meta.env.PUBLIC_RENJU_API_URL ?? '';
           <button id="help" title="조작 방법" aria-label="조작 방법">?</button>
         </div>
         <div id="canvas" class="canvas"></div>
+        <div class="board-clocks" id="board-clocks" hidden>
+          <div id="clock-black" class="board-clock"><span class="clock-piece black"></span><strong>10:00</strong><small></small></div>
+          <div id="clock-white" class="board-clock"><span class="clock-piece white"></span><strong>10:00</strong><small></small></div>
+        </div>
+        <div id="stage-overlay" class="stage-overlay" hidden aria-live="polite"><div class="overlay-card"><span id="overlay-kicker"></span><strong id="overlay-title"></strong><small id="overlay-subtitle"></small></div></div>
         <div id="forbidden-tip" class="forbidden-tip" hidden></div>
         <div id="board-help" class="board-help" hidden>드래그: 회전<br />휠 · 두 손가락: 확대<br />우클릭 · 두 손가락 이동: 이동</div>
         <div id="stage-hint" class="stage-hint">첫 수는 중앙에서 시작합니다</div>
       </section>
       <aside class="side">
-        <div class="side-top"><span id="connection-dot" class="connection-dot"></span><span id="status" role="status">연결 준비 중</span></div>
+        <div class="side-top"><span id="connection-dot" class="connection-dot"></span><span id="status" role="status">연결 준비 중</span><span id="spectators" class="spectators" hidden></span></div>
         <div class="players">
-          <div id="black-player" class="player"><span class="piece black"></span><div><strong id="black-name">흑</strong><small id="black-detail">대기 중</small></div></div>
-          <div id="white-player" class="player"><span class="piece white"></span><div><strong id="white-name">백</strong><small id="white-detail">대기 중</small></div></div>
+          <div id="black-player" class="player"><span class="piece black"></span><div class="player-copy"><span id="black-badge" class="player-badge">흑 · 방장</span><strong id="black-name">흑</strong><small id="black-detail">대기 중</small></div><span id="black-presence" class="presence"></span></div>
+          <div id="white-player" class="player"><span class="piece white"></span><div class="player-copy"><span id="white-badge" class="player-badge">백</span><strong id="white-name">백</strong><small id="white-detail">대기 중</small></div><span id="white-presence" class="presence"></span></div>
         </div>
-        <div id="lobby" class="lobby"><button id="create" class="primary">새 대국 만들기</button><button id="join" class="primary" hidden>대국 참여하기</button><p id="lobby-note"></p></div>
+        <div id="lobby" class="lobby"><button id="create" class="primary">새 대국 만들기</button><p id="lobby-note"></p></div>
+        <div id="room-setup" class="room-setup" hidden>
+          <div class="setup-heading"><strong>대국 설정</strong><span id="setup-note">방장이 설정합니다</span></div>
+          <div id="settings" class="settings" hidden><label>기본 시간<select id="main-minutes"><option value="0">없음</option><option value="3">3분</option><option value="5">5분</option><option value="10">10분</option><option value="15">15분</option><option value="30">30분</option></select></label><label>초읽기<select id="byo-seconds"><option value="0">없음</option><option value="10">10초</option><option value="20">20초</option><option value="30">30초</option><option value="60">60초</option></select></label><label>횟수<select id="byo-periods"><option value="0">0회</option><option value="1">1회</option><option value="3">3회</option><option value="5">5회</option></select></label></div>
+          <p id="settings-summary" class="settings-summary"></p>
+          <button id="ready" class="primary ready-button" hidden>준비하기</button>
+          <p id="ready-note" class="ready-note"></p>
+        </div>
         <div id="replay" class="replay" hidden><div class="replay-title"><span>기보</span><span id="move-count">0 / 0</span></div><div class="replay-controls"><button id="prev" title="이전 수" aria-label="이전 수">‹</button><strong id="move-label">시작</strong><button id="next" title="다음 수" aria-label="다음 수">›</button></div></div>
         <div class="side-spacer"></div>
         <button id="share" class="primary" hidden><span aria-hidden="true">↗</span> 초대 링크 복사</button>

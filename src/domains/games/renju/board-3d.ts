@@ -16,6 +16,8 @@ export class RenjuBoard {
   private stones = new THREE.Group();
   private highlights = new THREE.Group();
   private lastMove = new THREE.Group();
+  private avatars: Record<'black' | 'white', THREE.Group>;
+  private halos: Record<'black' | 'white', THREE.Mesh>;
   private pointer = new THREE.Vector2();
   private ray = new THREE.Raycaster();
   private plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -SURFACE);
@@ -31,7 +33,7 @@ export class RenjuBoard {
   onForbidden?: (point: Point | null, verdict?: Verdict, screen?: { x: number; y: number }) => void;
 
   constructor(private host: HTMLElement) {
-    this.camera.position.set(0, host.clientWidth < 600 ? 27 : 19, host.clientWidth < 600 ? 29 : 21);
+    this.camera.position.set(0, host.clientWidth < 600 ? 25 : 23, host.clientWidth < 600 ? 25 : 26);
     this.renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
@@ -69,6 +71,12 @@ export class RenjuBoard {
     this.scene.add(this.board);
     this.makeBoard();
     this.board.add(this.stones, this.highlights, this.lastMove);
+    const black = this.makeAvatar('black');
+    const white = this.makeAvatar('white');
+    this.avatars = { black: black.group, white: white.group };
+    this.halos = { black: black.halo, white: white.halo };
+    this.scene.add(black.group, white.group);
+    this.setSeats(null, null);
     this.renderer.domElement.addEventListener('pointerdown', (e) => {
       this.down = { x: e.clientX, y: e.clientY };
     });
@@ -179,6 +187,60 @@ export class RenjuBoard {
         this.board.add(dot);
       }
   }
+  private makeAvatar(color: 'black' | 'white') {
+    const group = new THREE.Group();
+    const isBlack = color === 'black';
+    const shell = new THREE.MeshPhysicalMaterial({
+      color: isBlack ? 0x182d3a : 0xf5ecd8,
+      roughness: 0.34,
+      clearcoat: 0.72,
+    });
+    const face = new THREE.MeshStandardMaterial({ color: isBlack ? 0x304859 : 0xfff9e9, roughness: 0.57 });
+    const accent = new THREE.MeshStandardMaterial({
+      color: isBlack ? 0xe4bd77 : 0x677f88,
+      metalness: 0.26,
+      roughness: 0.42,
+    });
+    const eye = new THREE.MeshBasicMaterial({ color: isBlack ? 0xf8eacb : 0x213746 });
+    const add = (geometry: THREE.BufferGeometry, material: THREE.Material, x: number, y: number, z: number) => {
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      group.add(mesh);
+      return mesh;
+    };
+    const plinth = add(new THREE.CylinderGeometry(1.12, 1.2, 0.13, 40), accent, 0, 0.01, 0);
+    plinth.receiveShadow = true;
+    const body = add(new THREE.SphereGeometry(0.82, 32, 22), shell, 0, 0.88, 0);
+    body.scale.set(1, 1.18, 0.78);
+    const belly = add(new THREE.SphereGeometry(0.59, 28, 20), face, 0, 0.83, 0.51);
+    belly.scale.set(1, 0.82, 0.38);
+    const head = add(new THREE.SphereGeometry(0.73, 32, 22), shell, 0, 1.84, 0.12);
+    head.scale.set(1, 0.91, 0.84);
+    for (const side of [-1, 1]) {
+      const arm = add(new THREE.SphereGeometry(0.25, 20, 16), shell, side * 0.78, 1.07, 0.22);
+      arm.scale.set(0.85, 1.45, 0.9);
+      const eyeMesh = add(new THREE.SphereGeometry(0.078, 16, 12), eye, side * 0.24, 1.93, 0.69);
+      eyeMesh.scale.z = 0.35;
+      add(new THREE.SphereGeometry(0.16, 18, 14), accent, side * 0.41, 2.46, -0.06);
+    }
+    const halo = add(new THREE.TorusGeometry(1.3, 0.035, 8, 64), accent, 0, 0.04, 0);
+    halo.rotation.x = Math.PI / 2;
+    halo.visible = false;
+    return { group, halo };
+  }
+  setSeats(role: 'black' | 'white' | 'spectator' | null, turn: 'black' | 'white' | null) {
+    const front = role === 'white' ? 'white' : 'black';
+    for (const color of ['black', 'white'] as const) {
+      const near = color === front;
+      const avatar = this.avatars[color];
+      avatar.position.set(near ? -5.0 : 5.0, -0.08, near ? 9.0 : -9.0);
+      avatar.rotation.y = near ? 0 : Math.PI;
+      avatar.scale.setScalar(near ? 0.85 : 0.78);
+      this.halos[color].visible = turn === color;
+    }
+    this.render();
+  }
   private render() {
     this.renderer.render(this.scene, this.camera);
   }
@@ -277,7 +339,7 @@ export class RenjuBoard {
   }
   reset() {
     this.topView = false;
-    this.camera.position.set(0, this.host.clientWidth < 600 ? 27 : 19, this.host.clientWidth < 600 ? 29 : 21);
+    this.camera.position.set(0, this.host.clientWidth < 600 ? 25 : 23, this.host.clientWidth < 600 ? 25 : 26);
     this.controls.target.set(0, 0, 0);
     this.controls.update();
   }

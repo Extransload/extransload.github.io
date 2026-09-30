@@ -486,3 +486,299 @@ button:disabled {
     font-size: 11px;
   }
 }
+
+/* Room presence and result layer */
+.spectators {
+  margin-left: auto;
+  color: #8c8372;
+  font-variant-numeric: tabular-nums;
+}
+.player {
+  position: relative;
+  min-height: 94px;
+}
+.player.self {
+  order: 0 !important;
+  background: #eaf0ed;
+  border-color: #81a697;
+  box-shadow: inset 3px 0 #668f7e;
+}
+.player.opponent {
+  background: #f6f2e9;
+}
+.player.active {
+  transform: translateX(-3px);
+}
+.player-copy {
+  min-width: 0;
+  flex: 1;
+}
+.player-badge {
+  display: block;
+  margin-bottom: 4px;
+  color: #a08559;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+.player.self .player-badge {
+  color: #547969;
+}
+.player strong {
+  font-size: 19px;
+  line-height: 1.1;
+}
+.player small {
+  font-size: 11px;
+}
+.presence {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #c9c2b5;
+  box-shadow: 0 0 0 4px #eae5dc;
+}
+.presence.online {
+  background: #6eae88;
+  box-shadow: 0 0 0 4px #d9eadf;
+}
+.room-setup {
+  border: 1px solid #e5ddce;
+  border-radius: 17px;
+  padding: 17px;
+  background: #fcfaf5;
+}
+.setup-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.setup-heading strong {
+  font-size: 13px;
+}
+.setup-heading span {
+  color: #8e877b;
+  font-size: 10px;
+  text-align: right;
+}
+.settings {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+  margin-top: 15px;
+}
+.settings label {
+  display: grid;
+  gap: 6px;
+  color: #81796b;
+  font-size: 10px;
+  font-weight: 700;
+}
+.settings select {
+  width: 100%;
+  min-height: 36px;
+  border: 1px solid #d9d0c0;
+  border-radius: 9px;
+  padding: 0 6px;
+  background: #fffefa;
+  color: #213746;
+  font: inherit;
+  font-size: 11px;
+}
+.settings-summary {
+  margin: 12px 0 0;
+  color: #4e6871;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.ready-button {
+  margin-top: 15px;
+  background: #254e5b;
+  border-color: #254e5b;
+  font-size: 14px;
+}
+.ready-button.is-ready {
+  background: #e4eee8;
+  border-color: #8db5a0;
+  color: #386d55;
+}
+.ready-note {
+  margin: 10px 0 0;
+  color: #898173;
+  font-size: 10px;
+  line-height: 1.5;
+}
+.board-clocks {
+  position: absolute;
+  z-index: 4;
+  left: 25px;
+  top: 24px;
+  display: grid;
+  gap: 8px;
+  pointer-events: none;
+}
+.board-clock {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 128px;
+  padding: 8px 10px;
+  border: 1px solid #dfd5c3;
+  border-radius: 13px;
+  background: #fffdf6e9;
+  box-shadow: 0 8px 22px #21374614;
+  color: #263b49;
+  backdrop-filter: blur(12px);
+}
+.board-clock strong {
+  font-size: 20px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.board-clock small {
+  display: block;
+  width: 42px;
+  color: #867a66;
+  font-size: 9px;
+  line-height: 1.2;
+}
+.board-clock.ticking {
+  border-color: #bd995f;
+  box-shadow:
+    0 0 0 2px #d7b97b55,
+    0 8px 22px #21374614;
+}
+.board-clock.urgent {
+  color: #b44e42;
+  animation: clock-pulse 1s ease-in-out infinite;
+}
+.clock-piece {
+  width: 13px;
+  height: 13px;
+  flex: none;
+  border-radius: 50%;
+}
+.clock-piece.black {
+  background: #1d2d39;
+}
+.clock-piece.white {
+  background: #f6efdc;
+  border: 1px solid #ac9d81;
+}
+.stage-overlay {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  background: radial-gradient(circle, #fbf6e7b5 0%, #faf6ee22 57%, transparent 85%);
+}
+.overlay-card {
+  display: grid;
+  justify-items: center;
+  gap: 11px;
+  width: min(450px, calc(100% - 40px));
+  padding: 26px 25px;
+  border: 1px solid #fff9e8c9;
+  border-radius: 29px;
+  background: #102333c9;
+  color: #fff6df;
+  text-align: center;
+  box-shadow: 0 22px 75px #0f273762;
+  backdrop-filter: blur(16px);
+  animation: overlay-enter 0.48s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.overlay-card > span {
+  color: #d5b679;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.26em;
+}
+.overlay-card strong {
+  font-size: clamp(39px, 6vw, 76px);
+  font-weight: 850;
+  line-height: 1.1;
+  letter-spacing: -0.055em;
+}
+.overlay-card small {
+  color: #e9e3d5;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.stage-overlay[data-mode='win'] .overlay-card {
+  background: #214f52db;
+  border-color: #d5b679;
+}
+.stage-overlay[data-mode='start'] .overlay-card {
+  animation:
+    overlay-enter 0.48s cubic-bezier(0.16, 1, 0.3, 1) both,
+    start-glow 1.9s ease-in-out both;
+}
+@keyframes overlay-enter {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.9);
+    filter: blur(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+@keyframes start-glow {
+  40% {
+    box-shadow: 0 24px 95px #d8b878b8;
+  }
+}
+@keyframes clock-pulse {
+  50% {
+    background: #fff1e7;
+  }
+}
+@media (max-width: 970px) {
+  .board-clocks {
+    left: 18px;
+    top: 18px;
+  }
+}
+@media (max-width: 580px) {
+  .player {
+    min-height: 72px;
+  }
+  .player strong {
+    font-size: 16px;
+  }
+  .board-clocks {
+    top: 60px;
+    left: 12px;
+    gap: 5px;
+  }
+  .board-clock {
+    min-width: 112px;
+    padding: 6px 8px;
+  }
+  .board-clock strong {
+    font-size: 16px;
+  }
+  .board-clock small {
+    font-size: 8px;
+  }
+  .overlay-card {
+    padding: 20px 16px;
+  }
+  .overlay-card strong {
+    font-size: 42px;
+  }
+  .overlay-card small {
+    font-size: 11px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .overlay-card,
+  .board-clock.urgent {
+    animation: none !important;
+  }
+}
