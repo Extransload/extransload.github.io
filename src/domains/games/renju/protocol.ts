@@ -16,6 +16,7 @@ export type PublicRoom = {
   id: string;
   status: GameStatus;
   joined: boolean;
+  connected?: Record<PlayerRole, boolean>;
   players: Record<PlayerRole, PlayerIdentity | null>;
   spectators: number;
   settings: GameSettings;
@@ -41,6 +42,8 @@ export type RoomSnapshot = {
   version: number;
   joined: boolean;
   ready: Record<PlayerRole, boolean>;
+  rematchDeadline: number | null;
+  rematchClosed: boolean;
   connected: Record<PlayerRole, boolean>;
   spectators: number;
   settings: GameSettings;
@@ -55,6 +58,7 @@ export type RoomSnapshot = {
 
 export const DEFAULT_SETTINGS: GameSettings = { mainMinutes: 10, byoSeconds: 30, byoPeriods: 3 };
 export const DISCONNECT_GRACE_MS = 30_000;
+export const REMATCH_WINDOW_MS = 10_000;
 export const ROLES: PlayerRole[] = ['black', 'white'];
 
 export function validSettings(value: unknown): value is GameSettings {

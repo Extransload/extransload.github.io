@@ -76,6 +76,9 @@ function render() {
     overlay.dataset.mode = finished ? 'result' : 'waiting';
   }
   $('#undo').hidden = !playing || moves.length < (player === 1 ? 2 : 3);
+  $('#start').hidden = playing;
+  $('#start').textContent = finished ? '다시 대국' : '대국 시작';
+  $('#resign-solo').hidden = !playing;
   $('#replay').hidden = !finished;
   if (finished) {
     $('#move-count').textContent = `${replayMove} / ${moves.length}`;
@@ -175,6 +178,7 @@ for (const [button, color] of [
   });
 }
 $('#start').addEventListener('click', () => {
+  if (playing) return;
   generation++;
   restartWorker();
   board.clearCelebration();
@@ -187,6 +191,13 @@ $('#start').addEventListener('click', () => {
   thinking = false;
   render();
   aiTurn();
+});
+$('#resign-solo').addEventListener('click', () => {
+  if (!playing || !window.confirm('대국을 기권하시겠습니까?')) return;
+  if (!playing) return;
+  generation++;
+  restartWorker();
+  finish(player === 1 ? 2 : 1);
 });
 $('#undo').addEventListener('click', () => {
   if (!playing || !moves.length) return;

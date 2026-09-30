@@ -14,7 +14,8 @@ export default defineConfig({
   },
   integrations: [
     sitemap({
-      filter: (page) => !page.includes('/admin/') && !page.includes('/blog/search/'),
+      filter: (page) =>
+        !page.includes('/admin/') && !page.includes('/blog/search/') && !page.includes('/playroom/gomoku/'),
     }),
   ],
   markdown: {

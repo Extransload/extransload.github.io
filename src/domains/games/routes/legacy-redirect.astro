@@ -1,0 +1,21 @@
+---
+interface Props {
+  destination: string;
+  title: string;
+}
+
+const { destination, title } = Astro.props;
+---
+
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="robots" content="noindex" />
+    <title>{title}</title>
+    <script is:inline define:vars={{ destination }}>
+      location.replace(`${destination}${location.search}${location.hash}`);
+    </script>
+  </head>
+  <body><a href={destination}>{title}</a></body>
+</html>

@@ -3,9 +3,10 @@ import { attr, builtRoutes, find, findAll, loadRoute, meta, sitemapRoutes, tag, 
 
 const SITE = 'https://extransload.github.io';
 const ROUTES = builtRoutes();
-const NON_INDEXABLE = ['/admin/', '/blog/search/'];
+const REDIRECTS = ['/playroom/gomoku/', '/playroom/gomoku/solo/'];
+const NON_INDEXABLE = ['/admin/', '/blog/search/', ...REDIRECTS];
 // The admin shell is a noindex/nofollow app mount, not a published document.
-const PUBLISHED = ROUTES.filter((route) => route !== '/admin/');
+const PUBLISHED = ROUTES.filter((route) => route !== '/admin/' && !REDIRECTS.includes(route));
 
 // Two routes that differ only in case share one directory on a case-insensitive
 // filesystem, so the surviving page can carry its twin's canonical. The sitemap

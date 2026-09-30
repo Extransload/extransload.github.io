@@ -20,30 +20,19 @@ a {
   text-decoration: none;
 }
 .playroom-top {
-  height: 82px;
+  height: 56px;
   padding: 0 clamp(20px, 3.8vw, 58px);
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  background: #101e2d;
-  border-bottom: 1px solid #b5965938;
+  background: #f3eee3;
 }
 .playroom-top a {
-  color: #f2ead8;
-}
-.playroom-brand {
-  font-size: 24px;
-  font-weight: 700;
-  letter-spacing: 0.025em;
-}
-.playroom-home {
-  font-size: 30px;
-  font-weight: 400;
+  color: #6f644f;
 }
 .playroom-index {
-  min-height: calc(100svh - 82px);
-  padding: clamp(52px, 8vh, 90px) clamp(24px, 6vw, 90px) 42px;
-  background: radial-gradient(ellipse at 68% 20%, #fffdfa 0%, #f5efe4 51%, #eae1d2 100%);
+  min-height: calc(100svh - 56px);
+  padding: clamp(18px, 3vw, 34px) clamp(24px, 6vw, 90px) 42px;
+  background: #f3eee3;
 }
 .playroom-intro,
 .game-list,
@@ -51,24 +40,18 @@ a {
   max-width: 1130px;
   margin-inline: auto;
 }
-.playroom-eyebrow {
-  margin: 0 0 12px;
-  color: #9b8057;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.23em;
+.playroom-intro {
+  display: grid;
+  place-items: center;
 }
 .playroom-intro h1 {
   margin: 0;
-  font-size: clamp(33px, 4.6vw, 58px);
-  font-weight: 760;
-  letter-spacing: -0.065em;
-  line-height: 1.2;
+  line-height: 0;
 }
-.playroom-intro > :where(p:last-child) {
-  margin: 18px 0 0;
-  color: #6c716d;
-  font-size: 14px;
+.playroom-intro h1 img {
+  width: 180px;
+  height: 60px;
+  object-fit: contain;
 }
 .game-list {
   display: grid;
@@ -259,18 +242,16 @@ a {
 }
 @media (max-width: 720px) {
   .playroom-top {
-    height: 65px;
+    height: 48px;
     padding: 0 16px;
   }
-  .playroom-brand {
-    font-size: 20px;
+  .playroom-intro h1 img {
+    width: 156px;
+    height: 52px;
   }
   .playroom-index {
-    min-height: calc(100svh - 65px);
-    padding: 46px 17px 38px;
-  }
-  .playroom-intro > :where(p:last-child) {
-    font-size: 12px;
+    min-height: calc(100svh - 48px);
+    padding: 20px 17px 38px;
   }
   .game-list {
     margin-top: 32px;

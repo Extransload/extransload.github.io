@@ -28,6 +28,8 @@ let lastBoardSignature = '';
 const name = guestName();
 $('#guest-name').textContent = name;
 let lastChatId = '';
+let refreshingRooms = false;
+let navigationVersion = 0;
 
 function status(message: string, kind: 'ready' | 'error' | 'idle' = 'idle') {
   $('#status').textContent = message;
@@ -124,7 +126,8 @@ function renderOverlay() {
       )[state.reason || ''] || '대국이 끝났습니다';
     kicker = 'GAME OVER';
     const readyCount = Number(state.ready.black) + Number(state.ready.white);
-    subtitle += ` · 재대국 ${readyCount}/2 준비`;
+    if (!state.rematchClosed && state.rematchDeadline && now < state.rematchDeadline)
+      subtitle += ` · 재대결 ${readyCount}/2 · ${Math.ceil((state.rematchDeadline - now) / 1000)}초`;
     mode = state.winner === 'draw' ? 'finished' : 'result';
   } else if (state?.status === 'waiting') {
     title = role === 'spectator' ? '관전 중' : '대국 준비';
@@ -162,7 +165,7 @@ function render() {
     board.setState(moves, role === 'black' ? 1 : role === 'white' ? 2 : null, !!myTurn);
     lastBoardSignature = boardSignature;
   }
-  board.setSeats(role, playing ? turn : null);
+  board.setSeats(role, playing ? turn : null, { black: !!state?.players.black, white: !!state?.players.white });
   if (finished && state?.winner && state.winner !== 'draw') board.celebrate(state.winner);
   for (const seat of ['black', 'white'] as const) {
     const card = $(`#${seat}-player`);
@@ -170,7 +173,7 @@ function render() {
     card.classList.toggle('self', mine);
     card.classList.toggle('opponent', role !== 'spectator' && !!role && !mine);
     card.classList.toggle('active', !!playing && turn === seat && !Object.keys(state?.disconnects || {}).length);
-    card.classList.toggle('ready', !!(waiting || finished) && !!state?.ready[seat]);
+    card.classList.toggle('ready', !!(waiting || (finished && !state?.rematchClosed)) && !!state?.ready[seat]);
     card.style.order = mine ? '0' : seat === 'black' ? '1' : '2';
     $(`#${seat}-name`).textContent = state?.players?.[seat]?.name ?? (mine ? name : seat === 'black' ? '흑' : '백');
     $(`#${seat}-badge`).textContent =
@@ -194,7 +197,7 @@ function render() {
     if (identity && state?.connected[seat])
       $(`#${seat}-detail`).textContent += ` · ${identity.country} · ${identity.maskedIp || 'unknown'}`;
     $(`#${seat}-presence`).classList.toggle('online', !!state?.connected[seat]);
-    $(`#${seat}-ready`).hidden = !(waiting || finished);
+    $(`#${seat}-ready`).hidden = !(waiting || (finished && !state?.rematchClosed));
     $(`#${seat}-ready`).classList.toggle('is-ready', !!state?.ready[seat]);
   }
   if (finished) status('대국 종료', 'ready');
@@ -203,6 +206,9 @@ function render() {
     status(!online ? '서버 연결 중' : role === 'spectator' ? '관전 중' : '대국 준비 중', online ? 'ready' : 'idle');
   else if (playing) status(role === 'spectator' ? '관전 중' : myTurn ? '내 차례' : '상대 차례', 'ready');
   $('#lobby').hidden = !!currentRoom;
+  $('#game').hidden = !currentRoom;
+  $('#lobby-nav').hidden = !!currentRoom;
+  document.body.classList.toggle('room-view', !!currentRoom);
   $('#chat').hidden = !currentRoom;
   $<HTMLInputElement>('#chat-input').disabled = !online;
   $<HTMLButtonElement>('#chat-form button').disabled = !online;
@@ -230,8 +236,8 @@ function render() {
   }
   $('#create').hidden = !!currentRoom;
   $('#room-setup').hidden = !waiting && !finished;
-  $('#settings').hidden = !(waiting || finished) || role !== 'black';
-  $('.setup-heading strong').textContent = finished ? '다시 대국' : '대국 설정';
+  $('#settings').hidden = !waiting || role !== 'black';
+  $('.setup-heading strong').textContent = finished ? '재대결' : '대국 설정';
   $('#settings-summary').textContent = state ? settingText(state.settings) : '';
   $('#setup-note').textContent =
     role === 'black'
@@ -239,7 +245,15 @@ function render() {
       : role === 'spectator'
         ? '관전자는 설정할 수 없습니다'
         : '방장이 설정합니다';
-  $('#ready').hidden = !(waiting || finished) || role === 'spectator' || !role;
+  $('#ready').hidden = !waiting || role === 'spectator' || !role;
+  const rematchOpen =
+    !!finished &&
+    !state?.rematchClosed &&
+    !!state?.rematchDeadline &&
+    Date.now() + serverOffset < state.rematchDeadline;
+  $('#rematch-actions').hidden = !rematchOpen || role === 'spectator' || !role;
+  $<HTMLButtonElement>('#rematch').disabled = !online || (!!role && role !== 'spectator' && !!state?.ready[role]);
+  $('#rematch').textContent = role && role !== 'spectator' && state?.ready[role] ? '✓ 수락 완료' : '재대결 수락';
   $<HTMLButtonElement>('#ready').disabled = !online;
   $('#ready').textContent = !online
     ? '연결 중…'
@@ -249,8 +263,11 @@ function render() {
   for (const selector of ['#main-minutes', '#byo-seconds', '#byo-periods'])
     $<HTMLSelectElement>(selector).disabled = !online;
   $('#ready').classList.toggle('is-ready', !!role && role !== 'spectator' && !!state?.ready[role]);
-  $('#ready-note').textContent =
-    role === 'spectator'
+  $('#ready-note').textContent = finished
+    ? rematchOpen
+      ? '두 사람이 10초 안에 수락하면 새 대국이 시작됩니다'
+      : '대국이 종료되었습니다 · 기보를 볼 수 있습니다'
+    : role === 'spectator'
       ? '대국을 실시간으로 볼 수 있습니다'
       : role === 'black' && !state?.joined
         ? '상대가 들어오면 함께 준비해 주세요'
@@ -307,7 +324,8 @@ function connect() {
       const was = previousStatus;
       state = message.state;
       serverOffset = state.serverNow - Date.now();
-      if (state.status === 'finished') replayMove = state.moves.length;
+      if (state.status === 'finished' && (was !== 'finished' || replayMove > state.moves.length))
+        replayMove = state.moves.length;
       if (was === 'finished' && state.status === 'playing') {
         board.clearCelebration();
         board.reset();
@@ -338,16 +356,20 @@ function connect() {
   ws.onerror = () => ws.close();
 }
 async function openRoom(id: string) {
+  const navigation = ++navigationVersion;
   currentRoom = id;
   loadToken(id);
   try {
-    state = (await request(`/api/rooms/${id}`)) as RoomSnapshot;
+    const snapshot = (await request(`/api/rooms/${id}`)) as RoomSnapshot;
+    if (navigation !== navigationVersion) return;
+    state = snapshot;
     previousStatus = state.status;
     serverOffset = state.serverNow - Date.now();
     if (secret) {
       const validation = await fetch(`${api}/api/rooms/${id}/session`, {
         headers: { Authorization: `Bearer ${secret}` },
       });
+      if (navigation !== navigationVersion) return;
       if (!validation.ok) {
         localStorage.removeItem(`renju:${id}`);
         secret = null;
@@ -356,12 +378,16 @@ async function openRoom(id: string) {
     }
     if (!role) {
       const entered = (await request(`/api/rooms/${id}/enter`, 'POST', { name })) as { token?: string; role: RoomRole };
+      if (navigation !== navigationVersion) return;
       if (entered.role === 'white' && entered.token) setToken(id, entered.token, 'white');
       else role = 'spectator';
     }
     connect();
     render();
   } catch {
+    if (navigation !== navigationVersion) return;
+    leaveRoom(false, false);
+    history.replaceState(null, '', location.pathname);
     status('대국을 찾을 수 없습니다', 'error');
     $('#lobby-note').textContent = '링크를 다시 확인해주세요.';
   }
@@ -369,6 +395,10 @@ async function openRoom(id: string) {
 setInterval(() => {
   renderClocks();
   renderOverlay();
+  if (state?.status === 'finished') {
+    const open = !state.rematchClosed && !!state.rematchDeadline && Date.now() + serverOffset < state.rematchDeadline;
+    $('#rematch-actions').hidden = !open || role === 'spectator' || !role;
+  }
 }, 200);
 
 board.onPlay = (point: Point) => {
@@ -399,7 +429,7 @@ async function createRoom(path: string) {
     for (const button of ['#create', '#create-public', '#match']) $<HTMLButtonElement>(button).disabled = true;
     const created = (await request(path, 'POST', { name })) as { id: string; token: string; role: PlayerRole };
     setToken(created.id, created.token, created.role);
-    history.replaceState(null, '', `${location.pathname}?room=${created.id}`);
+    history.pushState(null, '', `${location.pathname}?room=${created.id}`);
     await openRoom(created.id);
   } catch (error) {
     if (error instanceof TypeError) {
@@ -419,8 +449,48 @@ async function createRoom(path: string) {
 $('#create').addEventListener('click', () => void createRoom('/api/rooms'));
 $('#create-public').addEventListener('click', () => void createRoom('/api/public/rooms'));
 $('#match').addEventListener('click', () => void createRoom('/api/public/match'));
-async function refreshRooms() {
-  if (!api || currentRoom) return;
+function leaveRoom(updateHistory = true, notifyServer = true) {
+  navigationVersion++;
+  const release =
+    notifyServer && currentRoom && secret && api
+      ? fetch(`${api}/api/rooms/${currentRoom}/leave`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${secret}` },
+          keepalive: true,
+        }).catch(() => null)
+      : null;
+  socket?.close();
+  socket = null;
+  board.clearCelebration();
+  board.reset();
+  lastBoardSignature = '';
+  currentRoom = null;
+  role = null;
+  secret = null;
+  state = null;
+  lastChatId = '';
+  $('#chat-messages').replaceChildren();
+  previousStatus = null;
+  offline = false;
+  if (updateHistory) history.pushState(null, '', location.pathname);
+  status('새 대국을 시작하세요');
+  render();
+  if (release) void release.then(() => refreshRooms(true));
+  else void refreshRooms();
+}
+$('#room-exit').addEventListener('click', () => leaveRoom());
+window.addEventListener('popstate', () => {
+  const id = new URLSearchParams(location.search).get('room');
+  if (!id) leaveRoom(false);
+  else if (id !== currentRoom) {
+    socket?.close();
+    currentRoom = id;
+    void openRoom(id);
+  }
+});
+async function refreshRooms(force = false) {
+  if (!api || currentRoom || (document.hidden && !force) || refreshingRooms) return;
+  refreshingRooms = true;
   const list = $('#public-rooms');
   try {
     const { rooms } = (await request('/api/public/rooms')) as { rooms: PublicRoom[] };
@@ -440,19 +510,26 @@ async function refreshRooms() {
       detail.textContent = `${host?.country ?? 'XX'} · ${host?.maskedIp ?? 'unknown'} · ${room.status === 'playing' ? '대국 중 · 관전' : room.joined ? '준비 중 · 관전' : '참가 가능'} · ◉ ${room.spectators}`;
       button.append(title, detail);
       button.addEventListener('click', () => {
-        history.replaceState(null, '', `${location.pathname}?room=${room.id}`);
+        history.pushState(null, '', `${location.pathname}?room=${room.id}`);
         void openRoom(room.id);
       });
       list.append(button);
     }
+    render();
   } catch {
     list.textContent = '방 목록을 불러오지 못했습니다.';
+  } finally {
+    refreshingRooms = false;
   }
 }
-$('#refresh-rooms').addEventListener('click', () => void refreshRooms());
+$('#refresh-rooms').addEventListener('click', () => void refreshRooms(true));
 setInterval(() => {
-  if (!currentRoom) void refreshRooms();
-}, 10000);
+  void refreshRooms();
+}, 30000);
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) void refreshRooms();
+});
+window.addEventListener('focus', () => void refreshRooms());
 $('#chat-form').addEventListener('submit', (event) => {
   event.preventDefault();
   const input = $<HTMLInputElement>('#chat-input');
@@ -464,6 +541,14 @@ $('#chat-form').addEventListener('submit', (event) => {
 $('#ready').addEventListener('click', () => {
   if (!state || !role || role === 'spectator' || socket?.readyState !== WebSocket.OPEN) return;
   socket.send(JSON.stringify({ type: 'ready', ready: !state.ready[role] }));
+});
+$('#rematch').addEventListener('click', () => {
+  if (state?.status === 'finished' && socket?.readyState === WebSocket.OPEN)
+    socket.send(JSON.stringify({ type: 'rematch' }));
+});
+$('#rematch-decline').addEventListener('click', () => {
+  if (state?.status === 'finished' && socket?.readyState === WebSocket.OPEN)
+    socket.send(JSON.stringify({ type: 'rematch-decline' }));
 });
 for (const selector of ['#main-minutes', '#byo-seconds', '#byo-periods']) {
   $(selector).addEventListener('change', () => {
@@ -498,21 +583,7 @@ $('#resign').addEventListener('click', () => {
   if (window.confirm('대국을 기권하시겠습니까?')) socket?.send(JSON.stringify({ type: 'resign' }));
 });
 $('#new-game').addEventListener('click', () => {
-  socket?.close();
-  board.clearCelebration();
-  board.reset();
-  lastBoardSignature = '';
-  currentRoom = null;
-  role = null;
-  secret = null;
-  state = null;
-  lastChatId = '';
-  $('#chat-messages').replaceChildren();
-  previousStatus = null;
-  offline = false;
-  history.replaceState(null, '', location.pathname);
-  status('새 대국을 시작하세요');
-  render();
+  leaveRoom();
 });
 $('#prev').addEventListener('click', () => {
   replayMove = Math.max(0, replayMove - 1);
@@ -538,8 +609,11 @@ $('#help').addEventListener('click', () => {
   $('#board-help').hidden = !$('#board-help').hidden;
 });
 mountRulesHelp();
-if (!api) status('대국 서버 설정이 필요합니다', 'error');
-else {
+if (!api) {
+  status('대국 서버 설정이 필요합니다', 'error');
+  $('#lobby-note').textContent = '실시간 대국 서버 설정이 필요합니다.';
+  render();
+} else {
   for (const button of ['#create', '#create-public', '#match']) $<HTMLButtonElement>(button).disabled = false;
   if (currentRoom) void openRoom(currentRoom);
   else {

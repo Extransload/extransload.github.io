@@ -7,7 +7,7 @@ const START = -6.3,
   STEP = 0.9,
   SURFACE = 0.37;
 type Seat = 'black' | 'white';
-type AvatarRig = { group: THREE.Group; halo: THREE.Mesh; head: THREE.Mesh; arms: THREE.Mesh[] };
+type AvatarRig = { group: THREE.Group; character: THREE.Group; halo: THREE.Mesh; head: THREE.Mesh; arms: THREE.Mesh[] };
 export const coordinate = (x: number, y: number) => `${'ABCDEFGHJKLMNOP'[x]}${y + 1}`;
 export class RenjuBoard {
   private scene = new THREE.Scene();
@@ -19,7 +19,7 @@ export class RenjuBoard {
   private stoneGeometry = new THREE.SphereGeometry(0.36, 32, 22);
   private stoneMaterials = {
     black: new THREE.MeshPhysicalMaterial({ color: 0x09131d, roughness: 0.21, metalness: 0.15, clearcoat: 0.9 }),
-    white: new THREE.MeshPhysicalMaterial({ color: 0xf2e9d2, roughness: 0.28, metalness: 0.04, clearcoat: 0.68 }),
+    white: new THREE.MeshPhysicalMaterial({ color: 0xfff9ee, roughness: 0.24, metalness: 0.02, clearcoat: 0.78 }),
   };
   private highlights = new THREE.Group();
   private lastMove = new THREE.Group();
@@ -207,9 +207,9 @@ export class RenjuBoard {
     this.box(14.45, 0.74, 14.45, dark, -0.235, 0.2);
     this.box(14.23, 0.11, 14.23, brass, 0.14, 0.05);
     this.makeEmbroidery();
-    const surface = new THREE.MeshStandardMaterial({ color: 0xf4efe3, roughness: 0.83 });
+    const surface = new THREE.MeshStandardMaterial({ color: 0xb98250, roughness: 0.86 });
     this.box(13.96, 0.16, 13.96, surface, 0.28, 0.06);
-    const line = new THREE.MeshStandardMaterial({ color: 0xa69778, roughness: 0.95 });
+    const line = new THREE.MeshStandardMaterial({ color: 0x64472e, roughness: 0.95 });
     for (let i = 0; i < 15; i++) {
       const p = START + i * STEP;
       const h = new THREE.Mesh(new THREE.BoxGeometry(12.61, 0.006, 0.022), line);
@@ -219,7 +219,7 @@ export class RenjuBoard {
       v.position.set(p, 0.368, 0);
       this.board.add(v);
     }
-    const ink = new THREE.MeshStandardMaterial({ color: 0x907d5b, roughness: 0.8 });
+    const ink = new THREE.MeshStandardMaterial({ color: 0x4e3828, roughness: 0.8 });
     for (const x of [3, 7, 11])
       for (const y of [3, 7, 11]) {
         const dot = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.009, 20), ink);
@@ -269,9 +269,16 @@ export class RenjuBoard {
     const halo = add(new THREE.TorusGeometry(1.3, 0.035, 8, 64), accent, 0, 0.04, 0);
     halo.rotation.x = Math.PI / 2;
     halo.visible = false;
-    return { group, halo, head, arms };
+    const character = new THREE.Group();
+    group.add(character);
+    for (const child of [...group.children]) if (child !== plinth && child !== character) character.add(child);
+    return { group, character, halo, head, arms };
   }
-  setSeats(role: 'black' | 'white' | 'spectator' | null, turn: 'black' | 'white' | null) {
+  setSeats(
+    role: 'black' | 'white' | 'spectator' | null,
+    turn: 'black' | 'white' | null,
+    occupied: Record<Seat, boolean> = { black: true, white: true },
+  ) {
     if (role !== this.seatRole) {
       const front = role === 'white' ? 'white' : 'black';
       const compact = this.host.clientWidth < 600;
@@ -284,15 +291,17 @@ export class RenjuBoard {
       }
       this.seatRole = role;
     }
-    for (const color of ['black', 'white'] as const)
+    for (const color of ['black', 'white'] as const) {
+      this.avatars[color].character.visible = occupied[color];
       this.avatars[color].halo.visible = turn === color || this.celebrating === color;
+    }
     this.render();
   }
   celebrate(winner: Seat) {
     if (this.celebrating === winner) return;
     this.clearCelebration();
     this.celebrating = winner;
-    this.avatars[winner === 'black' ? 'white' : 'black'].group.visible = false;
+    const loser = this.avatars[winner === 'black' ? 'white' : 'black'];
     this.celebrationStarted = performance.now();
     const rig = this.avatars[winner];
     const center = rig.group.position.clone().add(new THREE.Vector3(0, 1.35, 0));
@@ -307,6 +316,7 @@ export class RenjuBoard {
     const baseRotation = rig.group.rotation.y;
     const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (reducedMotion) {
+      loser.character.rotation.z = Math.PI / 2;
       this.camera.position.copy(cameraEnd);
       this.controls.target.copy(center);
       rig.group.rotation.y = outwardRotation;
@@ -321,6 +331,8 @@ export class RenjuBoard {
       if (now - lastFrame < 30) return;
       lastFrame = now;
       const elapsed = now - this.celebrationStarted;
+      const fall = 1 - (1 - Math.min(1, elapsed / 800)) ** 3;
+      loser.character.rotation.z = (Math.PI / 2) * fall;
       const progress = Math.min(1, Math.max(0, (elapsed - 600) / 1150));
       const eased = 1 - (1 - progress) ** 3;
       if (progress < 1 || elapsed < 1800) {
@@ -347,7 +359,7 @@ export class RenjuBoard {
     this.celebrating = null;
     for (const color of ['black', 'white'] as const) {
       const rig = this.avatars[color];
-      rig.group.visible = true;
+      rig.character.rotation.z = 0;
       rig.group.position.y = -0.08;
       rig.group.rotation.y = Math.atan2(-rig.group.position.x, -rig.group.position.z);
       rig.head.rotation.z = 0;

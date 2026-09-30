@@ -1,13 +1,5 @@
-<!doctype html>
-<html lang="ko">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="robots" content="noindex" />
-    <meta http-equiv="refresh" content="0; url=/playroom/omokmaru/" />
-    <title>오목마루로 이동</title>
-    <script is:inline>
-      location.replace(`/playroom/omokmaru/${location.search}${location.hash}`);
-    </script>
-  </head>
-  <body><a href="/playroom/omokmaru/">오목마루로 이동</a></body>
-</html>
+---
+import LegacyRedirect from '../../domains/games/routes/legacy-redirect.astro';
+---
+
+<LegacyRedirect destination="/playroom/omokmaru/" title="오목마루로 이동" />

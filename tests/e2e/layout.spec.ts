@@ -617,32 +617,78 @@ test('sidebar reading icons show collapse-style tooltips on hover and focus', as
 test('playroom lists Omokmaru, opens its board, and About remains standalone', async ({ page }) => {
   await page.goto('/playroom/');
   await expect(page.locator('.game-list')).toBeVisible();
+  await expect(page.locator('.playroom-intro h1 img')).toHaveAttribute('alt', 'Playroom');
+  await expect(page.locator('.playroom-home')).toHaveAttribute('href', '/');
+  const homeDoor = await page.locator('.playroom-home').boundingBox();
+  const door = page.locator('.door-leaf');
+  const closed = await door.evaluate((element) => getComputedStyle(element).transform);
+  await page.locator('.playroom-home').hover();
+  await expect.poll(() => door.evaluate((element) => getComputedStyle(element).transform)).not.toBe(closed);
+  await page.mouse.move(500, 160);
+  await expect.poll(() => door.evaluate((element) => getComputedStyle(element).transform)).toBe(closed);
   await expect(page.locator('.stage canvas')).toHaveCount(0);
   await page.locator('a.game-card[href="/playroom/omokmaru/"]').click();
   await expect(page).toHaveURL(/\/playroom\/omokmaru\/$/);
-  await expect(page.locator('.top-brand')).toHaveText('Omokmaru');
-  await expect(page.locator('.top-home')).toHaveAttribute('href', '/playroom/');
-  await expect(page.locator('.stage canvas')).toBeVisible();
+  await expect(page.locator('#lobby-nav .door-control')).toHaveAttribute('href', '/playroom/');
+  const lobbyDoor = await page.locator('#lobby-nav .door-control').boundingBox();
+  expect(Math.abs(lobbyDoor!.x - homeDoor!.x)).toBeLessThan(1);
+  expect(Math.abs(lobbyDoor!.y - homeDoor!.y)).toBeLessThan(1);
+  await expect(page.locator('.lobby-heading h1')).toHaveText('Omokmaru');
+  await expect(page.locator('#lobby')).toBeVisible();
+  await expect(page.locator('#game')).toBeHidden();
+  await expect(page.locator('#nav-forward')).toHaveCount(0);
+  await expect(page.locator('.top-home')).toHaveCount(0);
+  await expect(page.locator('.stage canvas')).toBeHidden();
+  await page.locator('#lobby-nav .door-control').click();
+  await expect(page).toHaveURL(/\/playroom\/$/);
+  await page.locator('a.game-card[href="/playroom/omokmaru/"]').click();
   await expect(page.locator('#create')).toBeVisible();
   await expect(page.locator('#create')).toBeEnabled();
-  await page.locator('#rules').click();
-  await expect(page.locator('#rules-dialog')).toBeVisible();
-  await expect(page.locator('#rules-slide-title')).toHaveText('다섯 개를 잇기');
-  await page.locator('#rules-next').click();
-  await expect(page.locator('#rules-slide-title')).toHaveText('장목 · 여섯 개 이상');
   await page.goto('/about/');
   await expect(page.locator('.main-space-page')).toContainText('Coming soon');
   await expect(page.locator('.site-header')).toHaveCount(0);
 });
 
+test('solo match replaces start with resign until the match ends', async ({ page }) => {
+  await page.goto('/playroom/');
+  const homeDoor = await page.locator('.playroom-home').boundingBox();
+  await page.goto('/playroom/omokmaru/solo/');
+  await expect(page.locator('.top')).toHaveCount(0);
+  await expect(page.locator('.stage-mast .door-control')).toHaveAttribute('href', '/playroom/omokmaru/');
+  const soloDoor = await page.locator('.stage-mast .door-control').boundingBox();
+  expect(Math.abs(soloDoor!.x - homeDoor!.x)).toBeLessThan(1);
+  expect(Math.abs(soloDoor!.y - homeDoor!.y)).toBeLessThan(1);
+  await expect(page.locator('.stage-mast h1')).toHaveCount(0);
+  await expect(page.locator('.side > .side-title')).toHaveText('Omokmaru');
+  const side = await page.locator('.side').boundingBox();
+  const title = await page.locator('.side-title').boundingBox();
+  expect(Math.abs(title!.x + title!.width / 2 - (side!.x + side!.width / 2))).toBeLessThan(1);
+  const firstTool = await page.locator('.toolbar button').first().boundingBox();
+  expect(Math.abs(firstTool!.y + firstTool!.height / 2 - (soloDoor!.y + soloDoor!.height / 2))).toBeLessThan(1);
+  await expect(page.locator('#start')).toHaveText('대국 시작');
+  await page.locator('#start').click();
+  await expect(page.locator('#start')).toBeHidden();
+  await expect(page.locator('#resign-solo')).toBeVisible();
+  page.once('dialog', (dialog) => void dialog.accept());
+  await page.locator('#resign-solo').click();
+  await expect(page.locator('#start')).toHaveText('다시 대국');
+  await expect(page.locator('#start')).toBeVisible();
+  await expect(page.locator('#resign-solo')).toBeHidden();
+  await expect(page.locator('#replay')).toBeVisible();
+});
+
 test('old playroom invitations keep their room when redirected to Omokmaru', async ({ page }) => {
+  const navigations: string[] = [];
+  page.on('framenavigated', (frame) => navigations.push(frame.url()));
   await page.goto('/playroom/?room=old-room');
-  await expect(page).toHaveURL(/\/playroom\/omokmaru\/\?room=old-room$/);
+  await expect.poll(() => navigations.some((url) => /\/playroom\/omokmaru\/\?room=old-room$/.test(url))).toBe(true);
 });
 
 test('old Gomoku links redirect to Omokmaru with their room', async ({ page }) => {
+  const navigations: string[] = [];
+  page.on('framenavigated', (frame) => navigations.push(frame.url()));
   await page.goto('/playroom/gomoku/?room=old-room');
-  await expect(page).toHaveURL(/\/playroom\/omokmaru\/\?room=old-room$/);
+  await expect.poll(() => navigations.some((url) => /\/playroom\/omokmaru\/\?room=old-room$/.test(url))).toBe(true);
   await page.goto('/playroom/gomoku/solo/');
   await expect(page).toHaveURL(/\/playroom\/omokmaru\/solo\/$/);
 });

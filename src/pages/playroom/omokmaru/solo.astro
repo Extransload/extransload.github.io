@@ -1,6 +1,8 @@
 ---
 import '../../../domains/games/renju/playroom.css';
 import '../../../domains/games/renju/solo.css';
+import '../../../domains/games/styles/door.css';
+import DoorIcon from '../../../domains/games/components/DoorIcon.astro';
 import SeoHead from '../../../shared/components/SeoHead.astro';
 ---
 
@@ -14,10 +16,10 @@ import SeoHead from '../../../shared/components/SeoHead.astro';
     <SeoHead title="AI 대국 · 오목마루 Omokmaru — Extransload" description="3D 바둑판에서 AI와 오목 대국" canonicalPath="/playroom/omokmaru/solo/" />
     <link rel="icon" type="image/png" href="/favicon.png" />
   </head>
-  <body>
-    <header class="top"><a class="top-brand" href="/playroom/omokmaru/">Omokmaru</a><a class="top-home" href="/playroom/" aria-label="Playroom 홈">⌂</a></header>
+  <body class="solo-play">
     <main class="game">
       <section class="stage" aria-label="3D 렌주 바둑판">
+        <div class="stage-mast"><a class="door-control" href="/playroom/omokmaru/" aria-label="오목마루 로비로 돌아가기" title="로비로 나가기"><DoorIcon /></a></div>
         <div class="toolbar" role="toolbar" aria-label="바둑판 조작">
           <button id="view" title="위에서 보기" aria-label="위에서 보기">▦</button>
           <button id="zoom-in" title="확대" aria-label="확대">＋</button>
@@ -33,6 +35,7 @@ import SeoHead from '../../../shared/components/SeoHead.astro';
         <div id="stage-hint" class="stage-hint"></div>
       </section>
       <aside class="side">
+        <h1 class="side-title">Omokmaru</h1>
         <div class="side-top"><span class="connection-dot connected"></span><span id="status" role="status">AI 대국 준비</span></div>
         <div class="players">
           <div id="black-player" class="player"><span class="piece black"></span><div class="player-copy"><span class="player-badge">흑</span><strong id="black-name">나</strong><small id="black-detail">준비 중</small></div></div>
@@ -43,6 +46,7 @@ import SeoHead from '../../../shared/components/SeoHead.astro';
           <div class="solo-field"><span>내 돌</span><div class="segmented"><button id="side-black" class="selected" type="button">● 흑</button><button id="side-white" type="button">○ 백</button></div></div>
           <label class="solo-field"><span>난이도</span><select id="difficulty"><option value="easy">쉬움</option><option value="normal" selected>보통</option><option value="hard">어려움</option><option value="master">마스터</option></select></label>
           <button id="start" class="primary">대국 시작</button>
+          <button id="resign-solo" class="secondary" hidden>기권</button>
           <button id="undo" class="secondary" hidden>↶ 한 수 되돌리기</button>
         </div>
         <div id="replay" class="replay" hidden><div class="replay-title"><span>기보</span><span id="move-count">0 / 0</span></div><div class="replay-controls"><button id="prev" title="이전 수" aria-label="이전 수">‹</button><strong id="move-label">시작</strong><button id="next" title="다음 수" aria-label="다음 수">›</button></div></div>

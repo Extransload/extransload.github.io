@@ -3,6 +3,7 @@ import { advanceClock, finishMoveClock, freshClock, timeoutAfter } from '../../s
 import {
   DEFAULT_SETTINGS,
   DISCONNECT_GRACE_MS,
+  REMATCH_WINDOW_MS,
   ROLES,
   validSettings,
   type ClockState,
@@ -23,6 +24,10 @@ interface Env {
 }
 type Visitor = PlayerIdentity & { ip: string };
 type Room = {
+  publicId?: string;
+  createdAt?: number;
+  lobbyVersion?: number;
+  lobbySignature?: string;
   hostHash: string;
   guestHash?: string;
   moves: Move[];
@@ -31,6 +36,8 @@ type Room = {
   reason?: FinishReason;
   version: number;
   ready: Record<PlayerRole, boolean>;
+  rematchDeadline?: number | null;
+  rematchClosed?: boolean;
   settings: GameSettings;
   clocks: Record<PlayerRole, ClockState> | null;
   activeSince: number | null;
@@ -39,9 +46,11 @@ type Room = {
   players?: Record<PlayerRole, PlayerIdentity | null>;
   chat?: ChatMessage[];
 };
+type CachedRoom = PublicRoom & { version: number; updatedAt: number };
+const LOBBY_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 type SocketData = { role: RoomRole; visitor: Visitor; lastChat: number };
 type Message = {
-  type?: 'ready' | 'settings' | 'move' | 'resign' | 'chat';
+  type?: 'ready' | 'rematch' | 'rematch-decline' | 'settings' | 'move' | 'resign' | 'chat';
   ready?: boolean;
   settings?: unknown;
   x?: number;
@@ -121,7 +130,7 @@ export default {
       if (!response.ok) return cors(response, origin);
       return cors(json({ id, token: secret, role: 'black' }, 201), origin);
     }
-    const match = url.pathname.match(/^\/api\/rooms\/([0-9a-f-]{36})(?:\/(enter|join|ws|session))?$/);
+    const match = url.pathname.match(/^\/api\/rooms\/([0-9a-f-]{36})(?:\/(enter|join|ws|session|leave))?$/);
     if (!match) return cors(json({ error: 'not-found' }, 404), origin);
     const [, id, operation] = match;
     const target =
@@ -129,8 +138,8 @@ export default {
         ? '/enter'
         : operation === 'ws'
           ? '/ws'
-          : operation === 'session'
-            ? '/session'
+          : operation === 'session' || operation === 'leave'
+            ? `/${operation}`
             : '/snapshot';
     const roomUrl = new URL(target, url.origin);
     roomUrl.search = url.search;
@@ -162,8 +171,72 @@ export class RenjuLobby {
     private ctx: DurableObjectState,
     private env: Env,
   ) {}
-  private async ids(): Promise<{ id: string; createdAt: number }[]> {
-    return (await this.ctx.storage.get<{ id: string; createdAt: number }[]>('rooms')) ?? [];
+  private async entries(): Promise<CachedRoom[]> {
+    const stored = (await this.ctx.storage.get<Array<CachedRoom | { id: string; createdAt: number }>>('rooms')) ?? [];
+    const entries: CachedRoom[] = [];
+    let changed = false;
+    for (const entry of stored.slice(0, 80)) {
+      if (Date.now() - (('updatedAt' in entry && entry.updatedAt) || entry.createdAt) > LOBBY_MAX_AGE_MS) {
+        changed = true;
+        continue;
+      }
+      if ('status' in entry) {
+        if (entry.status === 'waiting' && !entry.connected) {
+          changed = true;
+          const state = await this.inspect(entry.id);
+          if (!state?.public) continue;
+          entry.status = state.status;
+          entry.joined = state.joined;
+          entry.connected = state.connected;
+          entry.players = state.players;
+          entry.spectators = state.spectators;
+          entry.settings = state.settings;
+          entry.version = Math.max(entry.version, state.version);
+          if (state.connected.black) entry.updatedAt = Date.now();
+        }
+        if (
+          entry.status === 'waiting' &&
+          !entry.connected?.black &&
+          Date.now() - entry.updatedAt > DISCONNECT_GRACE_MS
+        ) {
+          changed = true;
+          continue;
+        }
+        entries.push(entry);
+        continue;
+      }
+      // Older deployments stored only room IDs. Convert these once, then serve the cached list.
+      changed = true;
+      const state = await this.inspect(entry.id);
+      if (!state?.public) continue;
+      const cached: CachedRoom = {
+        id: entry.id,
+        status: state.status,
+        joined: state.joined,
+        connected: state.connected,
+        players: state.players,
+        spectators: state.spectators,
+        settings: state.settings,
+        createdAt: entry.createdAt,
+        version: state.version,
+        updatedAt: state.connected.black ? Date.now() : entry.createdAt,
+      };
+      if (
+        cached.status === 'waiting' &&
+        !cached.connected?.black &&
+        Date.now() - cached.updatedAt > DISCONNECT_GRACE_MS
+      )
+        continue;
+      entries.push(cached);
+      await this.env.ROOMS.get(this.env.ROOMS.idFromName(entry.id)).fetch(
+        new Request('https://room.internal/index', {
+          method: 'POST',
+          body: JSON.stringify({ id: entry.id, createdAt: entry.createdAt, version: state.version }),
+        }),
+      );
+    }
+    if (changed || stored.length > 80) await this.ctx.storage.put('rooms', entries);
+    return entries;
   }
   private async inspect(id: string): Promise<RoomSnapshot | null> {
     const response = await this.env.ROOMS.get(this.env.ROOMS.idFromName(id)).fetch('https://room.internal/snapshot');
@@ -172,45 +245,52 @@ export class RenjuLobby {
   private async create(visitor: Visitor) {
     const id = crypto.randomUUID(),
       secret = token();
+    const createdAt = Date.now();
     const response = await this.env.ROOMS.get(this.env.ROOMS.idFromName(id)).fetch(
       new Request('https://room.internal/init', {
         method: 'POST',
-        body: JSON.stringify({ secret, visitor, public: true }),
+        body: JSON.stringify({ secret, visitor, public: true, id, createdAt }),
       }),
     );
     if (!response.ok) return json({ error: 'create-failed' }, 502);
-    const list = await this.ids();
-    list.unshift({ id, createdAt: Date.now() });
+    const list = await this.entries();
+    list.unshift({
+      id,
+      status: 'waiting',
+      joined: false,
+      connected: { black: false, white: false },
+      players: { black: publicIdentity(visitor), white: null },
+      spectators: 0,
+      settings: DEFAULT_SETTINGS,
+      createdAt,
+      version: 0,
+      updatedAt: createdAt,
+    });
     await this.ctx.storage.put('rooms', list.slice(0, 80));
     return json({ id, token: secret, role: 'black' }, 201);
   }
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
     if (url.pathname === '/rooms' && request.method === 'GET') {
-      const rooms: PublicRoom[] = [];
-      const list = await this.ids();
-      for (const entry of list.slice(0, 40)) {
-        const state = await this.inspect(entry.id);
-        if (!state?.public || state.status === 'finished') continue;
-        rooms.push({
-          id: entry.id,
-          status: state.status,
-          joined: state.joined,
-          players: state.players,
-          spectators: state.spectators,
-          settings: state.settings,
-          createdAt: entry.createdAt,
-        });
-      }
-      return json({ rooms });
+      return json({ rooms: (await this.entries()).filter((entry) => entry.status !== 'finished').slice(0, 40) });
+    }
+    if (url.pathname === '/sync' && request.method === 'POST') {
+      return this.ctx.blockConcurrencyWhile(async () => {
+        const update = (await request.json()) as CachedRoom;
+        const entries = await this.entries();
+        const previous = entries.find((entry) => entry.id === update.id);
+        if (previous && previous.version >= update.version) return json({ ok: true });
+        const next = [update, ...entries.filter((entry) => entry.id !== update.id)].slice(0, 80);
+        await this.ctx.storage.put('rooms', next);
+        return json({ ok: true });
+      });
     }
     if ((url.pathname === '/create' || url.pathname === '/match') && request.method === 'POST') {
       return this.ctx.blockConcurrencyWhile(async () => {
         const { visitor } = (await request.json()) as { visitor: Visitor };
         if (url.pathname === '/match') {
-          for (const entry of (await this.ids()).slice(0, 40)) {
-            const state = await this.inspect(entry.id);
-            if (!state?.public || state.status !== 'waiting' || state.joined) continue;
+          for (const entry of (await this.entries()).slice(0, 40)) {
+            if (entry.status !== 'waiting' || entry.joined) continue;
             const response = await this.env.ROOMS.get(this.env.ROOMS.idFromName(entry.id)).fetch(
               new Request('https://room.internal/enter', {
                 method: 'POST',
@@ -232,7 +312,7 @@ export class RenjuLobby {
 export class RenjuRoom {
   constructor(
     private ctx: DurableObjectState,
-    _env: Env,
+    private env: Env,
   ) {}
 
   private async read(): Promise<Room | undefined> {
@@ -242,6 +322,8 @@ export class RenjuRoom {
     return {
       ...stored,
       ready: stored.ready ?? { black: false, white: false },
+      rematchDeadline: stored.rematchDeadline ?? null,
+      rematchClosed: stored.rematchClosed ?? (stored.status === 'finished' && !stored.rematchDeadline),
       settings: stored.settings ?? DEFAULT_SETTINGS,
       clocks: stored.clocks ?? null,
       activeSince: stored.activeSince ?? null,
@@ -251,8 +333,44 @@ export class RenjuRoom {
       chat: stored.chat ?? [],
     };
   }
-  private async write(room: Room) {
+  private publicSummary(room: Room): PublicRoom {
+    const state = this.snapshot(room);
+    return {
+      id: room.publicId!,
+      status: state.status,
+      joined: state.joined,
+      connected: state.connected,
+      players: state.players,
+      spectators: state.spectators,
+      settings: state.settings,
+      createdAt: room.createdAt!,
+    };
+  }
+  private async write(room: Room, publish = true) {
+    let update: CachedRoom | null = null;
+    if (publish && room.public && room.publicId && room.createdAt) {
+      const summary = this.publicSummary(room);
+      const signature = JSON.stringify({
+        status: summary.status,
+        joined: summary.joined,
+        connected: summary.connected,
+        players: summary.players,
+        spectators: summary.spectators,
+        settings: summary.settings,
+      });
+      if (signature !== room.lobbySignature) {
+        room.lobbySignature = signature;
+        room.lobbyVersion = (room.lobbyVersion ?? 0) + 1;
+        update = { ...summary, version: room.lobbyVersion, updatedAt: Date.now() };
+      }
+    }
     await this.ctx.storage.put('room', room);
+    if (update) {
+      const lobby = this.env.LOBBY.get(this.env.LOBBY.idFromName('global'));
+      this.ctx.waitUntil(
+        lobby.fetch(new Request('https://lobby.internal/sync', { method: 'POST', body: JSON.stringify(update) })),
+      );
+    }
   }
   private sockets(except?: WebSocket) {
     return this.ctx.getWebSockets().filter((ws) => ws !== except && ws.readyState === 1);
@@ -273,6 +391,8 @@ export class RenjuRoom {
       version: room.version,
       joined: !!room.guestHash,
       ready: room.ready,
+      rematchDeadline: room.rematchDeadline ?? null,
+      rematchClosed: !!room.rematchClosed,
       connected: { black: this.connected('black'), white: this.connected('white') },
       spectators: this.sockets().filter((ws) => this.roleOf(ws) === 'spectator').length,
       settings: room.settings,
@@ -307,10 +427,23 @@ export class RenjuRoom {
     room.reason = reason;
     room.activeSince = null;
     room.disconnects = {};
+    room.ready = { black: false, white: false };
+    room.rematchDeadline = Date.now() + REMATCH_WINDOW_MS;
+    room.rematchClosed = false;
+    room.version++;
+  }
+  private closeWaitingRoom(room: Room) {
+    room.status = 'finished';
+    room.reason = 'disconnect';
+    room.rematchDeadline = null;
+    room.rematchClosed = true;
+    room.ready = { black: false, white: false };
+    room.disconnects = {};
     room.version++;
   }
   private async schedule(room: Room) {
     const deadlines = Object.values(room.disconnects).filter((v): v is number => typeof v === 'number');
+    if (room.status === 'finished' && !room.rematchClosed && room.rematchDeadline) deadlines.push(room.rematchDeadline);
     if (room.status === 'playing' && room.clocks && room.activeSince !== null && !deadlines.length) {
       const turn: PlayerRole = room.moves.length % 2 === 0 ? 'black' : 'white';
       deadlines.push(room.activeSince + timeoutAfter(room.clocks[turn], room.settings));
@@ -329,7 +462,8 @@ export class RenjuRoom {
   }
   private startIfReady(room: Room, now: number) {
     if (
-      (room.status !== 'waiting' && room.status !== 'finished') ||
+      (room.status !== 'waiting' &&
+        (room.status !== 'finished' || room.rematchClosed || !room.rematchDeadline || now >= room.rematchDeadline)) ||
       !room.guestHash ||
       !room.ready.black ||
       !room.ready.white
@@ -344,8 +478,19 @@ export class RenjuRoom {
     room.clocks = { black: freshClock(room.settings), white: freshClock(room.settings) };
     room.activeSince = now;
     room.disconnects = {};
+    room.rematchDeadline = null;
+    room.rematchClosed = false;
   }
   private expireDisconnects(room: Room, now: number) {
+    if (
+      room.status === 'waiting' &&
+      room.disconnects.black &&
+      room.disconnects.black <= now &&
+      !this.connected('black')
+    ) {
+      this.closeWaitingRoom(room);
+      return;
+    }
     if (
       room.status === 'waiting' &&
       room.disconnects.white &&
@@ -375,25 +520,74 @@ export class RenjuRoom {
         secret,
         visitor,
         public: isPublic,
-      } = (await request.json()) as { secret: string; visitor?: Visitor; public?: boolean };
-      await this.write({
+        id,
+        createdAt,
+      } = (await request.json()) as {
+        secret: string;
+        visitor?: Visitor;
+        public?: boolean;
+        id?: string;
+        createdAt?: number;
+      };
+      const room: Room = {
+        publicId: isPublic ? id : undefined,
+        createdAt: isPublic ? createdAt : undefined,
         hostHash: await hash(secret),
         moves: [],
         status: 'waiting',
         version: 0,
         ready: { black: false, white: false },
+        rematchDeadline: null,
+        rematchClosed: false,
         settings: DEFAULT_SETTINGS,
         clocks: null,
         activeSince: null,
-        disconnects: {},
+        disconnects: { black: Date.now() + DISCONNECT_GRACE_MS },
         public: !!isPublic,
         players: { black: visitor ? publicIdentity(visitor) : null, white: null },
         chat: [],
-      });
+      };
+      if (room.publicId && room.createdAt) {
+        const summary = this.publicSummary(room);
+        room.lobbySignature = JSON.stringify({
+          status: summary.status,
+          joined: summary.joined,
+          connected: summary.connected,
+          players: summary.players,
+          spectators: summary.spectators,
+          settings: summary.settings,
+        });
+        room.lobbyVersion = 0;
+      }
+      await this.write(room, false);
+      await this.schedule(room);
       return json({ ok: true });
     }
     const room = await this.read();
     if (!room) return json({ error: 'not-found' }, 404);
+    if (url.pathname === '/index' && request.method === 'POST') {
+      const { id, createdAt, version } = (await request.json()) as {
+        id: string;
+        createdAt: number;
+        version: number;
+      };
+      if (!room.public) return json({ error: 'not-public' }, 400);
+      room.publicId = id;
+      room.createdAt = createdAt;
+      room.lobbyVersion = version;
+      const summary = this.publicSummary(room);
+      room.lobbySignature = JSON.stringify({
+        status: summary.status,
+        joined: summary.joined,
+        connected: summary.connected,
+        players: summary.players,
+        spectators: summary.spectators,
+        settings: summary.settings,
+      });
+      await this.write(room, false);
+      await this.schedule(room);
+      return json({ ok: true });
+    }
     if (url.pathname === '/snapshot' && request.method === 'GET') return json(this.snapshot(room));
     if (url.pathname === '/session' && request.method === 'GET') {
       const secret = request.headers.get('Authorization')?.replace(/^Bearer /, '');
@@ -402,6 +596,29 @@ export class RenjuRoom {
       const role: PlayerRole | undefined =
         hashed === room.hostHash ? 'black' : hashed === room.guestHash ? 'white' : undefined;
       return role ? json({ role }) : json({ error: 'unauthorized' }, 401);
+    }
+    if (url.pathname === '/leave' && request.method === 'POST') {
+      const secret = request.headers.get('Authorization')?.replace(/^Bearer /, '');
+      if (!secret) return json({ error: 'unauthorized' }, 401);
+      const hashed = await hash(secret);
+      return this.ctx.blockConcurrencyWhile(async () => {
+        const latest = (await this.read())!;
+        const role = hashed === latest.hostHash ? 'black' : hashed === latest.guestHash ? 'white' : null;
+        if (!role) return json({ error: 'unauthorized' }, 401);
+        if (latest.status !== 'waiting') return json({ ok: true });
+        if (role === 'black') this.closeWaitingRoom(latest);
+        else {
+          latest.guestHash = undefined;
+          if (latest.players) latest.players.white = null;
+          latest.ready.white = false;
+          delete latest.disconnects.white;
+          latest.version++;
+        }
+        await this.write(latest);
+        await this.schedule(latest);
+        this.broadcast(latest);
+        return json({ ok: true });
+      });
     }
     if (url.pathname === '/enter' && request.method === 'POST') {
       const { visitor } = (await request.json()) as { visitor?: Visitor };
@@ -515,26 +732,37 @@ export class RenjuRoom {
       return;
     }
     if (role === 'spectator') return;
-    if (room.status === 'finished' && message.type !== 'ready' && message.type !== 'settings') {
+    if (
+      room.status === 'finished' &&
+      message.type !== 'rematch' &&
+      message.type !== 'rematch-decline' &&
+      message.type !== 'settings'
+    ) {
       await this.write(room);
       await this.schedule(room);
       this.broadcast(room);
       return;
     }
     if (message.type === 'settings') {
-      if (
-        role !== 'black' ||
-        (room.status !== 'waiting' && room.status !== 'finished') ||
-        !validSettings(message.settings)
-      )
-        return;
+      if (role !== 'black' || room.status !== 'waiting' || !validSettings(message.settings)) return;
       room.settings = message.settings;
       room.ready = { black: false, white: false };
       room.version++;
     } else if (message.type === 'ready') {
-      if ((room.status !== 'waiting' && room.status !== 'finished') || typeof message.ready !== 'boolean') return;
+      if (room.status !== 'waiting' || typeof message.ready !== 'boolean') return;
       room.ready[role] = message.ready;
       this.startIfReady(room, now);
+      room.version++;
+    } else if (message.type === 'rematch' || message.type === 'rematch-decline') {
+      if (room.status !== 'finished' || room.rematchClosed || !room.rematchDeadline) return;
+      if (now >= room.rematchDeadline || message.type === 'rematch-decline') {
+        room.rematchClosed = true;
+        room.rematchDeadline = null;
+        room.ready = { black: false, white: false };
+      } else {
+        room.ready[role] = true;
+        this.startIfReady(room, now);
+      }
       room.version++;
     } else if (message.type === 'resign') {
       if (room.status !== 'playing') return;
@@ -593,7 +821,7 @@ export class RenjuRoom {
       if (role && role !== 'spectator' && !this.connected(role, socket)) {
         if (room.status === 'waiting' || room.status === 'finished') {
           room.ready[role] = false;
-          if (role === 'white' && room.status === 'waiting') room.disconnects.white = now + DISCONNECT_GRACE_MS;
+          if (room.status === 'waiting') room.disconnects[role] = now + DISCONNECT_GRACE_MS;
         } else if (room.status === 'playing') {
           this.settleTurn(room, now);
           if (room.status === 'playing') room.disconnects[role] = now + DISCONNECT_GRACE_MS;
@@ -612,6 +840,12 @@ export class RenjuRoom {
       if (!room) return;
       const now = Date.now();
       this.expireDisconnects(room, now);
+      if (room.status === 'finished' && room.rematchDeadline && now >= room.rematchDeadline) {
+        room.rematchDeadline = null;
+        room.rematchClosed = true;
+        room.ready = { black: false, white: false };
+        room.version++;
+      }
       if (room.status === 'playing' && !Object.keys(room.disconnects).length) this.settleTurn(room, now);
       if (room.status === 'playing' && room.activeSince === null) room.activeSince = now;
       await this.write(room);

@@ -2,6 +2,8 @@
 import SeoHead from '../../../shared/components/SeoHead.astro';
 import { playroomGames } from '../data/playroom-games';
 import '../styles/playroom-index.css';
+import '../styles/door.css';
+import DoorIcon from '../components/DoorIcon.astro';
 ---
 
 <!doctype html>
@@ -19,9 +21,9 @@ import '../styles/playroom-index.css';
     </script>
   </head>
   <body>
-    <header class="playroom-top"><a class="playroom-brand" href="/playroom/">Playroom</a><a class="playroom-home" href="/" aria-label="사이트 홈">⌂</a></header>
+    <header class="playroom-top"><a class="door-control playroom-home" href="/" aria-label="Home · Splash로 이동" title="Home"><DoorIcon /></a></header>
     <main class="playroom-index">
-      <div class="playroom-intro"><p class="playroom-eyebrow">A LITTLE SPACE TO PLAY</p><h1>어떤 게임을 해볼까요?</h1><p>마음에 드는 게임을 골라 시작해 보세요.</p></div>
+      <div class="playroom-intro"><h1><img src="/images/splash-playroom-wordmark-v2.webp" alt="Playroom" width="180" height="60" /></h1></div>
       <section class="game-list" aria-label="Playroom 게임 목록">
         {playroomGames.map((game) => <a class="game-card" href={game.href} aria-label={`${game.name} 플레이하기`}>
           <div class="game-card-copy"><span class="game-card-number">{game.number} / PLAYROOM</span><h2>{game.name}</h2><strong>{game.subtitle}</strong><p>{game.description}</p><div class="game-card-tags">{game.meta.map((tag) => <span>{tag}</span>)}</div><span class="game-card-cta">플레이하기 <span aria-hidden="true">↗</span></span></div>
