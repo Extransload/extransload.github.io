@@ -147,6 +147,7 @@ function render() {
   const playing = state?.status === 'playing';
   const finished = state?.status === 'finished';
   const waiting = state?.status === 'waiting';
+  const online = socket?.readyState === WebSocket.OPEN;
   const turn: PlayerRole = (state?.moves.length || 0) % 2 === 0 ? 'black' : 'white';
   const myTurn = playing && role === turn && !offline && !Object.keys(state?.disconnects || {}).length;
   const moves = finished ? state!.moves.slice(0, replayMove) : state?.moves || [];
@@ -191,7 +192,8 @@ function render() {
   }
   if (finished) status('대국 종료', 'ready');
   else if (offline) status('연결 복구 중', 'error');
-  else if (waiting) status(role === 'spectator' ? '관전 중' : '대국 준비 중', 'ready');
+  else if (waiting)
+    status(!online ? '서버 연결 중' : role === 'spectator' ? '관전 중' : '대국 준비 중', online ? 'ready' : 'idle');
   else if (playing) status(role === 'spectator' ? '관전 중' : myTurn ? '내 차례' : '상대 차례', 'ready');
   $('#lobby').hidden = !!currentRoom;
   $('#create').hidden = !!currentRoom;
@@ -206,7 +208,14 @@ function render() {
         ? '관전자는 설정할 수 없습니다'
         : '방장이 설정합니다';
   $('#ready').hidden = !(waiting || finished) || role === 'spectator' || !role;
-  $('#ready').textContent = role && role !== 'spectator' && state?.ready[role] ? '✓ 준비 완료 · 취소' : '준비하기';
+  $<HTMLButtonElement>('#ready').disabled = !online;
+  $('#ready').textContent = !online
+    ? '연결 중…'
+    : role && role !== 'spectator' && state?.ready[role]
+      ? '✓ 준비 완료 · 취소'
+      : '준비하기';
+  for (const selector of ['#main-minutes', '#byo-seconds', '#byo-periods'])
+    $<HTMLSelectElement>(selector).disabled = !online;
   $('#ready').classList.toggle('is-ready', !!role && role !== 'spectator' && !!state?.ready[role]);
   $('#ready-note').textContent =
     role === 'spectator'
