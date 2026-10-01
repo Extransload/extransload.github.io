@@ -2,9 +2,17 @@ import { RenjuBoard, coordinate } from './board-3d';
 import { analyzeMove, boardFromMoves, SIZE, type Color, type Move, type Point } from './rules';
 import type { Difficulty } from './ai';
 import { mountRulesHelp } from './rules-help';
+import { mountMoveConfirm } from './move-confirm';
 
 const $ = <T extends HTMLElement>(selector: string) => document.querySelector<T>(selector)!;
 const board = new RenjuBoard($('#canvas'));
+const moveConfirm = mountMoveConfirm(board, (point) => {
+  if (!playing || thinking || (moves.length % 2 ? 2 : 1) !== player) return;
+  if (add(point, player)) {
+    render();
+    aiTurn();
+  }
+});
 let worker: Worker;
 let generation = 0;
 let moves: Move[] = [];
@@ -26,6 +34,7 @@ function render() {
     board.setState(shown, player, interactive);
     lastBoardSignature = boardSignature;
   }
+  moveConfirm.setAvailable(interactive, player === 1 ? 'black' : 'white');
   board.setSeats(player === 1 ? 'black' : 'white', playing ? (moves.length % 2 ? 'white' : 'black') : null);
   if (finished && winner !== null && winner !== 'draw') board.celebrate(winner === 1 ? 'black' : 'white');
   for (const [color, seat] of [
@@ -143,17 +152,6 @@ function restartWorker() {
   worker = makeWorker();
 }
 worker = makeWorker();
-board.onPlay = (point) => {
-  if (!playing || thinking || (moves.length % 2 ? 2 : 1) !== player) return;
-  if (moves.length === 0 && (point.x !== 7 || point.y !== 7)) {
-    $('#status').textContent = '첫 수는 중앙에 놓으세요';
-    return;
-  }
-  if (add(point, player)) {
-    render();
-    aiTurn();
-  }
-};
 board.onForbidden = (point, verdict, screen) => {
   const tip = $('#forbidden-tip');
   if (!point || !verdict?.forbidden || !screen) {

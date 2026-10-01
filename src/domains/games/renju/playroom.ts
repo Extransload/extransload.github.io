@@ -2,9 +2,9 @@ import { RenjuBoard, coordinate } from './board-3d';
 import { advanceClock } from './clock';
 import type { PlayerRole, RoomRole, RoomSnapshot, GameSettings } from './protocol';
 import type { PublicRoom } from './protocol';
-import type { Point } from './rules';
 import { mountRulesHelp } from './rules-help';
-import { guestName } from './identity';
+import { mountMoveConfirm } from './move-confirm';
+import { guestClientId, guestName, saveGuestName } from './identity';
 
 const $ = <T extends HTMLElement>(selector: string) => document.querySelector<T>(selector)!;
 const api = (
@@ -12,6 +12,9 @@ const api = (
   (location.hostname === 'localhost' || location.hostname === '127.0.0.1' ? 'http://localhost:8787' : '')
 ).replace(/\/$/, '');
 const board = new RenjuBoard($('#canvas'));
+const moveConfirm = mountMoveConfirm(board, (point) => {
+  if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'move', ...point }));
+});
 let currentRoom = new URLSearchParams(location.search).get('room');
 let role: RoomRole | null = null;
 let secret: string | null = null;
@@ -25,7 +28,8 @@ let briefOverlay = false;
 let previousStatus: RoomSnapshot['status'] | null = null;
 let serverOffset = 0;
 let lastBoardSignature = '';
-const name = guestName();
+let name = guestName();
+const clientId = guestClientId();
 $('#guest-name').textContent = name;
 let lastChatId = '';
 let refreshingRooms = false;
@@ -165,6 +169,7 @@ function render() {
     board.setState(moves, role === 'black' ? 1 : role === 'white' ? 2 : null, !!myTurn);
     lastBoardSignature = boardSignature;
   }
+  moveConfirm.setAvailable(!!myTurn, role === 'white' ? 'white' : 'black');
   board.setSeats(role, playing ? turn : null, { black: !!state?.players.black, white: !!state?.players.white });
   if (finished && state?.winner && state.winner !== 'draw') board.celebrate(state.winner);
   for (const seat of ['black', 'white'] as const) {
@@ -278,6 +283,34 @@ function render() {
   $('#replay').hidden = !finished;
   $('#spectators').hidden = !state || state.spectators === 0;
   $('#spectators').textContent = `◉ ${state?.spectators || 0}`;
+  const spectatorList = $('#spectator-list');
+  spectatorList.replaceChildren();
+  $('#spectator-panel').hidden = !state?.spectatorList?.length;
+  for (const spectator of state?.spectatorList ?? []) {
+    const row = document.createElement('div');
+    row.className = 'spectator-row';
+    const label = document.createElement('span');
+    label.textContent = spectator.name;
+    row.append(label);
+    if (role === 'black') {
+      const kick = document.createElement('button');
+      kick.className = 'icon-action kick-action';
+      kick.type = 'button';
+      kick.title = `${spectator.name} 강퇴`;
+      kick.setAttribute('aria-label', kick.title);
+      kick.textContent = '×';
+      kick.disabled = !online;
+      kick.addEventListener('click', () => {
+        if (socket?.readyState !== WebSocket.OPEN) return;
+        if (window.confirm(`${spectator.name}님을 이 방에서 내보내시겠습니까?`))
+          socket.send(JSON.stringify({ type: 'kick', target: spectator.id }));
+      });
+      row.append(kick);
+    }
+    spectatorList.append(row);
+  }
+  $('#kick-white').hidden = !waiting || role !== 'black' || !state?.joined;
+  $<HTMLButtonElement>('#kick-white').disabled = !online;
   $('#stage-hint').textContent =
     !state?.moves.length && playing ? '첫 수는 중앙에서 시작합니다' : finished ? '화살표로 기보를 넘겨보세요' : '';
   if (state && (waiting || finished)) {
@@ -301,7 +334,10 @@ async function request(path: string, method = 'GET', body?: object) {
     headers: body ? { 'Content-Type': 'application/json' } : undefined,
     body: body ? JSON.stringify(body) : undefined,
   });
-  if (!response.ok) throw new Error(`서버 응답 ${response.status}`);
+  if (!response.ok) {
+    const detail = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(detail?.error ?? `서버 응답 ${response.status}`);
+  }
   return response.json();
 }
 function connect() {
@@ -311,6 +347,7 @@ function connect() {
   url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
   if (secret) url.searchParams.set('token', secret);
   url.searchParams.set('name', name);
+  url.searchParams.set('clientId', clientId);
   const ws = new WebSocket(url);
   socket = ws;
   ws.onopen = () => {
@@ -341,11 +378,23 @@ function connect() {
       }
       previousStatus = state.status;
       render();
+    } else if (message.type === 'kicked') {
+      if (currentRoom) localStorage.removeItem(`renju:${currentRoom}`);
+      leaveRoom(false, false);
+      history.replaceState(null, '', location.pathname);
+      $('#lobby-note').textContent = '방장이 내보냈습니다. 이 방에는 다시 입장할 수 없습니다.';
     } else if (message.type === 'error')
       status(message.error === 'center-first' ? '첫 수는 중앙에 놓으세요' : '착수할 수 없는 자리입니다', 'error');
   };
-  ws.onclose = () => {
+  ws.onclose = (event) => {
     if (socket !== ws) return;
+    if (event.code === 4001) {
+      if (currentRoom) localStorage.removeItem(`renju:${currentRoom}`);
+      leaveRoom(false, false);
+      history.replaceState(null, '', location.pathname);
+      $('#lobby-note').textContent = '방장이 내보냈습니다. 이 방에는 다시 입장할 수 없습니다.';
+      return;
+    }
     offline = true;
     if (state?.status !== 'finished') render();
     const delay = Math.min(15000, 800 * 2 ** retry++);
@@ -377,19 +426,28 @@ async function openRoom(id: string) {
       }
     }
     if (!role) {
-      const entered = (await request(`/api/rooms/${id}/enter`, 'POST', { name })) as { token?: string; role: RoomRole };
+      const entered = (await request(`/api/rooms/${id}/enter`, 'POST', { name, clientId })) as {
+        token?: string;
+        role: RoomRole;
+      };
       if (navigation !== navigationVersion) return;
       if (entered.role === 'white' && entered.token) setToken(id, entered.token, 'white');
       else role = 'spectator';
     }
     connect();
     render();
-  } catch {
+  } catch (error) {
     if (navigation !== navigationVersion) return;
     leaveRoom(false, false);
     history.replaceState(null, '', location.pathname);
-    status('대국을 찾을 수 없습니다', 'error');
-    $('#lobby-note').textContent = '링크를 다시 확인해주세요.';
+    status(
+      error instanceof Error && error.message === 'kicked' ? '강퇴된 방입니다' : '대국을 찾을 수 없습니다',
+      'error',
+    );
+    $('#lobby-note').textContent =
+      error instanceof Error && error.message === 'kicked'
+        ? '방장이 내보냈습니다. 이 방에는 다시 입장할 수 없습니다.'
+        : '링크를 다시 확인해주세요.';
   }
 }
 setInterval(() => {
@@ -401,9 +459,6 @@ setInterval(() => {
   }
 }, 200);
 
-board.onPlay = (point: Point) => {
-  if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'move', ...point }));
-};
 board.onForbidden = (point, verdict, screen) => {
   const tip = $('#forbidden-tip');
   if (!point || !verdict?.forbidden || !screen) {
@@ -427,7 +482,11 @@ async function createRoom(path: string) {
   }
   try {
     for (const button of ['#create', '#create-public', '#match']) $<HTMLButtonElement>(button).disabled = true;
-    const created = (await request(path, 'POST', { name })) as { id: string; token: string; role: PlayerRole };
+    const created = (await request(path, 'POST', { name, clientId })) as {
+      id: string;
+      token: string;
+      role: PlayerRole;
+    };
     setToken(created.id, created.token, created.role);
     history.pushState(null, '', `${location.pathname}?room=${created.id}`);
     await openRoom(created.id);
@@ -530,6 +589,28 @@ document.addEventListener('visibilitychange', () => {
   if (!document.hidden) void refreshRooms();
 });
 window.addEventListener('focus', () => void refreshRooms());
+function openNameDialog() {
+  const dialog = $<HTMLDialogElement>('#name-dialog');
+  $<HTMLInputElement>('#name-input').value = name;
+  $('#name-error').textContent = '';
+  dialog.showModal();
+  $<HTMLInputElement>('#name-input').focus();
+}
+$('#rename-lobby').addEventListener('click', openNameDialog);
+$('#rename-room').addEventListener('click', openNameDialog);
+$('#name-cancel').addEventListener('click', () => $<HTMLDialogElement>('#name-dialog').close());
+$('#name-form').addEventListener('submit', (event) => {
+  event.preventDefault();
+  const updated = saveGuestName($<HTMLInputElement>('#name-input').value);
+  if (!updated) {
+    $('#name-error').textContent = '영문으로 시작하는 3~30자 이름을 입력해 주세요.';
+    return;
+  }
+  name = updated;
+  $('#guest-name').textContent = name;
+  if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'rename', name }));
+  $<HTMLDialogElement>('#name-dialog').close();
+});
 $('#chat-form').addEventListener('submit', (event) => {
   event.preventDefault();
   const input = $<HTMLInputElement>('#chat-input');
@@ -541,6 +622,11 @@ $('#chat-form').addEventListener('submit', (event) => {
 $('#ready').addEventListener('click', () => {
   if (!state || !role || role === 'spectator' || socket?.readyState !== WebSocket.OPEN) return;
   socket.send(JSON.stringify({ type: 'ready', ready: !state.ready[role] }));
+});
+$('#kick-white').addEventListener('click', () => {
+  if (role !== 'black' || state?.status !== 'waiting' || !state.joined || socket?.readyState !== WebSocket.OPEN) return;
+  if (window.confirm(`${state.players.white?.name ?? '백 플레이어'}님을 이 방에서 내보내시겠습니까?`))
+    socket.send(JSON.stringify({ type: 'kick' }));
 });
 $('#rematch').addEventListener('click', () => {
   if (state?.status === 'finished' && socket?.readyState === WebSocket.OPEN)

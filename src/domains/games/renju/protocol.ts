@@ -3,6 +3,11 @@ import type { Move } from './rules';
 export type PlayerRole = 'black' | 'white';
 export type RoomRole = PlayerRole | 'spectator';
 export type PlayerIdentity = { name: string; country: string; maskedIp: string };
+export function normalizeGuestName(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const name = value.trim();
+  return /^[A-Za-z][A-Za-z0-9 -]{2,29}$/.test(name) ? name : null;
+}
 export type ChatMessage = {
   id: string;
   name: string;
@@ -46,6 +51,7 @@ export type RoomSnapshot = {
   rematchClosed: boolean;
   connected: Record<PlayerRole, boolean>;
   spectators: number;
+  spectatorList: { id: string; name: string }[];
   settings: GameSettings;
   clocks: Record<PlayerRole, ClockState> | null;
   activeSince: number | null;

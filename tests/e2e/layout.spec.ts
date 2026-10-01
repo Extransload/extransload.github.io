@@ -677,6 +677,56 @@ test('solo match replaces start with resign until the match ends', async ({ page
   await expect(page.locator('#replay')).toBeVisible();
 });
 
+test('desktop board click places a stone immediately', async ({ page }) => {
+  await page.goto('/playroom/omokmaru/solo/');
+  await page.locator('#difficulty').selectOption('easy');
+  await page.locator('#start').click();
+  const canvas = page.locator('.canvas canvas');
+  const box = await canvas.boundingBox();
+  const center = { x: box!.width / 2, y: box!.height / 2 };
+  await expect(page.locator('#move-confirm')).toBeHidden();
+  await expect(page.locator('#undo')).toBeHidden();
+  await canvas.click({ position: center });
+  await expect(page.locator('#undo')).toBeVisible();
+  await expect(page.locator('#move-confirm')).toBeHidden();
+});
+
+test('touch board tap previews a stone until the move button confirms it', async ({ browser }) => {
+  const context = await browser.newContext({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 844 } });
+  const page = await context.newPage();
+  try {
+    await page.goto('/playroom/omokmaru/solo/');
+    await page.locator('#difficulty').selectOption('easy');
+    await page.locator('#start').click();
+    const box = await page.locator('.canvas canvas').boundingBox();
+    const center = { x: box!.x + box!.width / 2, y: box!.y + box!.height / 2 };
+    await page.touchscreen.tap(center.x, center.y);
+    await expect(page.locator('#place-label')).toHaveText('H8 착수');
+    await expect(page.locator('#undo')).toBeHidden();
+    await page.locator('#cancel-move').click();
+    await expect(page.locator('#move-confirm')).toBeHidden();
+    await page.touchscreen.tap(center.x, center.y);
+    await page.locator('#place-move').click();
+    await expect(page.locator('#undo')).toBeVisible();
+  } finally {
+    await context.close();
+  }
+});
+
+test('Omokmaru guest name can be edited and survives a reload', async ({ page }) => {
+  await page.goto('/playroom/omokmaru/');
+  await page.locator('#rename-lobby').click();
+  await page.locator('#name-input').fill('ab');
+  await page.locator('#name-form button[type="submit"]').click();
+  await expect(page.locator('#name-error')).toContainText('3~30자');
+  await page.locator('#name-input').fill('NimbleFox');
+  await page.locator('#name-form button[type="submit"]').click();
+  await expect(page.locator('#name-dialog')).toBeHidden();
+  await expect(page.locator('#guest-name')).toHaveText('NimbleFox');
+  await page.reload();
+  await expect(page.locator('#guest-name')).toHaveText('NimbleFox');
+});
+
 test('old playroom invitations keep their room when redirected to Omokmaru', async ({ page }) => {
   const navigations: string[] = [];
   page.on('framenavigated', (frame) => navigations.push(frame.url()));

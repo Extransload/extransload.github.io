@@ -16,6 +16,7 @@ export class RenjuBoard {
   private controls: OrbitControls;
   private board = new THREE.Group();
   private stones = new THREE.Group();
+  private preview = new THREE.Group();
   private stoneGeometry = new THREE.SphereGeometry(0.36, 32, 22);
   private stoneMaterials = {
     black: new THREE.MeshPhysicalMaterial({ color: 0x09131d, roughness: 0.21, metalness: 0.15, clearcoat: 0.9 }),
@@ -23,6 +24,8 @@ export class RenjuBoard {
   };
   private highlights = new THREE.Group();
   private lastMove = new THREE.Group();
+  private lastMoveFrame = 0;
+  private lastMovePulses: THREE.Mesh<THREE.RingGeometry, THREE.MeshBasicMaterial>[] = [];
   private avatars: Record<Seat, AvatarRig>;
   private seatRole: Seat | 'spectator' | null | undefined;
   private celebrating: Seat | null = null;
@@ -39,9 +42,11 @@ export class RenjuBoard {
   private activeTouches = new Set<number>();
   private multiTouch = false;
   private hoverKey: string | null = null;
+  private selected: Point | null = null;
   private topView = false;
   private saved?: { position: THREE.Vector3; target: THREE.Vector3 };
-  onPlay?: (point: Point) => void;
+  onSelectionChange?: (point: Point | null) => void;
+  onImmediateMove?: (point: Point) => void;
   onForbidden?: (point: Point | null, verdict?: Verdict, screen?: { x: number; y: number }) => void;
 
   constructor(private host: HTMLElement) {
@@ -68,6 +73,9 @@ export class RenjuBoard {
     this.controls.mouseButtons.RIGHT = THREE.MOUSE.PAN;
     this.controls.touches.ONE = null;
     this.controls.touches.TWO = THREE.TOUCH.DOLLY_ROTATE;
+    this.controls.zoomToCursor = true;
+    this.controls.screenSpacePanning = false;
+    this.controls.addEventListener('start', () => this.clearSelection());
     this.controls.addEventListener('change', () => this.render());
     this.scene.add(new THREE.AmbientLight(0xf4e9d6, 1.2));
     const key = new THREE.DirectionalLight(0xffe5b4, 4.3);
@@ -85,7 +93,7 @@ export class RenjuBoard {
     this.scene.add(rim);
     this.scene.add(this.board);
     this.makeBoard();
-    this.board.add(this.stones, this.highlights, this.lastMove);
+    this.board.add(this.stones, this.preview, this.highlights, this.lastMove);
     const black = this.makeAvatar('black');
     const white = this.makeAvatar('white');
     this.avatars = { black, white };
@@ -97,6 +105,7 @@ export class RenjuBoard {
         if (this.activeTouches.size > 1) {
           this.multiTouch = true;
           this.down = undefined;
+          this.clearSelection();
         }
       }
       if (e.button === 0 && !this.multiTouch) this.down = { x: e.clientX, y: e.clientY, pointerId: e.pointerId };
@@ -104,6 +113,8 @@ export class RenjuBoard {
     this.renderer.domElement.addEventListener('pointermove', (e) => {
       if (e.buttons || e.pointerType === 'touch') {
         this.clearHighlight();
+        if (e.buttons && this.down && Math.hypot(e.clientX - this.down.x, e.clientY - this.down.y) > 8)
+          this.clearSelection();
         return;
       }
       this.inspect(e);
@@ -400,6 +411,7 @@ export class RenjuBoard {
     const point = this.point(e);
     const key = point ? `${point.x},${point.y}` : null;
     if (!click && key === this.hoverKey) return;
+    if (click) this.clearSelection();
     this.clearHighlight();
     if (!point || !this.interactive || !this.color) return;
     this.hoverKey = key;
@@ -412,9 +424,44 @@ export class RenjuBoard {
       for (const cause of verdict.causes) this.mark(cause, 0xc65c56, 0.5);
       const rect = this.host.getBoundingClientRect();
       this.onForbidden?.(point, verdict, { x: e.clientX - rect.left, y: e.clientY - rect.top });
-    } else if (click) this.onPlay?.(point);
+    } else if (click && e.pointerType === 'mouse') this.onImmediateMove?.(point);
+    else if (click) this.select(point);
     else this.mark(point, this.color === 1 ? 0x182936 : 0xd2bb8d, 0.32);
     this.render();
+  }
+  get selectedPoint(): Point | null {
+    return this.selected ? { ...this.selected } : null;
+  }
+  private select(point: Point) {
+    if (!this.color) return;
+    this.selected = { ...point };
+    const material = new THREE.MeshPhysicalMaterial({
+      color: this.color === 1 ? 0x09131d : 0xfff9ee,
+      roughness: 0.25,
+      transparent: true,
+      opacity: 0.58,
+      depthWrite: false,
+    });
+    const stone = new THREE.Mesh(this.stoneGeometry, material);
+    stone.scale.y = 0.5;
+    stone.position.set(START + point.x * STEP, 0.51, START + point.y * STEP);
+    this.preview.add(stone);
+    this.onSelectionChange?.(this.selectedPoint);
+  }
+  clearSelection() {
+    if (!this.selected && !this.preview.children.length) return;
+    this.selected = null;
+    for (const child of [...this.preview.children]) {
+      this.preview.remove(child);
+      ((child as THREE.Mesh).material as THREE.Material).dispose();
+    }
+    this.onSelectionChange?.(null);
+    this.render();
+  }
+  takeSelection(): Point | null {
+    const point = this.selectedPoint;
+    this.clearSelection();
+    return point;
   }
   private mark(point: Point, color: number, radius: number, group = this.highlights) {
     const mesh = new THREE.Mesh(
@@ -424,6 +471,67 @@ export class RenjuBoard {
     mesh.rotation.x = -Math.PI / 2;
     mesh.position.set(START + point.x * STEP, 0.405, START + point.y * STEP);
     group.add(mesh);
+  }
+  private markLastMove(move: Move) {
+    const x = START + move.x * STEP;
+    const z = START + move.y * STEP;
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(0.4, 0.48, 48),
+      new THREE.MeshBasicMaterial({ color: 0xffbd55, side: THREE.DoubleSide, toneMapped: false }),
+    );
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.set(x, 0.405, z);
+    this.lastMove.add(ring);
+
+    const glow = new THREE.Mesh(
+      new THREE.RingGeometry(0.38, 0.55, 48),
+      new THREE.MeshBasicMaterial({
+        color: 0xffaa42,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.25,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        toneMapped: false,
+      }),
+    );
+    glow.rotation.x = -Math.PI / 2;
+    glow.position.set(x, 0.402, z);
+    this.lastMove.add(glow);
+
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    this.lastMovePulses = Array.from({ length: 2 }, () => {
+      const pulse = new THREE.Mesh(
+        new THREE.RingGeometry(0.38, 0.44, 48),
+        new THREE.MeshBasicMaterial({
+          color: 0xffd677,
+          side: THREE.DoubleSide,
+          transparent: true,
+          opacity: 0,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+          toneMapped: false,
+        }),
+      );
+      pulse.rotation.x = -Math.PI / 2;
+      pulse.position.set(x, 0.41, z);
+      this.lastMove.add(pulse);
+      return pulse;
+    });
+    const started = performance.now();
+    let lastFrame = 0;
+    const animate = (now: number) => {
+      this.lastMoveFrame = requestAnimationFrame(animate);
+      if (now - lastFrame < 30) return;
+      lastFrame = now;
+      for (const [i, pulse] of this.lastMovePulses.entries()) {
+        const progress = ((now - started) / 1600 + i * 0.5) % 1;
+        pulse.scale.setScalar(1 + progress * 0.4);
+        pulse.material.opacity = 0.9 * (1 - progress) ** 1.5;
+      }
+      this.render();
+    };
+    this.lastMoveFrame = requestAnimationFrame(animate);
   }
   private clearHighlight() {
     this.hoverKey = null;
@@ -436,6 +544,9 @@ export class RenjuBoard {
     this.render();
   }
   setState(moves: Move[], color: Color | null, interactive: boolean) {
+    cancelAnimationFrame(this.lastMoveFrame);
+    this.lastMovePulses = [];
+    this.clearSelection();
     this.moves = moves;
     this.color = color;
     this.interactive = interactive;
@@ -457,10 +568,11 @@ export class RenjuBoard {
       stone.receiveShadow = true;
       this.stones.add(stone);
     }
-    if (moves.length) this.mark(moves[moves.length - 1], 0xd9b77a, 0.43, this.lastMove);
+    if (moves.length) this.markLastMove(moves[moves.length - 1]);
     this.render();
   }
   reset() {
+    this.clearSelection();
     this.topView = false;
     this.camera.position.set(0, this.host.clientWidth < 600 ? 25 : 23, this.host.clientWidth < 600 ? 25 : 26);
     this.controls.target.set(0, 0, 0);

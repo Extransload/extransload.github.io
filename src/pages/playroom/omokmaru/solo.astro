@@ -29,9 +29,10 @@ import SeoHead from '../../../shared/components/SeoHead.astro';
           <button id="help" title="조작 방법" aria-label="조작 방법">?</button>
         </div>
         <div id="canvas" class="canvas"></div>
+        <div id="move-confirm" class="move-confirm" hidden><button id="place-move" class="place-move" type="button" disabled><span class="confirm-stone" aria-hidden="true"></span><span id="place-label">자리 선택</span></button><button id="cancel-move" class="cancel-move" type="button" aria-label="선택 취소" title="선택 취소" hidden>×</button></div>
         <div id="stage-overlay" class="stage-overlay" hidden aria-live="polite"><div class="overlay-card"><span id="overlay-kicker"></span><strong id="overlay-title"></strong><small id="overlay-subtitle"></small></div></div>
         <div id="forbidden-tip" class="forbidden-tip" hidden></div>
-        <div id="board-help" class="board-help" hidden>왼쪽 클릭 · 한 손가락: 착수<br />휠 버튼을 누르고 드래그: 회전<br />두 손가락 이동: 회전<br />휠 · 두 손가락 벌리기: 확대<br />오른쪽 클릭 드래그: 이동</div>
+        <div id="board-help" class="board-help" hidden>왼쪽 클릭: 바로 착수<br />한 손가락: 자리 선택 후 착수 버튼<br />휠 버튼을 누르고 드래그: 회전<br />두 손가락 이동: 회전<br />휠 · 두 손가락 벌리기: 확대<br />오른쪽 클릭 드래그: 이동</div>
         <div id="stage-hint" class="stage-hint"></div>
       </section>
       <aside class="side">

@@ -6,6 +6,7 @@ import {
   REMATCH_WINDOW_MS,
   ROLES,
   validSettings,
+  normalizeGuestName,
   type ClockState,
   type FinishReason,
   type GameSettings,
@@ -22,7 +23,7 @@ interface Env {
   ROOMS: DurableObjectNamespace;
   LOBBY: DurableObjectNamespace;
 }
-type Visitor = PlayerIdentity & { ip: string };
+type Visitor = PlayerIdentity & { ip: string; clientId: string | null };
 type Room = {
   publicId?: string;
   createdAt?: number;
@@ -30,6 +31,8 @@ type Room = {
   lobbySignature?: string;
   hostHash: string;
   guestHash?: string;
+  guestClientId?: string | null;
+  bannedClientIds?: string[];
   moves: Move[];
   status: GameStatus;
   winner?: PlayerRole | 'draw';
@@ -48,14 +51,16 @@ type Room = {
 };
 type CachedRoom = PublicRoom & { version: number; updatedAt: number };
 const LOBBY_MAX_AGE_MS = 24 * 60 * 60 * 1000;
-type SocketData = { role: RoomRole; visitor: Visitor; lastChat: number };
+type SocketData = { id: string; role: RoomRole; visitor: Visitor; lastChat: number; seatHash?: string };
 type Message = {
-  type?: 'ready' | 'rematch' | 'rematch-decline' | 'settings' | 'move' | 'resign' | 'chat';
+  type?: 'ready' | 'rematch' | 'rematch-decline' | 'settings' | 'move' | 'resign' | 'chat' | 'rename' | 'kick';
   ready?: boolean;
   settings?: unknown;
   x?: number;
   y?: number;
   text?: string;
+  name?: string;
+  target?: string;
 };
 
 const json = (body: unknown, status = 200) => Response.json(body, { status });
@@ -66,12 +71,15 @@ function maskIp(ip: string) {
   if (ip.includes(':')) return `${ip.split(':').slice(0, 3).join(':')}::****`;
   return 'unknown';
 }
-function visitor(request: Request, name: unknown): Visitor {
-  const value = typeof name === 'string' && /^[A-Za-z][A-Za-z0-9 -]{2,29}$/.test(name.trim()) ? name.trim() : 'Guest';
+function clientId(value: unknown): string | null {
+  return typeof value === 'string' && /^[0-9a-f-]{36}$/.test(value) ? value : null;
+}
+function visitor(request: Request, name: unknown, id?: unknown): Visitor {
+  const value = normalizeGuestName(name) ?? 'Guest';
   const cf = request.cf as { country?: string } | undefined;
   const country = cf?.country && /^[A-Z]{2}$/.test(cf.country) ? cf.country : 'XX';
   const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
-  return { name: value, country, ip, maskedIp: maskIp(ip) };
+  return { name: value, country, ip, maskedIp: maskIp(ip), clientId: clientId(id) };
 }
 async function hash(value: string) {
   const bytes = new TextEncoder().encode(value);
@@ -103,13 +111,13 @@ export default {
       if (url.pathname === '/api/public/rooms' && request.method === 'GET')
         return cors(await lobby.fetch(new Request(`${url.origin}/rooms`)), origin);
       if ((url.pathname === '/api/public/rooms' || url.pathname === '/api/public/match') && request.method === 'POST') {
-        const body = (await request.json().catch(() => ({}))) as { name?: unknown };
+        const body = (await request.json().catch(() => ({}))) as { name?: unknown; clientId?: unknown };
         const target = url.pathname.endsWith('/match') ? '/match' : '/create';
         return cors(
           await lobby.fetch(
             new Request(`${url.origin}${target}`, {
               method: 'POST',
-              body: JSON.stringify({ visitor: visitor(request, body.name) }),
+              body: JSON.stringify({ visitor: visitor(request, body.name, body.clientId) }),
             }),
           ),
           origin,
@@ -118,13 +126,13 @@ export default {
       return cors(json({ error: 'not-found' }, 404), origin);
     }
     if (url.pathname === '/api/rooms' && request.method === 'POST') {
-      const body = (await request.json().catch(() => ({}))) as { name?: unknown };
+      const body = (await request.json().catch(() => ({}))) as { name?: unknown; clientId?: unknown };
       const id = crypto.randomUUID();
       const secret = token();
       const response = await env.ROOMS.get(env.ROOMS.idFromName(id)).fetch(
         new Request(`${url.origin}/init`, {
           method: 'POST',
-          body: JSON.stringify({ secret, visitor: visitor(request, body.name), public: false }),
+          body: JSON.stringify({ secret, visitor: visitor(request, body.name, body.clientId), public: false }),
         }),
       );
       if (!response.ok) return cors(response, origin);
@@ -145,19 +153,20 @@ export default {
     roomUrl.search = url.search;
     let forwarded: Request;
     if (operation === 'enter' && request.method === 'POST') {
-      const body = (await request.json().catch(() => ({}))) as { name?: unknown };
+      const body = (await request.json().catch(() => ({}))) as { name?: unknown; clientId?: unknown };
       forwarded = new Request(roomUrl, {
         method: 'POST',
-        body: JSON.stringify({ visitor: visitor(request, body.name) }),
+        body: JSON.stringify({ visitor: visitor(request, body.name, body.clientId) }),
       });
     } else {
       forwarded = new Request(roomUrl, request);
       if (operation === 'ws') {
         const headers = new Headers(forwarded.headers);
-        const identity = visitor(request, url.searchParams.get('name'));
+        const identity = visitor(request, url.searchParams.get('name'), url.searchParams.get('clientId'));
         headers.set('X-Renju-Name', identity.name);
         headers.set('X-Renju-Country', identity.country);
         headers.set('X-Renju-IP', identity.ip);
+        if (identity.clientId) headers.set('X-Renju-Client-Id', identity.clientId);
         forwarded = new Request(forwarded, { headers });
       }
     }
@@ -328,6 +337,7 @@ export class RenjuRoom {
       clocks: stored.clocks ?? null,
       activeSince: stored.activeSince ?? null,
       disconnects: stored.disconnects ?? {},
+      bannedClientIds: stored.bannedClientIds ?? [],
       public: stored.public ?? false,
       players: stored.players ?? { black: null, white: null },
       chat: stored.chat ?? [],
@@ -395,6 +405,10 @@ export class RenjuRoom {
       rematchClosed: !!room.rematchClosed,
       connected: { black: this.connected('black'), white: this.connected('white') },
       spectators: this.sockets().filter((ws) => this.roleOf(ws) === 'spectator').length,
+      spectatorList: this.sockets()
+        .map((ws) => ws.deserializeAttachment() as SocketData | null)
+        .filter((data): data is SocketData => data?.role === 'spectator')
+        .map((data) => ({ id: data.id, name: data.visitor.name })),
       settings: room.settings,
       clocks: room.clocks,
       activeSince: room.activeSince,
@@ -498,6 +512,7 @@ export class RenjuRoom {
       !this.connected('white')
     ) {
       room.guestHash = undefined;
+      room.guestClientId = null;
       if (room.players) room.players.white = null;
       room.ready.white = false;
       delete room.disconnects.white;
@@ -533,6 +548,7 @@ export class RenjuRoom {
         publicId: isPublic ? id : undefined,
         createdAt: isPublic ? createdAt : undefined,
         hostHash: await hash(secret),
+        bannedClientIds: [],
         moves: [],
         status: 'waiting',
         version: 0,
@@ -609,6 +625,7 @@ export class RenjuRoom {
         if (role === 'black') this.closeWaitingRoom(latest);
         else {
           latest.guestHash = undefined;
+          latest.guestClientId = null;
           if (latest.players) latest.players.white = null;
           latest.ready.white = false;
           delete latest.disconnects.white;
@@ -625,9 +642,12 @@ export class RenjuRoom {
       return this.ctx.blockConcurrencyWhile(async () => {
         const latest = (await this.read())!;
         this.expireDisconnects(latest, Date.now());
+        if (visitor?.clientId && latest.bannedClientIds?.includes(visitor.clientId))
+          return json({ error: 'kicked' }, 403);
         if (latest.status === 'waiting' && !latest.guestHash) {
           const secret = token();
           latest.guestHash = await hash(secret);
+          latest.guestClientId = visitor?.clientId;
           latest.players = {
             ...(latest.players ?? { black: null, white: null }),
             white: visitor ? publicIdentity(visitor) : null,
@@ -661,18 +681,28 @@ export class RenjuRoom {
           if ((role === 'black' && hashed !== latest.hostHash) || (role === 'white' && hashed !== latest.guestHash))
             return json({ error: 'unauthorized' }, 401);
         }
-        const pair = new WebSocketPair();
-        const [client, server] = Object.values(pair);
-        this.ctx.acceptWebSocket(server);
         const identity: Visitor = {
-          name: request.headers.get('X-Renju-Name') || 'Guest',
+          name: normalizeGuestName(request.headers.get('X-Renju-Name')) ?? 'Guest',
           country: request.headers.get('X-Renju-Country') || 'XX',
           ip: request.headers.get('X-Renju-IP') || 'unknown',
           maskedIp: maskIp(request.headers.get('X-Renju-IP') || 'unknown'),
+          clientId: clientId(request.headers.get('X-Renju-Client-Id')),
         };
-        const seatVisitor =
-          role === 'spectator' ? identity : { ...identity, name: latest.players?.[role]?.name ?? identity.name };
-        server.serializeAttachment({ role, visitor: seatVisitor, lastChat: 0 } satisfies SocketData);
+        if (identity.clientId && latest.bannedClientIds?.includes(identity.clientId))
+          return json({ error: 'kicked' }, 403);
+        const pair = new WebSocketPair();
+        const [client, server] = Object.values(pair);
+        this.ctx.acceptWebSocket(server);
+        if (role === 'white' && !latest.guestClientId) latest.guestClientId = identity.clientId;
+        const player = role === 'spectator' ? null : latest.players?.[role];
+        if (player) player.name = identity.name;
+        server.serializeAttachment({
+          id: crypto.randomUUID(),
+          role,
+          visitor: identity,
+          lastChat: 0,
+          seatHash: secret ? await hash(secret) : undefined,
+        } satisfies SocketData);
         if (role !== 'spectator') {
           delete latest.disconnects[role];
           if (
@@ -696,9 +726,11 @@ export class RenjuRoom {
     await this.ctx.blockConcurrencyWhile(() => this.applyMessage(socket, raw));
   }
   private async applyMessage(socket: WebSocket, raw: string | ArrayBuffer) {
-    const role = this.roleOf(socket);
+    const data = socket.deserializeAttachment() as SocketData | null;
+    const role = data?.role;
     const room = await this.read();
     if (!room || !role) return;
+    if (role === 'white' && data.seatHash !== room.guestHash) return;
     let message: Message;
     try {
       message = JSON.parse(String(raw));
@@ -708,8 +740,70 @@ export class RenjuRoom {
     }
     const now = Date.now();
     this.expireDisconnects(room, now);
+    if (message.type === 'rename') {
+      const renamed = normalizeGuestName(message.name);
+      if (!renamed) return;
+      for (const peer of this.sockets()) {
+        const attachment = peer.deserializeAttachment() as SocketData | null;
+        if (!attachment || (role === 'spectator' ? peer !== socket : attachment.role !== role)) continue;
+        peer.serializeAttachment({ ...attachment, visitor: { ...attachment.visitor, name: renamed } });
+      }
+      if (role !== 'spectator' && room.players?.[role]) {
+        room.players[role].name = renamed;
+      }
+      room.version++;
+      await this.write(room);
+      this.broadcast(room);
+      return;
+    }
+    if (message.type === 'kick') {
+      if (role !== 'black') return;
+      if (message.target) {
+        const peer = this.sockets().find((candidate) => {
+          const attachment = candidate.deserializeAttachment() as SocketData | null;
+          return attachment?.role === 'spectator' && attachment.id === message.target;
+        });
+        if (!peer) return;
+        const attachment = peer.deserializeAttachment() as SocketData;
+        if (attachment.visitor.clientId && !room.bannedClientIds?.includes(attachment.visitor.clientId))
+          room.bannedClientIds = [...(room.bannedClientIds ?? []), attachment.visitor.clientId];
+        room.version++;
+        await this.write(room);
+        try {
+          peer.send(JSON.stringify({ type: 'kicked' }));
+          peer.close(4001, 'kicked');
+        } catch {
+          peer.close();
+        }
+        this.broadcast(room);
+        return;
+      }
+      if (room.status !== 'waiting' || !room.guestHash) return;
+      if (room.guestClientId && !room.bannedClientIds?.includes(room.guestClientId))
+        room.bannedClientIds = [...(room.bannedClientIds ?? []), room.guestClientId];
+      const kickedHash = room.guestHash;
+      room.guestHash = undefined;
+      room.guestClientId = null;
+      if (room.players) room.players.white = null;
+      room.ready = { black: false, white: false };
+      delete room.disconnects.white;
+      room.version++;
+      await this.write(room);
+      await this.schedule(room);
+      for (const peer of this.sockets()) {
+        const attachment = peer.deserializeAttachment() as SocketData | null;
+        if (attachment?.role !== 'white' || attachment.seatHash !== kickedHash) continue;
+        try {
+          peer.send(JSON.stringify({ type: 'kicked' }));
+          peer.close(4001, 'kicked');
+        } catch {
+          peer.close();
+        }
+      }
+      this.broadcast(room);
+      return;
+    }
     if (message.type === 'chat') {
-      const data = socket.deserializeAttachment() as SocketData;
       const value = typeof message.text === 'string' ? message.text.trim().replace(/[\u0000-\u001f\u007f]/g, '') : '';
       if (!value || value.length > 200 || now - data.lastChat < 800) return;
       data.lastChat = now;
@@ -817,6 +911,8 @@ export class RenjuRoom {
       const room = await this.read();
       if (!room) return;
       const role = this.roleOf(socket);
+      const attachment = socket.deserializeAttachment() as SocketData | null;
+      if (role === 'white' && attachment?.seatHash !== room.guestHash) return;
       const now = Date.now();
       if (role && role !== 'spectator' && !this.connected(role, socket)) {
         if (room.status === 'waiting' || room.status === 'finished') {
