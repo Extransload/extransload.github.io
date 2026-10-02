@@ -23,6 +23,8 @@ describe('Omokmaru appearance values', () => {
     expect(normalizeAppearance({ stone: '__proto__', avatar: null, board: 100, victory: 'unknown' })).toEqual(
       DEFAULT_APPEARANCE,
     );
-    expect(normalizeAppearance({ stone: 'jade', avatar: 'mint', board: 'oak', victory: 'spin' }).accessory).toBe('none');
+    expect(normalizeAppearance({ stone: 'jade', avatar: 'mint', board: 'oak', victory: 'spin' }).accessory).toBe(
+      'none',
+    );
   });
 });
