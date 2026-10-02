@@ -206,7 +206,25 @@
   background: var(--item-b);
 }
 
+.studio-item[data-category='stone'][data-item-id='jade'] .studio-item-art i {
+  clip-path: polygon(30% 0, 70% 0, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0 70%, 0 30%);
+}
+
+.studio-item[data-category='stone'][data-item-id='slate'] .studio-item-art i {
+  height: 23px;
+  border-radius: 45% / 23%;
+}
+
+.studio-item[data-category='stone'][data-item-id='amber'] .studio-item-art i {
+  clip-path: polygon(42% 0, 84% 12%, 100% 49%, 73% 100%, 23% 91%, 0 47%, 14% 13%);
+}
+
+.studio-item[data-category='stone'][data-item-id='rose'] .studio-item-art i {
+  border-radius: 8px;
+}
+
 .studio-item[data-category='board'] .studio-item-art i {
+  position: relative;
   width: 66px;
   height: 46px;
   border: 4px solid #715c3f;
@@ -215,15 +233,127 @@
     linear-gradient(90deg, transparent 48%, var(--item-b) 49%, var(--item-b) 51%, transparent 52%), var(--item-a);
 }
 
+.studio-item[data-category='board'][data-item-id='walnut'] .studio-item-art i {
+  border-width: 7px;
+}
+
+.studio-item[data-category='board'][data-item-id='linen'] .studio-item-art i {
+  border-style: dashed;
+}
+
+.studio-item[data-category='board'][data-item-id='ink'] .studio-item-art i {
+  border-radius: 0;
+  box-shadow:
+    inset 5px 5px #bed0d0,
+    inset -5px -5px #bed0d0;
+}
+
+.studio-item[data-category='board'][data-item-id='meadow'] .studio-item-art i::before,
+.studio-item[data-category='board'][data-item-id='meadow'] .studio-item-art i::after {
+  position: absolute;
+  width: 9px;
+  height: 16px;
+  background: #cfdbab;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  content: '';
+}
+
+.studio-item[data-category='board'][data-item-id='meadow'] .studio-item-art i::before {
+  top: -5px;
+  left: -4px;
+  transform: rotate(-40deg);
+}
+
+.studio-item[data-category='board'][data-item-id='meadow'] .studio-item-art i::after {
+  right: -4px;
+  bottom: -5px;
+  transform: rotate(140deg);
+}
+
 .studio-item[data-category='board'] .studio-item-art i + i {
   display: none;
 }
 
 .studio-item[data-category='avatar'] .studio-item-art i {
+  position: relative;
   width: 38px;
   height: 44px;
   border: 3px solid var(--item-b);
   border-radius: 48% 48% 42% 42%;
+}
+
+.studio-item[data-category='avatar'] .studio-item-art i::before,
+.studio-item[data-category='avatar'] .studio-item-art i::after {
+  position: absolute;
+  display: block;
+  background: var(--item-b);
+  content: '';
+}
+
+.studio-item[data-category='avatar'][data-item-id='coral'] .studio-item-art i::before {
+  top: -12px;
+  left: -7px;
+  width: 46px;
+  height: 16px;
+  clip-path: polygon(0 100%, 18% 0, 50% 35%, 82% 0, 100% 100%);
+}
+
+.studio-item[data-category='avatar'][data-item-id='mint'] .studio-item-art i::before,
+.studio-item[data-category='avatar'][data-item-id='mint'] .studio-item-art i::after {
+  top: -14px;
+  width: 6px;
+  height: 18px;
+  border-radius: 80% 20% 0 0;
+}
+
+.studio-item[data-category='avatar'][data-item-id='mint'] .studio-item-art i::before {
+  left: 3px;
+  transform: rotate(-25deg);
+}
+
+.studio-item[data-category='avatar'][data-item-id='mint'] .studio-item-art i::after {
+  right: 3px;
+  transform: rotate(25deg);
+}
+
+.studio-item[data-category='avatar'][data-item-id='royal'] .studio-item-art i::before {
+  top: -19px;
+  left: -4px;
+  width: 39px;
+  height: 23px;
+  clip-path: polygon(60% 0, 91% 100%, 0 100%);
+}
+
+.studio-item[data-category='avatar'][data-item-id='sunflower'] .studio-item-art i::before,
+.studio-item[data-category='avatar'][data-item-id='sunflower'] .studio-item-art i::after {
+  top: -12px;
+  width: 12px;
+  height: 17px;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+
+.studio-item[data-category='avatar'][data-item-id='sunflower'] .studio-item-art i::before {
+  left: 1px;
+}
+
+.studio-item[data-category='avatar'][data-item-id='sunflower'] .studio-item-art i::after {
+  right: 1px;
+}
+
+.studio-item[data-category='avatar'][data-item-id='shadow'] .studio-item-art i::before {
+  top: -14px;
+  left: -6px;
+  width: 42px;
+  height: 22px;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+
+.studio-item[data-category='avatar'][data-item-id='shadow'] .studio-item-art i::after {
+  right: 4px;
+  bottom: 8px;
+  left: 4px;
+  height: 7px;
+  border-radius: 5px;
 }
 
 .studio-item[data-category='avatar'] .studio-item-art i + i {

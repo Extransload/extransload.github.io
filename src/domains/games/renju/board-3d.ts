@@ -7,6 +7,7 @@ import {
   type AvatarStyle,
   type BoardStyle,
   type PlayerAppearance,
+  type StoneStyle,
 } from './appearance';
 import {
   analyzeMove,
@@ -30,12 +31,16 @@ type AvatarRig = {
   group: THREE.Group;
   character: THREE.Group;
   halo: THREE.Mesh;
+  body: THREE.Mesh;
+  belly: THREE.Mesh;
   head: THREE.Mesh;
   arms: THREE.Mesh[];
+  ears: THREE.Mesh[];
   shell: THREE.MeshPhysicalMaterial;
   face: THREE.MeshStandardMaterial;
   accent: THREE.MeshStandardMaterial;
   decorations: Partial<Record<AccessoryStyle, THREE.Group>>;
+  variants: Partial<Record<AvatarStyle, THREE.Group>>;
 };
 export const coordinate = (x: number, y: number) => `${'ABCDEFGHJKLMNOP'[x]}${y + 1}`;
 export class RenjuBoard {
@@ -51,7 +56,23 @@ export class RenjuBoard {
   private showcaseFocus: ShowcaseFocus | null = null;
   private showcaseSeat: Seat = 'black';
   private preview = new THREE.Group();
-  private stoneGeometry = new THREE.SphereGeometry(0.42, 32, 22);
+  private stoneGeometries: Record<StoneStyle, THREE.BufferGeometry> = {
+    classic: new THREE.SphereGeometry(0.42, 32, 22),
+    jade: new THREE.IcosahedronGeometry(0.43, 1),
+    slate: new THREE.CylinderGeometry(0.4, 0.4, 0.7, 12),
+    amber: new THREE.DodecahedronGeometry(0.43, 0),
+    rose: new RoundedBoxGeometry(0.68, 0.7, 0.68, 3, 0.12),
+  };
+  private avatarBodies = {
+    round: new THREE.SphereGeometry(0.82, 32, 22),
+    cloak: new THREE.ConeGeometry(0.98, 1.84, 12),
+    runner: new RoundedBoxGeometry(1.46, 1.76, 1.14, 4, 0.3),
+  };
+  private avatarHeads = {
+    round: new THREE.SphereGeometry(0.73, 32, 22),
+    dragon: new THREE.DodecahedronGeometry(0.76, 1),
+    runner: new THREE.IcosahedronGeometry(0.76, 1),
+  };
   private whiteRimGeometry = new THREE.TorusGeometry(0.4, 0.03, 6, 48);
   private whiteRimMaterial = new THREE.MeshBasicMaterial({ color: 0x4e4335 });
   private stoneMaterials = {
@@ -67,6 +88,7 @@ export class RenjuBoard {
     line: THREE.MeshStandardMaterial;
     ink: THREE.MeshStandardMaterial;
   };
+  private boardVariants: Partial<Record<BoardStyle, THREE.Group>> = {};
   private highlights = new THREE.Group();
   private lastMove = new THREE.Group();
   private lastMoveFrame = 0;
@@ -157,11 +179,12 @@ export class RenjuBoard {
     rim.position.set(8, 8, -9);
     this.scene.add(rim);
     this.scene.add(this.board);
-    this.showcaseStoneMesh = new THREE.Mesh(this.stoneGeometry, this.stoneMaterials.black);
-    this.showcaseStoneMesh.scale.setScalar(2.5);
+    this.showcaseStoneMesh = new THREE.Mesh(this.stoneGeometries.classic, this.stoneMaterials.black);
+    this.showcaseStoneMesh.scale.set(2.5, 1.4, 2.5);
     this.showcaseStoneRim = new THREE.Mesh(this.whiteRimGeometry, this.whiteRimMaterial);
     this.showcaseStoneRim.rotation.x = Math.PI / 2;
     this.showcaseStoneRim.scale.setScalar(2.5);
+    this.showcaseStoneRim.position.y = -0.22;
     this.showcaseStone.add(this.showcaseStoneMesh, this.showcaseStoneRim);
     this.showcaseStone.visible = false;
     this.scene.add(this.showcaseStone);
@@ -348,6 +371,50 @@ export class RenjuBoard {
         dot.position.set(START + x * STEP, 0.377, START + y * STEP);
         this.board.add(dot);
       }
+    const detail = (style: BoardStyle, color: number) => {
+      const group = new THREE.Group();
+      group.visible = false;
+      this.board.add(group);
+      this.boardVariants[style] = group;
+      return { group, material: new THREE.MeshStandardMaterial({ color, roughness: 0.52, metalness: 0.12 }) };
+    };
+    const walnut = detail('walnut', 0xc6a779);
+    for (const side of [-1, 1]) {
+      const railX = new THREE.Mesh(new RoundedBoxGeometry(0.15, 0.11, 13.55, 2, 0.05), walnut.material);
+      railX.position.set(side * 6.78, 0.41, 0);
+      walnut.group.add(railX);
+      const railZ = new THREE.Mesh(new RoundedBoxGeometry(13.55, 0.11, 0.15, 2, 0.05), walnut.material);
+      railZ.position.set(0, 0.41, side * 6.78);
+      walnut.group.add(railZ);
+    }
+    const linen = detail('linen', 0xf1e4c8);
+    for (const side of [-1, 1])
+      for (let i = 0; i < 28; i++) {
+        const p = -6.37 + i * 0.47;
+        const stitchX = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.018, 0.035), linen.material);
+        stitchX.position.set(p, 0.377, side * 6.69);
+        linen.group.add(stitchX);
+        const stitchZ = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.018, 0.16), linen.material);
+        stitchZ.position.set(side * 6.69, 0.377, p);
+        linen.group.add(stitchZ);
+      }
+    const inkFrame = detail('ink', 0xb2c8d3);
+    for (const x of [-6.67, 6.67])
+      for (const z of [-6.67, 6.67]) {
+        const plate = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.045, 0.42), inkFrame.material);
+        plate.position.set(x, 0.396, z);
+        plate.rotation.y = Math.PI / 4;
+        inkFrame.group.add(plate);
+      }
+    const meadow = detail('meadow', 0xd5c892);
+    for (const x of [-6.6, 6.6])
+      for (const z of [-6.6, 6.6]) {
+        const leaf = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.65, 5), meadow.material);
+        leaf.position.set(x, 0.395, z);
+        leaf.rotation.x = Math.PI / 2;
+        leaf.rotation.z = x * z > 0 ? 0.65 : -0.65;
+        meadow.group.add(leaf);
+      }
   }
   private makeAvatar(color: 'black' | 'white') {
     const group = new THREE.Group();
@@ -373,11 +440,11 @@ export class RenjuBoard {
     };
     const plinth = add(new THREE.CylinderGeometry(1.12, 1.2, 0.13, 40), accent, 0, 0.01, 0);
     plinth.receiveShadow = true;
-    const body = add(new THREE.SphereGeometry(0.82, 32, 22), shell, 0, 0.88, 0);
+    const body = add(this.avatarBodies.round, shell, 0, 0.88, 0);
     body.scale.set(1, 1.18, 0.78);
     const belly = add(new THREE.SphereGeometry(0.59, 28, 20), face, 0, 0.83, 0.51);
     belly.scale.set(1, 0.82, 0.38);
-    const head = add(new THREE.SphereGeometry(0.73, 32, 22), shell, 0, 1.84, 0.12);
+    const head = add(this.avatarHeads.round, shell, 0, 1.84, 0.12);
     head.scale.set(1, 0.91, 0.84);
     const decorations: Partial<Record<AccessoryStyle, THREE.Group>> = {};
     const decorate = (
@@ -425,21 +492,170 @@ export class RenjuBoard {
       }),
     );
     const arms: THREE.Mesh[] = [];
+    const ears: THREE.Mesh[] = [];
     for (const side of [-1, 1]) {
       const arm = add(new THREE.SphereGeometry(0.25, 20, 16), shell, side * 0.78, 1.07, 0.22);
       arm.scale.set(0.85, 1.45, 0.9);
       arms.push(arm);
       const eyeMesh = add(new THREE.SphereGeometry(0.078, 16, 12), eye, side * 0.24, 1.93, 0.69);
       eyeMesh.scale.z = 0.35;
-      add(new THREE.SphereGeometry(0.16, 18, 14), accent, side * 0.41, 2.46, -0.06);
+      ears.push(add(new THREE.SphereGeometry(0.16, 18, 14), accent, side * 0.41, 2.46, -0.06));
     }
+    const variants: Partial<Record<AvatarStyle, THREE.Group>> = {};
+    const variant = (style: AvatarStyle) => {
+      const set = new THREE.Group();
+      set.visible = false;
+      group.add(set);
+      variants[style] = set;
+      return set;
+    };
+    const piece = (
+      parent: THREE.Group,
+      geometry: THREE.BufferGeometry,
+      material: THREE.Material,
+      x: number,
+      y: number,
+      z: number,
+      scale: [number, number, number] = [1, 1, 1],
+      rotation: [number, number, number] = [0, 0, 0],
+    ) => {
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.set(x, y, z);
+      mesh.scale.set(...scale);
+      mesh.rotation.set(...rotation);
+      mesh.castShadow = true;
+      parent.add(mesh);
+      return mesh;
+    };
+    const captain = variant('coral');
+    piece(
+      captain,
+      new THREE.CylinderGeometry(0.74, 0.78, 0.12, 3),
+      accent,
+      0,
+      2.48,
+      0.08,
+      [1, 1, 1],
+      [0, Math.PI / 2, 0],
+    );
+    piece(captain, new THREE.ConeGeometry(0.62, 0.52, 3), shell, 0, 2.76, 0.05, [1, 1, 1], [0, Math.PI / 2, 0]);
+    const patch = new THREE.MeshStandardMaterial({ color: 0x182b32, roughness: 0.72 });
+    piece(captain, new THREE.SphereGeometry(0.15, 16, 12), patch, -0.24, 1.93, 0.73, [1, 0.84, 0.3]);
+    piece(captain, new THREE.BoxGeometry(0.65, 0.04, 0.04), patch, 0, 2.05, 0.7, [1, 1, 1], [0, 0, -0.22]);
+    piece(captain, new THREE.TorusGeometry(0.52, 0.1, 8, 32), accent, 0, 1.28, 0.06, [1, 1, 1], [Math.PI / 2, 0, 0]);
+    for (const side of [-1, 1])
+      piece(
+        captain,
+        new THREE.BoxGeometry(0.08, 0.66, 0.05),
+        accent,
+        side * 0.4,
+        0.88,
+        0.64,
+        [1, 1, 1],
+        [0, 0, side * 0.2],
+      );
+
+    const forest = variant('mint');
+    for (const side of [-1, 1]) {
+      piece(
+        forest,
+        new THREE.CylinderGeometry(0.055, 0.1, 0.85, 8),
+        accent,
+        side * 0.5,
+        2.72,
+        0.06,
+        [1, 1, 1],
+        [0, 0, -side * 0.36],
+      );
+      piece(
+        forest,
+        new THREE.CylinderGeometry(0.035, 0.06, 0.46, 8),
+        accent,
+        side * 0.74,
+        2.93,
+        0.05,
+        [1, 1, 1],
+        [0, 0, -side * 0.88],
+      );
+      piece(
+        forest,
+        new THREE.ConeGeometry(0.3, 0.74, 5),
+        face,
+        side * 0.87,
+        1.16,
+        -0.18,
+        [1, 1, 1],
+        [0, 0, side * 0.48],
+      );
+    }
+
+    const mage = variant('royal');
+    piece(mage, new THREE.CylinderGeometry(0.78, 0.8, 0.09, 24), accent, 0, 2.45, 0.06);
+    piece(mage, new THREE.ConeGeometry(0.59, 1.02, 16), shell, 0, 2.93, 0.04, [1, 1, 1], [0, 0, -0.1]);
+    piece(mage, new THREE.OctahedronGeometry(0.15), accent, 0.1, 3.48, 0.02);
+    for (const side of [-1, 1])
+      piece(
+        mage,
+        new THREE.ConeGeometry(0.36, 1.32, 4),
+        shell,
+        side * 0.72,
+        0.91,
+        -0.45,
+        [1, 1, 1],
+        [0, 0, side * 0.24],
+      );
+
+    const dragon = variant('sunflower');
+    for (const side of [-1, 1]) {
+      piece(
+        dragon,
+        new THREE.ConeGeometry(0.19, 0.56, 8),
+        accent,
+        side * 0.48,
+        2.63,
+        0.05,
+        [1, 1, 1],
+        [0, 0, -side * 0.3],
+      );
+      piece(
+        dragon,
+        new THREE.ConeGeometry(0.43, 1.13, 3),
+        face,
+        side * 1.02,
+        1.28,
+        -0.28,
+        [1, 1, 1],
+        [0, 0, side * 0.65],
+      );
+    }
+    piece(dragon, new RoundedBoxGeometry(0.66, 0.3, 0.43, 3, 0.09), face, 0, 1.69, 0.77);
+    const nostril = new THREE.MeshStandardMaterial({ color: 0x513721, roughness: 0.9 });
+    for (const side of [-1, 1]) piece(dragon, new THREE.SphereGeometry(0.035, 10, 8), nostril, side * 0.16, 1.73, 1.0);
+    piece(dragon, new THREE.CylinderGeometry(0.14, 0.28, 0.8, 8), shell, 1.03, 0.52, -0.48, [1, 1, 1], [0, 0, -1.1]);
+    piece(dragon, new THREE.ConeGeometry(0.25, 0.44, 6), accent, 1.39, 0.64, -0.5, [1, 1, 1], [0, 0, -1.18]);
+
+    const runner = variant('shadow');
+    piece(runner, new THREE.ConeGeometry(0.68, 0.8, 8), shell, 0, 2.5, 0.02);
+    piece(runner, new RoundedBoxGeometry(1.04, 0.28, 0.12, 2, 0.04), face, 0, 1.51, 0.71);
+    piece(runner, new THREE.BoxGeometry(1.17, 0.09, 0.1), accent, 0, 2.24, 0.29);
+    for (const side of [-1, 1])
+      piece(
+        runner,
+        new THREE.ConeGeometry(0.27, 0.91, 4),
+        shell,
+        side * 0.87,
+        1.02,
+        -0.27,
+        [1, 1, 1],
+        [0, 0, side * 0.5],
+      );
     const halo = add(new THREE.TorusGeometry(1.3, 0.035, 8, 64), accent, 0, 0.04, 0);
     halo.rotation.x = Math.PI / 2;
     halo.visible = false;
     const character = new THREE.Group();
     group.add(character);
     for (const child of [...group.children]) if (child !== plinth && child !== character) character.add(child);
-    return { group, character, halo, head, arms, shell, face, accent, decorations };
+    return { group, character, halo, body, belly, head, arms, ears, shell, face, accent, decorations, variants };
   }
   setBoardStyle(style: BoardStyle) {
     if (!this.boardMaterials) return;
@@ -453,6 +669,7 @@ export class RenjuBoard {
     this.boardMaterials.surface.color.setHex(palette[0]);
     this.boardMaterials.line.color.setHex(palette[1]);
     this.boardMaterials.ink.color.setHex(palette[2]);
+    for (const [name, detail] of Object.entries(this.boardVariants)) detail.visible = name === style;
     this.render();
   }
   setAppearance(seat: Seat, appearance: PlayerAppearance) {
@@ -468,6 +685,15 @@ export class RenjuBoard {
     material.color.setHex(stone[0]);
     material.roughness = stone[1];
     material.metalness = stone[2];
+    for (const child of this.stones.children) {
+      if (child.userData.seat !== seat) continue;
+      if (child.userData.stone) (child as THREE.Mesh).geometry = this.stoneGeometries[appearance.stone];
+      if (child.userData.rim) child.visible = appearance.stone === 'classic';
+    }
+    if (seat === this.showcaseSeat) {
+      this.showcaseStoneMesh.geometry = this.stoneGeometries[appearance.stone];
+      this.showcaseStoneRim.visible = seat === 'white' && appearance.stone === 'classic';
+    }
     const rig = this.avatars[seat];
     const avatar = {
       classic: seat === 'black' ? [0x182d3a, 0x304859, 0xe4bd77] : [0xf5ecd8, 0xfff9e9, 0x677f88],
@@ -475,12 +701,34 @@ export class RenjuBoard {
       mint: seat === 'black' ? [0x1e4946, 0x3b6961, 0xe6ce9e] : [0xe0f0e4, 0xf6fcf3, 0x58a592],
       royal: seat === 'black' ? [0x242e56, 0x394874, 0xe4c176] : [0xe0e5fa, 0xf9faff, 0x8b77b9],
       sunflower: seat === 'black' ? [0x634222, 0x8d6537, 0xefc45b] : [0xffedb5, 0xfff9dc, 0xcc9b3b],
+      shadow: seat === 'black' ? [0x252c3d, 0x47546a, 0xb1bfce] : [0xc4cad2, 0xe8edf0, 0x53637a],
     }[appearance.avatar as AvatarStyle];
     rig.shell.color.setHex(avatar[0]);
     rig.face.color.setHex(avatar[1]);
     rig.accent.color.setHex(avatar[2]);
+    rig.body.geometry =
+      appearance.avatar === 'royal'
+        ? this.avatarBodies.cloak
+        : appearance.avatar === 'shadow'
+          ? this.avatarBodies.runner
+          : this.avatarBodies.round;
+    rig.body.scale.set(
+      appearance.avatar === 'sunflower' ? 1.14 : appearance.avatar === 'coral' ? 1.04 : 1,
+      appearance.avatar === 'royal' || appearance.avatar === 'shadow' ? 1 : 1.18,
+      appearance.avatar === 'royal' ? 0.82 : 0.78,
+    );
+    rig.head.geometry =
+      appearance.avatar === 'sunflower'
+        ? this.avatarHeads.dragon
+        : appearance.avatar === 'shadow'
+          ? this.avatarHeads.runner
+          : this.avatarHeads.round;
+    rig.head.scale.set(appearance.avatar === 'mint' ? 0.92 : 1, appearance.avatar === 'royal' ? 1.08 : 0.91, 0.84);
+    rig.belly.visible = appearance.avatar !== 'royal' && appearance.avatar !== 'shadow';
     for (const [style, decoration] of Object.entries(rig.decorations))
       decoration!.visible = style === appearance.accessory;
+    for (const [style, variant] of Object.entries(rig.variants)) variant!.visible = style === appearance.avatar;
+    for (const ear of rig.ears) ear.visible = appearance.avatar === 'classic';
     if (this.selected && this.color === (seat === 'black' ? 1 : 2)) {
       const preview = this.preview.children[0] as THREE.Mesh | undefined;
       if (preview) (preview.material as THREE.MeshPhysicalMaterial).color.setHex(stone[0]);
@@ -502,7 +750,8 @@ export class RenjuBoard {
     this.winningLine.visible = false;
     this.showcaseStone.visible = focus === 'stone';
     this.showcaseStoneMesh.material = this.stoneMaterials[seat];
-    this.showcaseStoneRim.visible = seat === 'white';
+    this.showcaseStoneMesh.geometry = this.stoneGeometries[this.appearance[seat].stone];
+    this.showcaseStoneRim.visible = seat === 'white' && this.appearance[seat].stone === 'classic';
     for (const color of ['black', 'white'] as const) {
       const rig = this.avatars[color];
       rig.group.visible = (focus === 'avatar' || focus === 'accessory' || focus === 'victory') && color === seat;
@@ -515,10 +764,10 @@ export class RenjuBoard {
     this.controls.maxDistance = focus === 'board' ? 58 : 22;
     const view = {
       stone: { position: [2.2, 1.4, 5.1], target: [0, 0, 0] },
-      avatar: { position: [0, 2.7, 6.5], target: [0, 1.2, 0] },
-      accessory: { position: [0, 2.6, 3.9], target: [0, 2, 0] },
+      avatar: { position: [0, 3, 7.8], target: [0, 1.45, 0] },
+      accessory: { position: [0, 2.9, 5.5], target: [0, 2.25, 0] },
       board: { position: [0, 23, 17], target: [0, 0, 0] },
-      victory: { position: [0, 2.7, 6.5], target: [0, 1.2, 0] },
+      victory: { position: [0, 3, 7.8], target: [0, 1.45, 0] },
     }[focus];
     this.camera.position.set(...(view.position as [number, number, number]));
     this.controls.target.set(...(view.target as [number, number, number]));
@@ -721,7 +970,10 @@ export class RenjuBoard {
       opacity: 0.86,
       depthWrite: false,
     });
-    const stone = new THREE.Mesh(this.stoneGeometry, material);
+    const stone = new THREE.Mesh(
+      this.stoneGeometries[this.appearance[this.color === 1 ? 'black' : 'white'].stone],
+      material,
+    );
     stone.scale.y = 0.56;
     stone.position.set(START + point.x * STEP, 0.55, START + point.y * STEP);
     this.preview.add(stone);
@@ -929,10 +1181,10 @@ export class RenjuBoard {
       ((child as THREE.Mesh).material as THREE.Material).dispose();
     }
     for (const move of moves) {
-      const stone = new THREE.Mesh(
-        this.stoneGeometry,
-        move.color === 1 ? this.stoneMaterials.black : this.stoneMaterials.white,
-      );
+      const seat = move.color === 1 ? 'black' : 'white';
+      const stone = new THREE.Mesh(this.stoneGeometries[this.appearance[seat].stone], this.stoneMaterials[seat]);
+      stone.userData.seat = seat;
+      stone.userData.stone = true;
       stone.scale.y = 0.56;
       stone.position.set(START + move.x * STEP, 0.55, START + move.y * STEP);
       stone.castShadow = true;
@@ -940,6 +1192,9 @@ export class RenjuBoard {
       this.stones.add(stone);
       if (move.color === 2) {
         const rim = new THREE.Mesh(this.whiteRimGeometry, this.whiteRimMaterial);
+        rim.userData.seat = 'white';
+        rim.userData.rim = true;
+        rim.visible = this.appearance.white.stone === 'classic';
         rim.rotation.x = Math.PI / 2;
         rim.position.set(stone.position.x, 0.46, stone.position.z);
         this.stones.add(rim);

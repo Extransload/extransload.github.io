@@ -31,4 +31,9 @@ describe('Omokmaru appearance values', () => {
     expect(appearanceForSeat('black', 'spectator', selected)).toEqual(DEFAULT_APPEARANCE);
     expect(appearanceForSeat('white', null, selected)).toEqual(DEFAULT_APPEARANCE);
   });
+
+  it('accepts the new original character while retaining saved legacy choices', () => {
+    expect(normalizeAppearance({ avatar: 'shadow' }).avatar).toBe('shadow');
+    expect(normalizeAppearance({ avatar: 'coral' }).avatar).toBe('coral');
+  });
 });

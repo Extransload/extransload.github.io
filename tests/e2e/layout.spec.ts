@@ -782,7 +782,10 @@ test('Omokmaru studio previews, saves, and reuses a free look', async ({ page })
   expect((await page.locator('#studio-canvas canvas').screenshot()).equals(before)).toBe(false);
   await page.locator('[data-category="avatar"]').click();
   await expect(page.locator('#studio-canvas')).toHaveAttribute('data-focus', 'avatar');
+  await expect(page.locator('#studio-items .studio-item')).toHaveCount(6);
+  const originalAvatar = await page.locator('#studio-canvas canvas').screenshot();
   await page.locator('[data-item-id="coral"]').click();
+  expect((await page.locator('#studio-canvas canvas').screenshot()).equals(originalAvatar)).toBe(false);
   await page.locator('.studio-tabs [data-category="accessory"]').click();
   await expect(page.locator('#studio-canvas')).toHaveAttribute('data-focus', 'accessory');
   await page.locator('[data-item-id="crown"]').click();
@@ -793,7 +796,9 @@ test('Omokmaru studio previews, saves, and reuses a free look', async ({ page })
   await expect(page.locator('#studio-canvas')).toHaveAttribute('data-focus', 'victory');
   await expect(page.locator('#studio-victory')).toBeVisible();
   await page.locator('[data-item-id="spin"]').click();
-  await expect(page.locator('#studio-current-label')).toHaveText('비취 · 산호 · 별 왕관 · 호두나무 · 빙글 회전');
+  await expect(page.locator('#studio-current-label')).toHaveText(
+    '팔각 비취 · 파도 선장 · 별 왕관 · 호두나무 · 빙글 회전',
+  );
   await page.locator('#studio-victory').click();
   await expect(page.locator('#studio-victory')).toHaveText(/다시 보기/);
   await page.locator('[data-category="stone"]').click();
@@ -802,9 +807,13 @@ test('Omokmaru studio previews, saves, and reuses a free look', async ({ page })
   await page.locator('#studio-default').click();
   await expect(page.locator('#studio-current-label')).toContainText('클래식');
   await page.locator('.studio-slot').first().getByRole('button', { name: '적용' }).click();
-  await expect(page.locator('#studio-current-label')).toHaveText('비취 · 산호 · 별 왕관 · 호두나무 · 빙글 회전');
+  await expect(page.locator('#studio-current-label')).toHaveText(
+    '팔각 비취 · 파도 선장 · 별 왕관 · 호두나무 · 빙글 회전',
+  );
   await page.reload();
-  await expect(page.locator('#studio-current-label')).toHaveText('비취 · 산호 · 별 왕관 · 호두나무 · 빙글 회전');
+  await expect(page.locator('#studio-current-label')).toHaveText(
+    '팔각 비취 · 파도 선장 · 별 왕관 · 호두나무 · 빙글 회전',
+  );
   await page.goto('/playroom/omokmaru/solo/');
   await expect(page.locator('.wardrobe-link')).toBeVisible();
   await page.locator('#start').click();
