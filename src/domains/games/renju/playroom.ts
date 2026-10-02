@@ -6,8 +6,7 @@ import { mountRulesHelp } from './rules-help';
 import { mountMoveConfirm } from './move-confirm';
 import { guestClientId, guestName, saveGuestName } from './identity';
 import { mountGameSound } from './sound';
-import { DEFAULT_APPEARANCE, type Appearance } from './appearance';
-import { mountWardrobe } from './wardrobe';
+import { DEFAULT_APPEARANCE, watchAppearance, type Appearance } from './appearance';
 
 const $ = <T extends HTMLElement>(selector: string) => document.querySelector<T>(selector)!;
 const api = (
@@ -34,7 +33,7 @@ let lastBoardSignature = '';
 let lastRenderedStatus: RoomSnapshot['status'] | null = null;
 let name = guestName();
 let appearance: Appearance = { ...DEFAULT_APPEARANCE };
-mountWardrobe((next) => {
+watchAppearance((next) => {
   appearance = next;
   board.setBoardStyle(next.board);
   if (role === 'black' || role === 'white') board.setAppearance(role, next);

@@ -4,11 +4,11 @@ import type { Difficulty } from './ai';
 import { mountRulesHelp } from './rules-help';
 import { mountMoveConfirm } from './move-confirm';
 import { mountGameSound } from './sound';
-import { mountWardrobe } from './wardrobe';
+import { watchAppearance } from './appearance';
 
 const $ = <T extends HTMLElement>(selector: string) => document.querySelector<T>(selector)!;
 const board = new RenjuBoard($('#canvas'));
-mountWardrobe((appearance) => {
+watchAppearance((appearance) => {
   board.setBoardStyle(appearance.board);
   board.setAppearance('black', appearance);
   board.setAppearance('white', appearance);

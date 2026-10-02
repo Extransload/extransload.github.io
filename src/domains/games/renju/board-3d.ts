@@ -1,7 +1,13 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { DEFAULT_APPEARANCE, type AvatarStyle, type BoardStyle, type PublicAppearance } from './appearance';
+import {
+  DEFAULT_APPEARANCE,
+  type AccessoryStyle,
+  type AvatarStyle,
+  type BoardStyle,
+  type PublicAppearance,
+} from './appearance';
 import {
   analyzeMove,
   boardFromMoves,
@@ -28,6 +34,7 @@ type AvatarRig = {
   shell: THREE.MeshPhysicalMaterial;
   face: THREE.MeshStandardMaterial;
   accent: THREE.MeshStandardMaterial;
+  decorations: Partial<Record<AccessoryStyle, THREE.Group>>;
 };
 export const coordinate = (x: number, y: number) => `${'ABCDEFGHJKLMNOP'[x]}${y + 1}`;
 export class RenjuBoard {
@@ -358,6 +365,51 @@ export class RenjuBoard {
     belly.scale.set(1, 0.82, 0.38);
     const head = add(new THREE.SphereGeometry(0.73, 32, 22), shell, 0, 1.84, 0.12);
     head.scale.set(1, 0.91, 0.84);
+    const decorations: Partial<Record<AccessoryStyle, THREE.Group>> = {};
+    const decorate = (
+      style: AccessoryStyle,
+      pieces: { geometry: THREE.BufferGeometry; x: number; y: number; z: number }[],
+    ) => {
+      const set = new THREE.Group();
+      for (const piece of pieces) {
+        const mesh = new THREE.Mesh(piece.geometry, accent);
+        mesh.position.set(piece.x, piece.y, piece.z);
+        mesh.castShadow = true;
+        set.add(mesh);
+      }
+      set.visible = false;
+      group.add(set);
+      decorations[style] = set;
+    };
+    decorate('flower', [
+      { geometry: new THREE.SphereGeometry(0.2, 16, 12), x: -0.49, y: 2.39, z: 0.42 },
+      { geometry: new THREE.SphereGeometry(0.12, 16, 12), x: -0.7, y: 2.24, z: 0.4 },
+    ]);
+    decorate('leaf', [
+      { geometry: new THREE.ConeGeometry(0.16, 0.43, 12), x: 0.31, y: 2.55, z: 0.14 },
+      { geometry: new THREE.ConeGeometry(0.12, 0.32, 12), x: 0.03, y: 2.57, z: 0.17 },
+    ]);
+    decorate(
+      'crown',
+      [-0.42, 0, 0.42].map((x) => ({
+        geometry: new THREE.ConeGeometry(0.17, x === 0 ? 0.55 : 0.42, 8),
+        x,
+        y: 2.59,
+        z: 0.12,
+      })),
+    );
+    decorate(
+      'sun',
+      Array.from({ length: 6 }, (_, i) => {
+        const angle = (i / 6) * Math.PI * 2;
+        return {
+          geometry: new THREE.SphereGeometry(0.17, 12, 10),
+          x: -0.48 + Math.cos(angle) * 0.2,
+          y: 2.36 + Math.sin(angle) * 0.2,
+          z: 0.48,
+        };
+      }),
+    );
     const arms: THREE.Mesh[] = [];
     for (const side of [-1, 1]) {
       const arm = add(new THREE.SphereGeometry(0.25, 20, 16), shell, side * 0.78, 1.07, 0.22);
@@ -373,7 +425,7 @@ export class RenjuBoard {
     const character = new THREE.Group();
     group.add(character);
     for (const child of [...group.children]) if (child !== plinth && child !== character) character.add(child);
-    return { group, character, halo, head, arms, shell, face, accent };
+    return { group, character, halo, head, arms, shell, face, accent, decorations };
   }
   setBoardStyle(style: BoardStyle) {
     if (!this.boardMaterials) return;
@@ -381,6 +433,8 @@ export class RenjuBoard {
       oak: [0xb98250, 0x64472e, 0x4e3828],
       walnut: [0x997653, 0x473627, 0x35291e],
       linen: [0x8e8b7d, 0x464438, 0x36342d],
+      ink: [0x7b8c96, 0x3b4f5b, 0x2d404b],
+      meadow: [0x87916d, 0x4b5e38, 0x39492d],
     }[style];
     this.boardMaterials.surface.color.setHex(palette[0]);
     this.boardMaterials.line.color.setHex(palette[1]);
@@ -393,6 +447,8 @@ export class RenjuBoard {
       classic: seat === 'black' ? [0x09131d, 0.21, 0.15] : [0xfff9ee, 0.24, 0.02],
       jade: seat === 'black' ? [0x123b38, 0.16, 0.08] : [0xe8f4dc, 0.18, 0.04],
       slate: seat === 'black' ? [0x23272e, 0.68, 0.02] : [0xe5e3de, 0.62, 0.01],
+      amber: seat === 'black' ? [0x493018, 0.24, 0.12] : [0xfff1d2, 0.24, 0.05],
+      rose: seat === 'black' ? [0x442433, 0.27, 0.1] : [0xffe8ee, 0.24, 0.03],
     }[appearance.stone];
     const material = this.stoneMaterials[seat];
     material.color.setHex(stone[0]);
@@ -403,10 +459,14 @@ export class RenjuBoard {
       classic: seat === 'black' ? [0x182d3a, 0x304859, 0xe4bd77] : [0xf5ecd8, 0xfff9e9, 0x677f88],
       coral: seat === 'black' ? [0x583240, 0x815160, 0xf2bd89] : [0xffe2d4, 0xfff2e8, 0xc36566],
       mint: seat === 'black' ? [0x1e4946, 0x3b6961, 0xe6ce9e] : [0xe0f0e4, 0xf6fcf3, 0x58a592],
+      royal: seat === 'black' ? [0x242e56, 0x394874, 0xe4c176] : [0xe0e5fa, 0xf9faff, 0x8b77b9],
+      sunflower: seat === 'black' ? [0x634222, 0x8d6537, 0xefc45b] : [0xffedb5, 0xfff9dc, 0xcc9b3b],
     }[appearance.avatar as AvatarStyle];
     rig.shell.color.setHex(avatar[0]);
     rig.face.color.setHex(avatar[1]);
     rig.accent.color.setHex(avatar[2]);
+    for (const [style, decoration] of Object.entries(rig.decorations))
+      decoration!.visible = style === appearance.accessory;
     if (this.selected && this.color === (seat === 'black' ? 1 : 2)) {
       const preview = this.preview.children[0] as THREE.Mesh | undefined;
       if (preview) (preview.material as THREE.MeshPhysicalMaterial).color.setHex(stone[0]);
@@ -486,14 +546,16 @@ export class RenjuBoard {
       }
       const turn = 1 - (1 - Math.min(1, elapsed / 650)) ** 3;
       const beat = Math.max(0, (elapsed - 650) / 1000);
-      const spin = this.appearance[winner].victory === 'spin';
+      const style = this.appearance[winner].victory;
       rig.group.rotation.y =
-        baseRotation + Math.PI * turn + (elapsed > 650 ? (spin ? beat * 3 : Math.sin(beat * 4) * 0.3) : 0);
+        baseRotation + Math.PI * turn + (elapsed > 650 ? (style === 'spin' ? beat * 3 : Math.sin(beat * 4) * 0.3) : 0);
       if (elapsed > 650) {
-        rig.group.position.y = baseY + Math.abs(Math.sin(beat * (spin ? 4 : 7))) * (spin ? 0.16 : 0.28);
-        rig.head.rotation.z = Math.sin(beat * 5) * 0.15;
-        rig.arms[0].rotation.z = -0.55 - Math.sin(beat * 7) * 0.45;
-        rig.arms[1].rotation.z = 0.55 + Math.sin(beat * 7 + Math.PI) * 0.45;
+        rig.group.position.y =
+          baseY + Math.abs(Math.sin(beat * (style === 'spin' ? 4 : 7))) * (style === 'bow' ? 0.04 : 0.28);
+        rig.head.rotation.z = style === 'bow' ? 0.22 + Math.sin(beat * 3) * 0.06 : Math.sin(beat * 5) * 0.15;
+        rig.group.rotation.x = style === 'bow' ? -0.16 - Math.sin(beat * 3) * 0.04 : 0;
+        rig.arms[0].rotation.z = style === 'cheer' ? -1.65 : -0.55 - Math.sin(beat * 7) * 0.45;
+        rig.arms[1].rotation.z = style === 'cheer' ? 1.65 : 0.55 + Math.sin(beat * 7 + Math.PI) * 0.45;
         rig.halo.scale.setScalar(1 + Math.sin(beat * 6) * 0.08);
       }
       this.render();
@@ -509,6 +571,7 @@ export class RenjuBoard {
       const rig = this.avatars[color];
       rig.character.rotation.z = 0;
       rig.group.position.y = -0.08;
+      rig.group.rotation.x = 0;
       rig.group.rotation.y = Math.atan2(-rig.group.position.x, -rig.group.position.z);
       rig.head.rotation.z = 0;
       for (const arm of rig.arms) arm.rotation.z = 0;

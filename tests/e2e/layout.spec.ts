@@ -744,7 +744,11 @@ test('solo board renders the AI reply after the player move', async ({ page }) =
   await expect(page.locator('#canvas')).toHaveAttribute('data-rendered-moves', '2');
   const canvas = page.locator('.canvas canvas');
   await canvas.focus();
-  await page.keyboard.press('ArrowRight');
+  for (let step = 0; step < 5; step++) {
+    await page.keyboard.press('ArrowRight');
+    if ((await page.locator('#board-keyboard-status').textContent())?.includes('빈 자리')) break;
+  }
+  await expect(page.locator('#board-keyboard-status')).toContainText('빈 자리');
   await page.keyboard.press('Enter');
   await expect(page.locator('#canvas')).toHaveAttribute('data-rendered-moves', '4');
   await page.locator('#undo').click();
@@ -761,18 +765,64 @@ test('Omokmaru sound setting persists between visits', async ({ page }) => {
   await expect(page.locator('#sound')).toHaveAttribute('aria-pressed', 'true');
 });
 
-test('free Omokmaru wardrobe stays selected across solo and online pages', async ({ page }) => {
+test('Omokmaru studio previews, saves, and reuses a free look', async ({ page }) => {
+  await page.goto('/playroom/omokmaru/wardrobe/');
+  await expect(page.locator('#studio-canvas')).toHaveAttribute('data-rendered-moves', '8');
+  await expect(page.locator('.studio-item[aria-pressed="true"]')).toHaveCount(1);
+  const before = await page.locator('#studio-canvas canvas').screenshot();
+  await page.locator('[data-item-id="jade"]').click();
+  await expect(page.locator('.studio-item[aria-pressed="true"]')).toHaveCount(1);
+  await expect(page.locator('[data-item-id="jade"]')).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('[data-category="avatar"]').click();
+  await page.locator('[data-item-id="coral"]').click();
+  await page.locator('.studio-tabs [data-category="accessory"]').click();
+  await page.locator('[data-item-id="crown"]').click();
+  await page.locator('[data-category="board"]').click();
+  await page.locator('[data-item-id="walnut"]').click();
+  await page.locator('[data-category="victory"]').click();
+  await page.locator('[data-item-id="spin"]').click();
+  await expect(page.locator('#studio-current-label')).toHaveText('비취 · 산호 · 별 왕관 · 호두나무 · 빙글 회전');
+  expect((await page.locator('#studio-canvas canvas').screenshot()).equals(before)).toBe(false);
+  await page.locator('#studio-victory').click();
+  await expect(page.locator('#studio-victory')).toHaveText(/다시 보기/);
+  await page.locator('#studio-board-reset').click();
+  await expect(page.locator('#studio-canvas')).toHaveAttribute('data-rendered-moves', '8');
+  await page.getByRole('button', { name: '1번 세트에 현재 조합 저장' }).click();
+  await page.locator('#studio-default').click();
+  await expect(page.locator('#studio-current-label')).toContainText('클래식');
+  await page.locator('.studio-slot').first().getByRole('button', { name: '적용' }).click();
+  await expect(page.locator('#studio-current-label')).toHaveText('비취 · 산호 · 별 왕관 · 호두나무 · 빙글 회전');
+  await page.reload();
+  await expect(page.locator('#studio-current-label')).toHaveText('비취 · 산호 · 별 왕관 · 호두나무 · 빙글 회전');
   await page.goto('/playroom/omokmaru/solo/');
-  await page.locator('[data-wardrobe="stone"]').selectOption('jade');
-  await page.locator('[data-wardrobe="avatar"]').selectOption('coral');
-  await page.locator('[data-wardrobe="board"]').selectOption('walnut');
-  await page.locator('[data-wardrobe="victory"]').selectOption('spin');
+  await expect(page.locator('.wardrobe-link')).toBeVisible();
   await page.locator('#start').click();
   await expect(page.locator('#canvas')).toHaveAttribute('data-rendered-moves', '2');
   await page.goto('/playroom/omokmaru/');
-  for (const [field, value] of Object.entries({ stone: 'jade', avatar: 'coral', board: 'walnut', victory: 'spin' }))
-    await expect(page.locator(`#lobby [data-wardrobe="${field}"]`)).toHaveValue(value);
-  await expect(page.getByRole('region', { name: '무료 꾸미기 옷장' })).toContainText('모든 디자인 사용 가능');
+  await expect(page.locator('#lobby .wardrobe-link')).toBeVisible();
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('omokmaru-appearance-v1') || 'null'))).toEqual({
+    stone: 'jade',
+    avatar: 'coral',
+    accessory: 'crown',
+    board: 'walnut',
+    victory: 'spin',
+  });
+});
+
+test('Omokmaru studio puts the 3D preview before options on a phone', async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/playroom/omokmaru/wardrobe/');
+  const preview = await page.locator('.studio-preview').boundingBox();
+  const options = await page.locator('.studio-editor').boundingBox();
+  expect(preview!.y).toBeLessThan(options!.y);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  await page.locator('[data-seat="white"]').click();
+  await page.locator('#studio-victory').click();
+  await expect(page.locator('#studio-canvas')).toHaveAttribute('data-rendered-moves', '10');
+  const startFrame = await page.locator('#studio-canvas canvas').screenshot();
+  await page.waitForTimeout(500);
+  expect((await page.locator('#studio-canvas canvas').screenshot()).equals(startFrame)).toBe(false);
 });
 
 test('keyboard can inspect coordinates and place a solo move', async ({ page }) => {
