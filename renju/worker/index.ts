@@ -1,4 +1,12 @@
-import { analyzeMove, boardFromMoves, index, SIZE, type Color, type Move } from '../../src/domains/games/renju/rules';
+import {
+  analyzeMove,
+  boardFromMoves,
+  index,
+  openingMove,
+  SIZE,
+  type Color,
+  type Move,
+} from '../../src/domains/games/renju/rules';
 import { advanceClock, finishMoveClock, freshClock, timeoutAfter } from '../../src/domains/games/renju/clock';
 import {
   DEFAULT_SETTINGS,
@@ -485,7 +493,7 @@ export class RenjuRoom {
       return;
     if (!this.connected('black') || !this.connected('white')) return;
     room.status = 'playing';
-    room.moves = [];
+    room.moves = [openingMove()];
     room.winner = undefined;
     room.reason = undefined;
     room.ready = { black: false, white: false };

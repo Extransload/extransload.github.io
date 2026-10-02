@@ -94,6 +94,18 @@ describe('Renju move rules', () => {
     );
     expect(result).toMatchObject({ legal: false, forbidden: 'double-three' });
   });
+  it('treats OXOOO as a broken four, not a second three', () => {
+    // O is black, X is empty. The move at row 2, column 4
+    // makes a horizontal broken four and a vertical open three.
+    const board = placed([
+      [8, 6],
+      [5, 7],
+      [7, 7],
+      [9, 7],
+      [8, 8],
+    ]);
+    expect(analyzeMove(board, 8, 7, 1)).toMatchObject({ legal: true, win: false });
+  });
   it('allows an apparent double three when a branch cannot become open four', () => {
     const result = analyzeMove(
       placed(

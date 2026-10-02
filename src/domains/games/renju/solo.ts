@@ -1,5 +1,5 @@
 import { RenjuBoard, coordinate } from './board-3d';
-import { analyzeMove, boardFromMoves, SIZE, type Color, type Move, type Point } from './rules';
+import { analyzeMove, boardFromMoves, openingMove, SIZE, type Color, type Move, type Point } from './rules';
 import type { Difficulty } from './ai';
 import { mountRulesHelp } from './rules-help';
 import { mountMoveConfirm } from './move-confirm';
@@ -98,7 +98,7 @@ function render() {
     $('#overlay-kicker').textContent = finished ? 'GAME OVER' : 'SOLO';
     overlay.dataset.mode = finished ? 'result' : 'waiting';
   }
-  $('#undo').hidden = !playing || moves.length < (player === 1 ? 2 : 3);
+  $('#undo').hidden = !playing || moves.length < (player === 1 ? 3 : 2);
   $('#start').hidden = playing;
   $('#start').textContent = finished ? '다시 대국' : '대국 시작';
   $('#resign-solo').hidden = !playing;
@@ -200,7 +200,7 @@ $('#start').addEventListener('click', () => {
   board.clearCelebration();
   board.reset();
   lastBoardSignature = '';
-  moves = [];
+  moves = [openingMove()];
   winner = null;
   wonByFive = false;
   finished = false;
@@ -218,7 +218,7 @@ $('#resign-solo').addEventListener('click', () => {
   finish(player === 1 ? 2 : 1);
 });
 $('#undo').addEventListener('click', () => {
-  if (!playing || !moves.length) return;
+  if (!playing || moves.length < (player === 1 ? 3 : 2)) return;
   generation++;
   restartWorker();
   thinking = false;

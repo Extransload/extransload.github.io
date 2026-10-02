@@ -723,14 +723,16 @@ test('solo match replaces start with resign until the match ends', async ({ page
 
 test('desktop board click places a stone immediately', async ({ page }) => {
   await page.goto('/playroom/omokmaru/solo/');
+  await page.locator('#side-white').click();
   await page.locator('#difficulty').selectOption('easy');
   await page.locator('#start').click();
   const canvas = page.locator('.canvas canvas');
   const box = await canvas.boundingBox();
-  const center = { x: box!.width / 2, y: box!.height / 2 };
+  const neighbor = { x: box!.width / 2 + 42, y: box!.height / 2 };
+  await expect(page.locator('#canvas')).toHaveAttribute('data-rendered-moves', '1');
   await expect(page.locator('#move-confirm')).toBeHidden();
   await expect(page.locator('#undo')).toBeHidden();
-  await canvas.click({ position: center });
+  await canvas.click({ position: neighbor });
   await expect(page.locator('#undo')).toBeVisible();
   await expect(page.locator('#move-confirm')).toBeHidden();
 });
@@ -739,12 +741,14 @@ test('solo board renders the AI reply after the player move', async ({ page }) =
   await page.goto('/playroom/omokmaru/solo/');
   await page.locator('#difficulty').selectOption('easy');
   await page.locator('#start').click();
-  const canvas = page.locator('.canvas canvas');
-  const bounds = await canvas.boundingBox();
-  await canvas.click({ position: { x: bounds!.width / 2, y: bounds!.height / 2 } });
   await expect(page.locator('#canvas')).toHaveAttribute('data-rendered-moves', '2');
+  const canvas = page.locator('.canvas canvas');
+  await canvas.focus();
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#canvas')).toHaveAttribute('data-rendered-moves', '4');
   await page.locator('#undo').click();
-  await expect(page.locator('#canvas')).toHaveAttribute('data-rendered-moves', '0');
+  await expect(page.locator('#canvas')).toHaveAttribute('data-rendered-moves', '2');
 });
 
 test('Omokmaru sound setting persists between visits', async ({ page }) => {
@@ -759,6 +763,7 @@ test('Omokmaru sound setting persists between visits', async ({ page }) => {
 
 test('keyboard can inspect coordinates and place a solo move', async ({ page }) => {
   await page.goto('/playroom/omokmaru/solo/');
+  await page.locator('#side-white').click();
   await page.locator('#difficulty').selectOption('easy');
   await page.locator('#start').click();
   const canvas = page.locator('.canvas canvas');
@@ -766,8 +771,6 @@ test('keyboard can inspect coordinates and place a solo move', async ({ page }) 
   await canvas.focus();
   await page.keyboard.press('ArrowRight');
   await expect(page.locator('#board-keyboard-status')).toContainText('J8');
-  await page.keyboard.press('ArrowLeft');
-  await expect(page.locator('#board-keyboard-status')).toContainText('H8');
   await page.keyboard.press('Enter');
   await expect(page.locator('#undo')).toBeVisible();
 });
@@ -777,6 +780,7 @@ test('small solo screen returns to the board when play starts', async ({ browser
   const page = await context.newPage();
   try {
     await page.goto('/playroom/omokmaru/solo/');
+    await page.locator('#side-white').click();
     await page.locator('#start').click();
     await expect.poll(() => page.evaluate(() => Math.round(window.scrollY))).toBe(0);
     await expect(page.locator('#stage-hint')).toContainText('내 차례');
@@ -816,13 +820,13 @@ test('touch board tap previews a stone until the move button confirms it', async
     await page.locator('#difficulty').selectOption('easy');
     await page.locator('#start').click();
     const box = await page.locator('.canvas canvas').boundingBox();
-    const center = { x: box!.x + box!.width / 2, y: box!.y + box!.height / 2 };
-    await page.touchscreen.tap(center.x, center.y);
-    await expect(page.locator('#place-label')).toHaveText('H8 착수');
+    const neighbor = { x: box!.x + box!.width / 2 + 20, y: box!.y + box!.height / 2 };
+    await page.touchscreen.tap(neighbor.x, neighbor.y);
+    await expect(page.locator('#place-label')).toHaveText(/착수/);
     await expect(page.locator('#undo')).toBeHidden();
     await page.locator('#cancel-move').click();
     await expect(page.locator('#move-confirm')).toBeHidden();
-    await page.touchscreen.tap(center.x, center.y);
+    await page.touchscreen.tap(neighbor.x, neighbor.y);
     await page.locator('#place-move').click();
     await expect(page.locator('#undo')).toBeVisible();
   } finally {

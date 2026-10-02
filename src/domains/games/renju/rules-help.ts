@@ -87,6 +87,24 @@ const slides: Slide[] = [
       [4, 3, 4, 5, 'gold'],
     ],
   },
+  {
+    tag: '허용',
+    title: '띈 4와 3은 쌍삼이 아님',
+    body: '가로 OXOOO는 빈 칸 하나를 채우면 5목이 되는 띈 4입니다. 세로의 3과 만나도 3·3 금수가 아닙니다.',
+    alt: '가로 띈 4와 세로 열린 3이 만나는 자리에 흑돌을 놓아도 허용되는 그림',
+    stones: [
+      [4, 3, 'black'],
+      [1, 4, 'black'],
+      [3, 4, 'black'],
+      [5, 4, 'black'],
+      [4, 5, 'black'],
+    ],
+    candidate: [4, 4, 'allowed'],
+    paths: [
+      [1, 4, 5, 4, 'gold'],
+      [4, 3, 4, 5, 'gold'],
+    ],
+  },
 ];
 function diagram(slide: Slide) {
   const point = (x: number, y: number) => [36 + x * 33, 36 + y * 33];

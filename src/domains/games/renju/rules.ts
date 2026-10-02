@@ -5,6 +5,7 @@ export type Move = Point & { color: Color };
 export type Board = Uint8Array;
 export type ForbiddenKind = 'overline' | 'double-four' | 'double-three';
 export type Verdict = { legal: boolean; win: boolean; forbidden?: ForbiddenKind; causes: Point[] };
+export const openingMove = (): Move => ({ x: 7, y: 7, color: 1 });
 
 const directions = [
   [1, 0],
@@ -70,9 +71,11 @@ function fours(board: Board, x: number, y: number): Point[][] {
   return [...found.values()];
 }
 
-function threes(board: Board, x: number, y: number, memo: Map<string, Verdict>): Point[][] {
+function threes(board: Board, x: number, y: number, fourGroups: Point[][], memo: Map<string, Verdict>): Point[][] {
   const found = new Map<string, Point[]>();
   for (const [dx, dy] of directions) {
+    // A line that already makes a four is a four threat, not an open three.
+    if (fourGroups.some((group) => group.every((point) => (point.x - x) * dy === (point.y - y) * dx))) continue;
     for (let offset = -4; offset <= 4; offset++) {
       const qx = x + offset * dx,
         qy = y + offset * dy;
@@ -128,7 +131,7 @@ export function analyzeMove(
     const fourGroups = fours(board, x, y);
     if (fourGroups.length >= 2)
       return { legal: false, win: false, forbidden: 'double-four', causes: unique(fourGroups.flat()) };
-    const threeGroups = threes(board, x, y, memo);
+    const threeGroups = threes(board, x, y, fourGroups, memo);
     if (threeGroups.length >= 2)
       return { legal: false, win: false, forbidden: 'double-three', causes: unique(threeGroups.flat()) };
     const verdict = { legal: true, win: false, causes: [] };
