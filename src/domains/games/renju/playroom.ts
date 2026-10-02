@@ -6,6 +6,8 @@ import { mountRulesHelp } from './rules-help';
 import { mountMoveConfirm } from './move-confirm';
 import { guestClientId, guestName, saveGuestName } from './identity';
 import { mountGameSound } from './sound';
+import { DEFAULT_APPEARANCE, type Appearance } from './appearance';
+import { mountWardrobe } from './wardrobe';
 
 const $ = <T extends HTMLElement>(selector: string) => document.querySelector<T>(selector)!;
 const api = (
@@ -31,6 +33,14 @@ let serverOffset = 0;
 let lastBoardSignature = '';
 let lastRenderedStatus: RoomSnapshot['status'] | null = null;
 let name = guestName();
+let appearance: Appearance = { ...DEFAULT_APPEARANCE };
+mountWardrobe((next) => {
+  appearance = next;
+  board.setBoardStyle(next.board);
+  if (role === 'black' || role === 'white') board.setAppearance(role, next);
+  if (socket?.readyState === WebSocket.OPEN && role !== 'spectator')
+    socket.send(JSON.stringify({ type: 'appearance', appearance: next }));
+});
 const clientId = guestClientId();
 $('#guest-name').textContent = name;
 let lastChatId = '';
@@ -174,6 +184,8 @@ function render() {
   lastRenderedStatus = state?.status ?? null;
   moveConfirm.setAvailable(!!myTurn, role === 'white' ? 'white' : 'black');
   board.setSeats(role, playing ? turn : null, { black: !!state?.players.black, white: !!state?.players.white });
+  for (const seat of ['black', 'white'] as const)
+    board.setAppearance(seat, seat === role ? appearance : (state?.players[seat]?.appearance ?? DEFAULT_APPEARANCE));
   if (finished && state?.winner && state.winner !== 'draw' && replayMove === state.moves.length)
     board.celebrate(state.winner, state.reason === 'five');
   else if (finished && state && replayMove < state.moves.length && board.clearCelebration()) board.reset();
@@ -366,6 +378,7 @@ function connect() {
   ws.onopen = () => {
     retry = 0;
     offline = false;
+    if (role !== 'spectator') ws.send(JSON.stringify({ type: 'appearance', appearance }));
     if (state) render();
   };
   ws.onmessage = (event) => {

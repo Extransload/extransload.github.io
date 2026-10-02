@@ -1,8 +1,9 @@
 import type { Move } from './rules';
+import type { PublicAppearance } from './appearance';
 
 export type PlayerRole = 'black' | 'white';
 export type RoomRole = PlayerRole | 'spectator';
-export type PlayerIdentity = { name: string; country: string; maskedIp: string };
+export type PlayerIdentity = { name: string; country: string; maskedIp: string; appearance?: PublicAppearance };
 export function normalizeGuestName(value: unknown): string | null {
   if (typeof value !== 'string') return null;
   const name = value.trim();

@@ -761,6 +761,20 @@ test('Omokmaru sound setting persists between visits', async ({ page }) => {
   await expect(page.locator('#sound')).toHaveAttribute('aria-pressed', 'true');
 });
 
+test('free Omokmaru wardrobe stays selected across solo and online pages', async ({ page }) => {
+  await page.goto('/playroom/omokmaru/solo/');
+  await page.locator('[data-wardrobe="stone"]').selectOption('jade');
+  await page.locator('[data-wardrobe="avatar"]').selectOption('coral');
+  await page.locator('[data-wardrobe="board"]').selectOption('walnut');
+  await page.locator('[data-wardrobe="victory"]').selectOption('spin');
+  await page.locator('#start').click();
+  await expect(page.locator('#canvas')).toHaveAttribute('data-rendered-moves', '2');
+  await page.goto('/playroom/omokmaru/');
+  for (const [field, value] of Object.entries({ stone: 'jade', avatar: 'coral', board: 'walnut', victory: 'spin' }))
+    await expect(page.locator(`#lobby [data-wardrobe="${field}"]`)).toHaveValue(value);
+  await expect(page.getByRole('region', { name: '무료 꾸미기 옷장' })).toContainText('모든 디자인 사용 가능');
+});
+
 test('keyboard can inspect coordinates and place a solo move', async ({ page }) => {
   await page.goto('/playroom/omokmaru/solo/');
   await page.locator('#side-white').click();

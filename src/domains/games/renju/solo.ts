@@ -4,9 +4,15 @@ import type { Difficulty } from './ai';
 import { mountRulesHelp } from './rules-help';
 import { mountMoveConfirm } from './move-confirm';
 import { mountGameSound } from './sound';
+import { mountWardrobe } from './wardrobe';
 
 const $ = <T extends HTMLElement>(selector: string) => document.querySelector<T>(selector)!;
 const board = new RenjuBoard($('#canvas'));
+mountWardrobe((appearance) => {
+  board.setBoardStyle(appearance.board);
+  board.setAppearance('black', appearance);
+  board.setAppearance('white', appearance);
+});
 const sound = mountGameSound();
 board.onMoveCommitted = () => sound.playStone();
 const moveConfirm = mountMoveConfirm(board, (point) => {

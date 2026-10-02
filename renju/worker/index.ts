@@ -26,6 +26,7 @@ import {
   type ChatMessage,
   type PublicRoom,
 } from '../../src/domains/games/renju/protocol';
+import { publicAppearance } from '../../src/domains/games/renju/appearance';
 
 interface Env {
   ROOMS: DurableObjectNamespace;
@@ -61,7 +62,17 @@ type CachedRoom = PublicRoom & { version: number; updatedAt: number };
 const LOBBY_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 type SocketData = { id: string; role: RoomRole; visitor: Visitor; lastChat: number; seatHash?: string };
 type Message = {
-  type?: 'ready' | 'rematch' | 'rematch-decline' | 'settings' | 'move' | 'resign' | 'chat' | 'rename' | 'kick';
+  type?:
+    | 'ready'
+    | 'rematch'
+    | 'rematch-decline'
+    | 'settings'
+    | 'move'
+    | 'resign'
+    | 'chat'
+    | 'rename'
+    | 'kick'
+    | 'appearance';
   ready?: boolean;
   settings?: unknown;
   x?: number;
@@ -69,11 +80,17 @@ type Message = {
   text?: string;
   name?: string;
   target?: string;
+  appearance?: unknown;
 };
 
 const json = (body: unknown, status = 200) => Response.json(body, { status });
 const token = () => crypto.randomUUID() + crypto.randomUUID();
-const publicIdentity = ({ name, country, maskedIp }: PlayerIdentity): PlayerIdentity => ({ name, country, maskedIp });
+const publicIdentity = ({ name, country, maskedIp, appearance }: PlayerIdentity): PlayerIdentity => ({
+  name,
+  country,
+  maskedIp,
+  appearance,
+});
 function maskIp(ip: string) {
   if (/^(\d{1,3}\.){3}\d{1,3}$/.test(ip)) return ip.replace(/\.\d+$/, '.xxx');
   if (ip.includes(':')) return `${ip.split(':').slice(0, 3).join(':')}::****`;
@@ -424,12 +441,8 @@ export class RenjuRoom {
       serverNow: Date.now(),
       public: !!room.public,
       players: {
-        black: players.black
-          ? { name: players.black.name, country: players.black.country, maskedIp: players.black.maskedIp }
-          : null,
-        white: players.white
-          ? { name: players.white.name, country: players.white.country, maskedIp: players.white.maskedIp }
-          : null,
+        black: players.black ? publicIdentity(players.black) : null,
+        white: players.white ? publicIdentity(players.white) : null,
       },
       chat: room.chat ?? [],
     };
@@ -759,6 +772,16 @@ export class RenjuRoom {
       if (role !== 'spectator' && room.players?.[role]) {
         room.players[role].name = renamed;
       }
+      room.version++;
+      await this.write(room);
+      this.broadcast(room);
+      return;
+    }
+    if (message.type === 'appearance') {
+      if (role === 'spectator' || !room.players?.[role]) return;
+      const next = publicAppearance(message.appearance);
+      if (JSON.stringify(room.players[role].appearance) === JSON.stringify(next)) return;
+      room.players[role].appearance = next;
       room.version++;
       await this.write(room);
       this.broadcast(room);

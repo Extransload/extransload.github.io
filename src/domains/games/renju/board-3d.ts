@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { DEFAULT_APPEARANCE, type AvatarStyle, type BoardStyle, type PublicAppearance } from './appearance';
 import {
   analyzeMove,
   boardFromMoves,
@@ -18,7 +19,16 @@ const START = -6.3,
   STEP = 0.9,
   SURFACE = 0.37;
 type Seat = 'black' | 'white';
-type AvatarRig = { group: THREE.Group; character: THREE.Group; halo: THREE.Mesh; head: THREE.Mesh; arms: THREE.Mesh[] };
+type AvatarRig = {
+  group: THREE.Group;
+  character: THREE.Group;
+  halo: THREE.Mesh;
+  head: THREE.Mesh;
+  arms: THREE.Mesh[];
+  shell: THREE.MeshPhysicalMaterial;
+  face: THREE.MeshStandardMaterial;
+  accent: THREE.MeshStandardMaterial;
+};
 export const coordinate = (x: number, y: number) => `${'ABCDEFGHJKLMNOP'[x]}${y + 1}`;
 export class RenjuBoard {
   private scene = new THREE.Scene();
@@ -29,11 +39,20 @@ export class RenjuBoard {
   private stones = new THREE.Group();
   private preview = new THREE.Group();
   private stoneGeometry = new THREE.SphereGeometry(0.42, 32, 22);
-  private whiteRimGeometry = new THREE.TorusGeometry(0.4, 0.018, 6, 48);
+  private whiteRimGeometry = new THREE.TorusGeometry(0.4, 0.03, 6, 48);
   private whiteRimMaterial = new THREE.MeshBasicMaterial({ color: 0x4e4335 });
   private stoneMaterials = {
     black: new THREE.MeshPhysicalMaterial({ color: 0x09131d, roughness: 0.21, metalness: 0.15, clearcoat: 0.9 }),
     white: new THREE.MeshPhysicalMaterial({ color: 0xfff9ee, roughness: 0.24, metalness: 0.02, clearcoat: 0.78 }),
+  };
+  private appearance: Record<Seat, PublicAppearance> = {
+    black: { ...DEFAULT_APPEARANCE },
+    white: { ...DEFAULT_APPEARANCE },
+  };
+  private boardMaterials?: {
+    surface: THREE.MeshStandardMaterial;
+    line: THREE.MeshStandardMaterial;
+    ink: THREE.MeshStandardMaterial;
   };
   private highlights = new THREE.Group();
   private lastMove = new THREE.Group();
@@ -301,6 +320,7 @@ export class RenjuBoard {
       this.board.add(v);
     }
     const ink = new THREE.MeshStandardMaterial({ color: 0x4e3828, roughness: 0.8 });
+    this.boardMaterials = { surface, line, ink };
     for (const x of [3, 7, 11])
       for (const y of [3, 7, 11]) {
         const dot = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.009, 20), ink);
@@ -353,7 +373,45 @@ export class RenjuBoard {
     const character = new THREE.Group();
     group.add(character);
     for (const child of [...group.children]) if (child !== plinth && child !== character) character.add(child);
-    return { group, character, halo, head, arms };
+    return { group, character, halo, head, arms, shell, face, accent };
+  }
+  setBoardStyle(style: BoardStyle) {
+    if (!this.boardMaterials) return;
+    const palette = {
+      oak: [0xb98250, 0x64472e, 0x4e3828],
+      walnut: [0x997653, 0x473627, 0x35291e],
+      linen: [0x8e8b7d, 0x464438, 0x36342d],
+    }[style];
+    this.boardMaterials.surface.color.setHex(palette[0]);
+    this.boardMaterials.line.color.setHex(palette[1]);
+    this.boardMaterials.ink.color.setHex(palette[2]);
+    this.render();
+  }
+  setAppearance(seat: Seat, appearance: PublicAppearance) {
+    this.appearance[seat] = appearance;
+    const stone = {
+      classic: seat === 'black' ? [0x09131d, 0.21, 0.15] : [0xfff9ee, 0.24, 0.02],
+      jade: seat === 'black' ? [0x123b38, 0.16, 0.08] : [0xe8f4dc, 0.18, 0.04],
+      slate: seat === 'black' ? [0x23272e, 0.68, 0.02] : [0xe5e3de, 0.62, 0.01],
+    }[appearance.stone];
+    const material = this.stoneMaterials[seat];
+    material.color.setHex(stone[0]);
+    material.roughness = stone[1];
+    material.metalness = stone[2];
+    const rig = this.avatars[seat];
+    const avatar = {
+      classic: seat === 'black' ? [0x182d3a, 0x304859, 0xe4bd77] : [0xf5ecd8, 0xfff9e9, 0x677f88],
+      coral: seat === 'black' ? [0x583240, 0x815160, 0xf2bd89] : [0xffe2d4, 0xfff2e8, 0xc36566],
+      mint: seat === 'black' ? [0x1e4946, 0x3b6961, 0xe6ce9e] : [0xe0f0e4, 0xf6fcf3, 0x58a592],
+    }[appearance.avatar as AvatarStyle];
+    rig.shell.color.setHex(avatar[0]);
+    rig.face.color.setHex(avatar[1]);
+    rig.accent.color.setHex(avatar[2]);
+    if (this.selected && this.color === (seat === 'black' ? 1 : 2)) {
+      const preview = this.preview.children[0] as THREE.Mesh | undefined;
+      if (preview) (preview.material as THREE.MeshPhysicalMaterial).color.setHex(stone[0]);
+    }
+    this.render();
   }
   setSeats(
     role: 'black' | 'white' | 'spectator' | null,
@@ -428,9 +486,11 @@ export class RenjuBoard {
       }
       const turn = 1 - (1 - Math.min(1, elapsed / 650)) ** 3;
       const beat = Math.max(0, (elapsed - 650) / 1000);
-      rig.group.rotation.y = baseRotation + Math.PI * turn + (elapsed > 650 ? Math.sin(beat * 4) * 0.3 : 0);
+      const spin = this.appearance[winner].victory === 'spin';
+      rig.group.rotation.y =
+        baseRotation + Math.PI * turn + (elapsed > 650 ? (spin ? beat * 3 : Math.sin(beat * 4) * 0.3) : 0);
       if (elapsed > 650) {
-        rig.group.position.y = baseY + Math.abs(Math.sin(beat * 7)) * 0.28;
+        rig.group.position.y = baseY + Math.abs(Math.sin(beat * (spin ? 4 : 7))) * (spin ? 0.16 : 0.28);
         rig.head.rotation.z = Math.sin(beat * 5) * 0.15;
         rig.arms[0].rotation.z = -0.55 - Math.sin(beat * 7) * 0.45;
         rig.arms[1].rotation.z = 0.55 + Math.sin(beat * 7 + Math.PI) * 0.45;
@@ -541,7 +601,7 @@ export class RenjuBoard {
     if (!this.color) return;
     this.selected = { ...point };
     const material = new THREE.MeshPhysicalMaterial({
-      color: this.color === 1 ? 0x09131d : 0xfff9ee,
+      color: this.stoneMaterials[this.color === 1 ? 'black' : 'white'].color,
       roughness: 0.25,
       transparent: true,
       opacity: 0.86,
