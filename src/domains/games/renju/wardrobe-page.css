@@ -382,6 +382,11 @@
   gap: 12px;
 }
 
+.studio-preview-actions[hidden],
+.studio-camera button[hidden] {
+  display: none;
+}
+
 .studio-preview-top h2 {
   margin: 6px 0 0;
   font:

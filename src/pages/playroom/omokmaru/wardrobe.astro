@@ -23,7 +23,7 @@ import SeoHead from '../../../shared/components/SeoHead.astro';
       <span class="studio-free">ALL FREE</span>
     </header>
     <main class="studio-shell">
-      <div class="studio-intro"><span class="studio-eyebrow">YOUR GAME, YOUR STYLE</span><h1 id="studio-title">꾸미기 스튜디오</h1><p>돌 하나부터 승리의 순간까지, 마음에 드는 모습으로 꾸며 보세요. 모든 디자인은 무료입니다.</p></div>
+      <div class="studio-intro"><span class="studio-eyebrow">YOUR GAME, YOUR STYLE</span><h1 id="studio-title">꾸미기 스튜디오</h1><p>돌 하나부터 승리의 순간까지 마음에 드는 모습으로 꾸며 보세요. 모든 디자인은 무료이며 내 화면에만 적용됩니다.</p></div>
       <section class="studio-editor" aria-labelledby="studio-title">
         <nav class="studio-tabs" aria-label="꾸미기 종류">
           <button type="button" data-category="stone" aria-pressed="true"><span>●</span> 돌</button>
@@ -38,12 +38,12 @@ import SeoHead from '../../../shared/components/SeoHead.astro';
       </section>
       <section class="studio-preview" aria-label="3D 미리보기">
         <div class="studio-preview-top"><div><span class="studio-eyebrow">LIVE PREVIEW</span><h2>나의 오목마루</h2></div><span id="studio-save-status" role="status">자동 저장됨</span></div>
-        <div class="studio-stage"><div id="studio-canvas" class="canvas"></div><div class="studio-stage-label">마우스 휠로 확대 · 오른쪽 클릭으로 이동</div></div>
+        <div class="studio-stage"><div id="studio-canvas" class="canvas"></div><div id="studio-stage-label" class="studio-stage-label">돌을 가까이 보는 중</div></div>
         <div class="studio-preview-controls">
           <div class="studio-seats" role="group" aria-label="미리 볼 돌 색"><button type="button" data-seat="black" aria-pressed="true"><i class="studio-seat-stone black"></i> 흑돌 모습</button><button type="button" data-seat="white" aria-pressed="false"><i class="studio-seat-stone white"></i> 백돌 모습</button></div>
           <div class="studio-camera" role="group" aria-label="미리보기 시점"><button id="studio-view" type="button" title="위에서 보기" aria-label="위에서 보기">▦</button><button id="studio-zoom-in" type="button" title="확대" aria-label="확대">＋</button><button id="studio-zoom-out" type="button" title="축소" aria-label="축소">−</button><button id="studio-reset-view" type="button" title="시점 초기화" aria-label="시점 초기화">↺</button></div>
         </div>
-        <div class="studio-preview-actions"><button id="studio-victory" class="studio-play-button" type="button">✦ 승리 연출 재생</button><button id="studio-board-reset" type="button">대국 장면으로</button></div>
+        <div id="studio-preview-actions" class="studio-preview-actions" hidden><button id="studio-victory" class="studio-play-button" type="button">↻ 승리 연출 다시 보기</button></div>
         <div class="studio-current"><span>현재 조합</span><strong id="studio-current-label"></strong></div>
         <div class="studio-links"><a href="/playroom/omokmaru/solo/">AI 대국에서 사용 ↗</a><a href="/playroom/omokmaru/">온라인 대국에서 사용 ↗</a></div>
       </section>

@@ -5,6 +5,7 @@ import {
   AVATARS,
   BOARDS,
   DEFAULT_APPEARANCE,
+  appearanceForSeat,
   loadAppearance,
   normalizeAppearance,
   saveAppearance,
@@ -65,7 +66,6 @@ const winningMoves: Record<Seat, Move[]> = {
 let appearance = loadAppearance();
 let category: Category = 'stone';
 let seat: Seat = 'black';
-let victoryPreview = false;
 
 function optionName(key: Category, id: string) {
   return APPEARANCE_OPTIONS[key].find((option) => option.id === id)?.name ?? id;
@@ -94,22 +94,42 @@ function writeSlots() {
 }
 
 function showScene() {
-  victoryPreview = false;
   board.clearCelebration();
   board.setState(sampleMoves, null, false, false);
   board.setSeats(seat, null);
-  board.reset();
-  $('#studio-victory').textContent = '✦ 승리 연출 재생';
+  board.focusShowcase(category, seat);
+  $('#studio-stage-label').textContent = {
+    stone: '돌을 가까이 보는 중 · 휠로 더 확대',
+    avatar: '내 아바타만 가까이 보는 중',
+    accessory: '머리 장식을 가까이 보는 중',
+    board: '바둑판 전체를 보는 중',
+    victory: '승리 동작을 보는 중',
+  }[category];
+  $('#studio-preview-actions').hidden = category !== 'victory';
+  $('#studio-view').hidden = category !== 'board';
+  $('#studio-view').classList.remove('active');
 }
 
 function showVictory() {
-  victoryPreview = true;
   board.clearCelebration();
-  board.reset();
   board.setState(winningMoves[seat], null, false, false);
   board.setSeats(seat, null);
-  board.celebrate(seat, true);
+  board.focusShowcase('victory', seat);
+  $('#studio-stage-label').textContent = '내 아바타의 승리 동작을 보는 중';
+  $('#studio-preview-actions').hidden = false;
+  $('#studio-view').hidden = true;
+  board.celebrate(seat);
   $('#studio-victory').textContent = '↻ 승리 연출 다시 보기';
+}
+
+function showCategory() {
+  if (category === 'victory') showVictory();
+  else showScene();
+}
+
+function applySeatAppearance() {
+  board.setAppearance('black', appearanceForSeat('black', seat, appearance));
+  board.setAppearance('white', appearanceForSeat('white', seat, appearance));
 }
 
 function renderItems() {
@@ -195,36 +215,36 @@ function setAppearance(next: Appearance) {
   appearance = normalizeAppearance(next);
   const saved = saveAppearance(appearance);
   board.setBoardStyle(appearance.board);
-  board.setAppearance('black', appearance);
-  board.setAppearance('white', appearance);
+  applySeatAppearance();
   $('#studio-current-label').textContent =
     `${optionName('stone', appearance.stone)} · ${optionName('avatar', appearance.avatar)} · ${optionName('accessory', appearance.accessory)} · ${optionName('board', appearance.board)} · ${optionName('victory', appearance.victory)}`;
   $('#studio-save-status').textContent = saved ? '자동 저장됨' : '이 탭에서만 적용';
   renderItems();
-  if (victoryPreview) showVictory();
+  if (category === 'victory') showVictory();
 }
 
 for (const tab of document.querySelectorAll<HTMLButtonElement>('.studio-tabs [data-category]'))
   tab.addEventListener('click', () => {
     category = tab.dataset.category as Category;
     renderItems();
+    showCategory();
   });
 for (const button of document.querySelectorAll<HTMLButtonElement>('[data-seat]'))
   button.addEventListener('click', () => {
     seat = button.dataset.seat as Seat;
     for (const peer of document.querySelectorAll<HTMLButtonElement>('[data-seat]'))
       peer.setAttribute('aria-pressed', String(peer === button));
-    showScene();
+    applySeatAppearance();
+    showCategory();
   });
 
 $('#studio-victory').addEventListener('click', showVictory);
-$('#studio-board-reset').addEventListener('click', showScene);
 $('#studio-view').addEventListener('click', () => {
   $('#studio-view').classList.toggle('active', board.toggleTop());
 });
 $('#studio-zoom-in').addEventListener('click', () => board.zoom(0.78));
 $('#studio-zoom-out').addEventListener('click', () => board.zoom(1.28));
-$('#studio-reset-view').addEventListener('click', () => board.reset());
+$('#studio-reset-view').addEventListener('click', showCategory);
 $('#studio-default').addEventListener('click', () => setAppearance({ ...DEFAULT_APPEARANCE }));
 $('#studio-random').addEventListener('click', () => {
   const random = <T>(list: readonly T[]) => list[crypto.getRandomValues(new Uint32Array(1))[0] % list.length];

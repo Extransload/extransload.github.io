@@ -26,7 +26,6 @@ import {
   type ChatMessage,
   type PublicRoom,
 } from '../../src/domains/games/renju/protocol';
-import { publicAppearance } from '../../src/domains/games/renju/appearance';
 
 interface Env {
   ROOMS: DurableObjectNamespace;
@@ -62,17 +61,7 @@ type CachedRoom = PublicRoom & { version: number; updatedAt: number };
 const LOBBY_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 type SocketData = { id: string; role: RoomRole; visitor: Visitor; lastChat: number; seatHash?: string };
 type Message = {
-  type?:
-    | 'ready'
-    | 'rematch'
-    | 'rematch-decline'
-    | 'settings'
-    | 'move'
-    | 'resign'
-    | 'chat'
-    | 'rename'
-    | 'kick'
-    | 'appearance';
+  type?: 'ready' | 'rematch' | 'rematch-decline' | 'settings' | 'move' | 'resign' | 'chat' | 'rename' | 'kick';
   ready?: boolean;
   settings?: unknown;
   x?: number;
@@ -80,16 +69,14 @@ type Message = {
   text?: string;
   name?: string;
   target?: string;
-  appearance?: unknown;
 };
 
 const json = (body: unknown, status = 200) => Response.json(body, { status });
 const token = () => crypto.randomUUID() + crypto.randomUUID();
-const publicIdentity = ({ name, country, maskedIp, appearance }: PlayerIdentity): PlayerIdentity => ({
+const publicIdentity = ({ name, country, maskedIp }: PlayerIdentity): PlayerIdentity => ({
   name,
   country,
   maskedIp,
-  appearance,
 });
 function maskIp(ip: string) {
   if (/^(\d{1,3}\.){3}\d{1,3}$/.test(ip)) return ip.replace(/\.\d+$/, '.xxx');
@@ -306,7 +293,17 @@ export class RenjuLobby {
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
     if (url.pathname === '/rooms' && request.method === 'GET') {
-      return json({ rooms: (await this.entries()).filter((entry) => entry.status !== 'finished').slice(0, 40) });
+      const rooms = (await this.entries())
+        .filter((entry) => entry.status !== 'finished')
+        .slice(0, 40)
+        .map((entry) => ({
+          ...entry,
+          players: {
+            black: entry.players.black ? publicIdentity(entry.players.black) : null,
+            white: entry.players.white ? publicIdentity(entry.players.white) : null,
+          },
+        }));
+      return json({ rooms });
     }
     if (url.pathname === '/sync' && request.method === 'POST') {
       return this.ctx.blockConcurrencyWhile(async () => {
@@ -772,16 +769,6 @@ export class RenjuRoom {
       if (role !== 'spectator' && room.players?.[role]) {
         room.players[role].name = renamed;
       }
-      room.version++;
-      await this.write(room);
-      this.broadcast(room);
-      return;
-    }
-    if (message.type === 'appearance') {
-      if (role === 'spectator' || !room.players?.[role]) return;
-      const next = publicAppearance(message.appearance);
-      if (JSON.stringify(room.players[role].appearance) === JSON.stringify(next)) return;
-      room.players[role].appearance = next;
       room.version++;
       await this.write(room);
       this.broadcast(room);

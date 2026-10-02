@@ -9,13 +9,13 @@ export type AvatarStyle = (typeof AVATARS)[number];
 export type AccessoryStyle = (typeof ACCESSORIES)[number];
 export type BoardStyle = (typeof BOARDS)[number];
 export type VictoryStyle = (typeof VICTORIES)[number];
-export type PublicAppearance = {
+export type PlayerAppearance = {
   stone: StoneStyle;
   avatar: AvatarStyle;
   accessory: AccessoryStyle;
   victory: VictoryStyle;
 };
-export type Appearance = PublicAppearance & { board: BoardStyle };
+export type Appearance = PlayerAppearance & { board: BoardStyle };
 
 export const DEFAULT_APPEARANCE: Appearance = {
   stone: 'classic',
@@ -24,6 +24,14 @@ export const DEFAULT_APPEARANCE: Appearance = {
   board: 'oak',
   victory: 'dance',
 };
+
+export function appearanceForSeat(
+  seat: 'black' | 'white',
+  mySeat: 'black' | 'white' | 'spectator' | null,
+  selected: Appearance,
+): PlayerAppearance {
+  return seat === mySeat ? selected : DEFAULT_APPEARANCE;
+}
 export const APPEARANCE_STORAGE_KEY = 'omokmaru-appearance-v1';
 
 export const APPEARANCE_OPTIONS = {
@@ -74,11 +82,6 @@ export function normalizeAppearance(value: unknown): Appearance {
     board: BOARDS.includes(input.board as BoardStyle) ? input.board! : DEFAULT_APPEARANCE.board,
     victory: VICTORIES.includes(input.victory as VictoryStyle) ? input.victory! : DEFAULT_APPEARANCE.victory,
   };
-}
-
-export function publicAppearance(value: unknown): PublicAppearance {
-  const { stone, avatar, accessory, victory } = normalizeAppearance(value);
-  return { stone, avatar, accessory, victory };
 }
 
 export function loadAppearance(): Appearance {

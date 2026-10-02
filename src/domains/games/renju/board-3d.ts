@@ -6,7 +6,7 @@ import {
   type AccessoryStyle,
   type AvatarStyle,
   type BoardStyle,
-  type PublicAppearance,
+  type PlayerAppearance,
 } from './appearance';
 import {
   analyzeMove,
@@ -25,6 +25,7 @@ const START = -6.3,
   STEP = 0.9,
   SURFACE = 0.37;
 type Seat = 'black' | 'white';
+type ShowcaseFocus = 'stone' | 'avatar' | 'accessory' | 'board' | 'victory';
 type AvatarRig = {
   group: THREE.Group;
   character: THREE.Group;
@@ -44,6 +45,11 @@ export class RenjuBoard {
   private controls: OrbitControls;
   private board = new THREE.Group();
   private stones = new THREE.Group();
+  private showcaseStone = new THREE.Group();
+  private showcaseStoneMesh: THREE.Mesh;
+  private showcaseStoneRim: THREE.Mesh;
+  private showcaseFocus: ShowcaseFocus | null = null;
+  private showcaseSeat: Seat = 'black';
   private preview = new THREE.Group();
   private stoneGeometry = new THREE.SphereGeometry(0.42, 32, 22);
   private whiteRimGeometry = new THREE.TorusGeometry(0.4, 0.03, 6, 48);
@@ -52,7 +58,7 @@ export class RenjuBoard {
     black: new THREE.MeshPhysicalMaterial({ color: 0x09131d, roughness: 0.21, metalness: 0.15, clearcoat: 0.9 }),
     white: new THREE.MeshPhysicalMaterial({ color: 0xfff9ee, roughness: 0.24, metalness: 0.02, clearcoat: 0.78 }),
   };
-  private appearance: Record<Seat, PublicAppearance> = {
+  private appearance: Record<Seat, PlayerAppearance> = {
     black: { ...DEFAULT_APPEARANCE },
     white: { ...DEFAULT_APPEARANCE },
   };
@@ -151,6 +157,14 @@ export class RenjuBoard {
     rim.position.set(8, 8, -9);
     this.scene.add(rim);
     this.scene.add(this.board);
+    this.showcaseStoneMesh = new THREE.Mesh(this.stoneGeometry, this.stoneMaterials.black);
+    this.showcaseStoneMesh.scale.setScalar(2.5);
+    this.showcaseStoneRim = new THREE.Mesh(this.whiteRimGeometry, this.whiteRimMaterial);
+    this.showcaseStoneRim.rotation.x = Math.PI / 2;
+    this.showcaseStoneRim.scale.setScalar(2.5);
+    this.showcaseStone.add(this.showcaseStoneMesh, this.showcaseStoneRim);
+    this.showcaseStone.visible = false;
+    this.scene.add(this.showcaseStone);
     this.makeBoard();
     this.board.add(this.stones, this.preview, this.highlights, this.lastMove, this.impact, this.winningLine);
     const black = this.makeAvatar('black');
@@ -441,7 +455,7 @@ export class RenjuBoard {
     this.boardMaterials.ink.color.setHex(palette[2]);
     this.render();
   }
-  setAppearance(seat: Seat, appearance: PublicAppearance) {
+  setAppearance(seat: Seat, appearance: PlayerAppearance) {
     this.appearance[seat] = appearance;
     const stone = {
       classic: seat === 'black' ? [0x09131d, 0.21, 0.15] : [0xfff9ee, 0.24, 0.02],
@@ -472,6 +486,43 @@ export class RenjuBoard {
       if (preview) (preview.material as THREE.MeshPhysicalMaterial).color.setHex(stone[0]);
     }
     this.render();
+  }
+  focusShowcase(focus: ShowcaseFocus, seat: Seat) {
+    this.clearCelebration();
+    this.showcaseFocus = focus;
+    this.showcaseSeat = seat;
+    this.host.dataset.focus = focus;
+    this.topView = false;
+    this.board.visible = focus === 'board';
+    this.stones.visible = false;
+    this.lastMove.visible = false;
+    this.highlights.visible = false;
+    this.preview.visible = false;
+    this.impact.visible = false;
+    this.winningLine.visible = false;
+    this.showcaseStone.visible = focus === 'stone';
+    this.showcaseStoneMesh.material = this.stoneMaterials[seat];
+    this.showcaseStoneRim.visible = seat === 'white';
+    for (const color of ['black', 'white'] as const) {
+      const rig = this.avatars[color];
+      rig.group.visible = (focus === 'avatar' || focus === 'accessory' || focus === 'victory') && color === seat;
+      if (color === seat) {
+        rig.group.position.set(0, -0.08, 0);
+        rig.group.rotation.y = 0;
+      }
+    }
+    this.controls.minDistance = focus === 'board' ? 11 : 2.6;
+    this.controls.maxDistance = focus === 'board' ? 58 : 22;
+    const view = {
+      stone: { position: [2.2, 1.4, 5.1], target: [0, 0, 0] },
+      avatar: { position: [0, 2.7, 6.5], target: [0, 1.2, 0] },
+      accessory: { position: [0, 2.6, 3.9], target: [0, 2, 0] },
+      board: { position: [0, 23, 17], target: [0, 0, 0] },
+      victory: { position: [0, 2.7, 6.5], target: [0, 1.2, 0] },
+    }[focus];
+    this.camera.position.set(...(view.position as [number, number, number]));
+    this.controls.target.set(...(view.target as [number, number, number]));
+    this.controls.update();
   }
   setSeats(
     role: 'black' | 'white' | 'spectator' | null,
@@ -539,12 +590,12 @@ export class RenjuBoard {
       loser.character.rotation.z = (Math.PI / 2) * fall;
       const progress = Math.min(1, Math.max(0, (elapsed - 600) / 1150));
       const eased = 1 - (1 - progress) ** 3;
-      if (progress < 1 || elapsed < 1800) {
+      if (this.showcaseFocus !== 'victory' && (progress < 1 || elapsed < 1800)) {
         this.camera.position.copy(cameraStart).lerp(cameraEnd, eased);
         this.controls.target.copy(targetStart).lerp(center, eased);
         this.controls.update();
       }
-      const turn = 1 - (1 - Math.min(1, elapsed / 650)) ** 3;
+      const turn = this.showcaseFocus === 'victory' ? 0 : 1 - (1 - Math.min(1, elapsed / 650)) ** 3;
       const beat = Math.max(0, (elapsed - 650) / 1000);
       const style = this.appearance[winner].victory;
       rig.group.rotation.y =
@@ -903,6 +954,10 @@ export class RenjuBoard {
   }
   reset() {
     this.clearSelection();
+    if (this.showcaseFocus) {
+      this.focusShowcase(this.showcaseFocus, this.showcaseSeat);
+      return;
+    }
     this.topView = false;
     this.camera.position.set(0, this.host.clientWidth < 600 ? 25 : 23, this.host.clientWidth < 600 ? 25 : 26);
     this.controls.target.set(0, 0, 0);

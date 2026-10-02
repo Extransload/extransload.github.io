@@ -4,14 +4,20 @@ import type { Difficulty } from './ai';
 import { mountRulesHelp } from './rules-help';
 import { mountMoveConfirm } from './move-confirm';
 import { mountGameSound } from './sound';
-import { watchAppearance } from './appearance';
+import { appearanceForSeat, DEFAULT_APPEARANCE, watchAppearance, type Appearance } from './appearance';
 
 const $ = <T extends HTMLElement>(selector: string) => document.querySelector<T>(selector)!;
 const board = new RenjuBoard($('#canvas'));
-watchAppearance((appearance) => {
-  board.setBoardStyle(appearance.board);
-  board.setAppearance('black', appearance);
-  board.setAppearance('white', appearance);
+let appearance: Appearance = { ...DEFAULT_APPEARANCE };
+function applySeatAppearance() {
+  const mySeat = $<HTMLButtonElement>('#side-white').classList.contains('selected') ? 'white' : 'black';
+  board.setAppearance('black', appearanceForSeat('black', mySeat, appearance));
+  board.setAppearance('white', appearanceForSeat('white', mySeat, appearance));
+}
+watchAppearance((next) => {
+  appearance = next;
+  board.setBoardStyle(next.board);
+  applySeatAppearance();
 });
 const sound = mountGameSound();
 board.onMoveCommitted = () => sound.playStone();
@@ -196,6 +202,7 @@ for (const [button, color] of [
     player = color;
     $('#side-black').classList.toggle('selected', color === 1);
     $('#side-white').classList.toggle('selected', color === 2);
+    applySeatAppearance();
     if (!playing) render();
   });
 }
