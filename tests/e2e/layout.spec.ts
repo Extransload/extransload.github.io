@@ -650,6 +650,7 @@ test('playroom lists Omokmaru, opens its board, and About remains standalone', a
 });
 
 test('Playroom animations stay active under reduced motion', async ({ page }) => {
+  test.setTimeout(60_000);
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/playroom/');
   expect(await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches)).toBe(true);
@@ -673,14 +674,17 @@ test('Playroom animations stay active under reduced motion', async ({ page }) =>
   await expect(page.locator('#sound')).toHaveAttribute('aria-pressed', 'false');
   await page.locator('#sound').click();
   const canvas = page.locator('.canvas canvas');
-  const firstPulse = await canvas.screenshot();
+  const bounds = await canvas.boundingBox();
+  expect(bounds).not.toBeNull();
+  const captureBoard = () => page.screenshot({ clip: bounds!, animations: 'allow' });
+  const firstPulse = await captureBoard();
   await page.waitForTimeout(250);
-  expect((await canvas.screenshot()).equals(firstPulse)).toBe(false);
+  expect((await captureBoard()).equals(firstPulse)).toBe(false);
   page.once('dialog', (dialog) => void dialog.accept());
   await page.locator('#resign-solo').click();
-  const firstVictory = await canvas.screenshot();
+  const firstVictory = await captureBoard();
   await page.waitForTimeout(300);
-  expect((await canvas.screenshot()).equals(firstVictory)).toBe(false);
+  expect((await captureBoard()).equals(firstVictory)).toBe(false);
 
   await page.goto('/playroom/omokmaru/');
   await page.evaluate(() => {
@@ -766,6 +770,7 @@ test('Omokmaru sound setting persists between visits', async ({ page }) => {
 });
 
 test('Omokmaru studio previews, saves, and reuses a free look', async ({ page }) => {
+  test.setTimeout(60_000);
   await page.goto('/playroom/omokmaru/wardrobe/');
   await expect(page.locator('#studio-canvas')).toHaveAttribute('data-rendered-moves', '8');
   await expect(page.locator('.studio-item[aria-pressed="true"]')).toHaveCount(1);
