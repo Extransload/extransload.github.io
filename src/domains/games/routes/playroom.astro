@@ -36,6 +36,7 @@ const apiUrl = import.meta.env.PUBLIC_RENJU_API_URL ?? '';
           <button id="zoom-in" title="확대" aria-label="확대">＋</button>
           <button id="zoom-out" title="축소" aria-label="축소">−</button>
           <button id="reset" title="시점 초기화" aria-label="시점 초기화">↺</button>
+          <button id="sound" title="효과음 끄기" aria-label="효과음 끄기" aria-pressed="true">♫</button>
           <button id="rules" title="렌주 규칙" aria-label="렌주 규칙">☷</button>
           <button id="help" title="조작 방법" aria-label="조작 방법">?</button>
         </div>
@@ -47,7 +48,7 @@ const apiUrl = import.meta.env.PUBLIC_RENJU_API_URL ?? '';
         </div>
         <div id="stage-overlay" class="stage-overlay" hidden aria-live="polite"><div class="overlay-card"><span id="overlay-kicker"></span><strong id="overlay-title"></strong><small id="overlay-subtitle"></small></div></div>
         <div id="forbidden-tip" class="forbidden-tip" hidden></div>
-        <div id="board-help" class="board-help" hidden>왼쪽 클릭: 바로 착수<br />한 손가락: 자리 선택 후 착수 버튼<br />휠 버튼을 누르고 드래그: 회전<br />두 손가락 이동: 회전<br />휠 · 두 손가락 벌리기: 확대<br />오른쪽 클릭 드래그: 이동</div>
+        <div id="board-help" class="board-help" hidden>왼쪽 클릭: 바로 착수<br />한 손가락: 자리 선택 후 착수 버튼<br />방향키: 좌표 이동 · Enter/스페이스: 착수<br />휠 버튼을 누르고 드래그: 회전<br />두 손가락 이동: 회전<br />휠 · 두 손가락 벌리기: 확대<br />오른쪽 클릭 드래그: 이동</div>
         <div id="stage-hint" class="stage-hint">첫 수는 중앙에서 시작합니다</div>
       </section>
       <aside class="side">
@@ -66,7 +67,7 @@ const apiUrl = import.meta.env.PUBLIC_RENJU_API_URL ?? '';
           <div id="rematch-actions" class="rematch-actions" hidden><button id="rematch" class="primary">재대결</button><button id="rematch-decline" class="secondary">거절</button></div>
           <p id="ready-note" class="ready-note"></p>
         </div>
-        <div id="replay" class="replay" hidden><div class="replay-title"><span>기보</span><span id="move-count">0 / 0</span></div><div class="replay-controls"><button id="prev" title="이전 수" aria-label="이전 수">‹</button><strong id="move-label">시작</strong><button id="next" title="다음 수" aria-label="다음 수">›</button></div></div>
+        <div id="replay" class="replay" hidden><div class="replay-title"><span>기보</span><span id="move-count">0 / 0</span></div><div class="replay-controls"><button id="prev" title="이전 수" aria-label="이전 수">‹</button><strong id="move-label">시작</strong><button id="next" title="다음 수" aria-label="다음 수">›</button></div><button id="decisive" class="decisive-move" type="button" hidden>승부를 결정한 수 보기 ↗</button></div>
         <section id="chat" class="room-chat" hidden aria-label="대국 채팅"><div class="chat-heading"><strong>채팅</strong><small>최대 200자</small></div><div id="chat-messages" class="chat-messages" role="log" aria-live="polite"></div><form id="chat-form" class="chat-form"><input id="chat-input" maxlength="200" autocomplete="off" placeholder="메시지를 입력하세요" aria-label="채팅 메시지" /><button class="chat-send" type="submit" aria-label="채팅 보내기">➤</button></form></section>
         <div class="side-spacer"></div>
         <button id="share" class="primary" hidden><span aria-hidden="true">↗</span> 초대 링크 복사</button>

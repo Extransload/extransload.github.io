@@ -31,7 +31,7 @@ a {
 }
 .playroom-index {
   min-height: calc(100svh - 56px);
-  padding: clamp(18px, 3vw, 34px) clamp(24px, 6vw, 90px) 42px;
+  padding: 8px clamp(24px, 6vw, 90px) 42px;
   background: #f3eee3;
 }
 .playroom-intro,
@@ -56,7 +56,7 @@ a {
 .game-list {
   display: grid;
   gap: 18px;
-  margin-top: clamp(34px, 6vh, 62px);
+  margin-top: clamp(72px, 10vh, 100px);
 }
 .game-card {
   position: relative;
@@ -251,10 +251,10 @@ a {
   }
   .playroom-index {
     min-height: calc(100svh - 48px);
-    padding: 20px 17px 38px;
+    padding: 4px 17px 38px;
   }
   .game-list {
-    margin-top: 32px;
+    margin-top: 56px;
   }
   .game-card {
     grid-template-columns: 1fr;
@@ -278,13 +278,6 @@ a {
   }
   .playroom-footnote {
     text-align: left;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .game-card,
-  .game-card-board,
-  .game-card-cta span {
-    transition: none;
   }
 }
 .game-card-art-number {

@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { analyzeMove, emptyBoard, index, type Board } from '../../src/domains/games/renju/rules';
+import {
+  analyzeMove,
+  emptyBoard,
+  index,
+  winningLineFromMoves,
+  type Board,
+  type Move,
+} from '../../src/domains/games/renju/rules';
 
 function placed(black: [number, number][], white: [number, number][] = []): Board {
   const board = emptyBoard();
@@ -110,5 +117,20 @@ describe('Renju move rules', () => {
   it('rejects occupied intersections and board edges', () => {
     expect(analyzeMove(placed([[7, 7]]), 7, 7, 2).legal).toBe(false);
     expect(analyzeMove(emptyBoard(), -1, 7, 1).legal).toBe(false);
+  });
+  it('returns the ordered winning stones for the result sequence', () => {
+    const moves: Move[] = [
+      { x: 7, y: 7, color: 1 },
+      { x: 0, y: 0, color: 2 },
+      { x: 8, y: 7, color: 1 },
+      { x: 0, y: 1, color: 2 },
+      { x: 9, y: 7, color: 1 },
+      { x: 0, y: 2, color: 2 },
+      { x: 10, y: 7, color: 1 },
+      { x: 0, y: 3, color: 2 },
+      { x: 11, y: 7, color: 1 },
+    ];
+    expect(winningLineFromMoves(moves)).toEqual([7, 8, 9, 10, 11].map((x) => ({ x, y: 7 })));
+    expect(winningLineFromMoves(moves.slice(0, -1))).toEqual([]);
   });
 });

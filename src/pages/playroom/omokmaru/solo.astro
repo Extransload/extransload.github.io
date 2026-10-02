@@ -25,6 +25,7 @@ import SeoHead from '../../../shared/components/SeoHead.astro';
           <button id="zoom-in" title="확대" aria-label="확대">＋</button>
           <button id="zoom-out" title="축소" aria-label="축소">−</button>
           <button id="reset" title="시점 초기화" aria-label="시점 초기화">↺</button>
+          <button id="sound" title="효과음 끄기" aria-label="효과음 끄기" aria-pressed="true">♫</button>
           <button id="rules" title="렌주 규칙" aria-label="렌주 규칙">☷</button>
           <button id="help" title="조작 방법" aria-label="조작 방법">?</button>
         </div>
@@ -32,7 +33,7 @@ import SeoHead from '../../../shared/components/SeoHead.astro';
         <div id="move-confirm" class="move-confirm" hidden><button id="place-move" class="place-move" type="button" disabled><span class="confirm-stone" aria-hidden="true"></span><span id="place-label">자리 선택</span></button><button id="cancel-move" class="cancel-move" type="button" aria-label="선택 취소" title="선택 취소" hidden>×</button></div>
         <div id="stage-overlay" class="stage-overlay" hidden aria-live="polite"><div class="overlay-card"><span id="overlay-kicker"></span><strong id="overlay-title"></strong><small id="overlay-subtitle"></small></div></div>
         <div id="forbidden-tip" class="forbidden-tip" hidden></div>
-        <div id="board-help" class="board-help" hidden>왼쪽 클릭: 바로 착수<br />한 손가락: 자리 선택 후 착수 버튼<br />휠 버튼을 누르고 드래그: 회전<br />두 손가락 이동: 회전<br />휠 · 두 손가락 벌리기: 확대<br />오른쪽 클릭 드래그: 이동</div>
+        <div id="board-help" class="board-help" hidden>왼쪽 클릭: 바로 착수<br />한 손가락: 자리 선택 후 착수 버튼<br />방향키: 좌표 이동 · Enter/스페이스: 착수<br />휠 버튼을 누르고 드래그: 회전<br />두 손가락 이동: 회전<br />휠 · 두 손가락 벌리기: 확대<br />오른쪽 클릭 드래그: 이동</div>
         <div id="stage-hint" class="stage-hint"></div>
       </section>
       <aside class="side">
@@ -50,7 +51,7 @@ import SeoHead from '../../../shared/components/SeoHead.astro';
           <button id="resign-solo" class="secondary" hidden>기권</button>
           <button id="undo" class="secondary" hidden>↶ 한 수 되돌리기</button>
         </div>
-        <div id="replay" class="replay" hidden><div class="replay-title"><span>기보</span><span id="move-count">0 / 0</span></div><div class="replay-controls"><button id="prev" title="이전 수" aria-label="이전 수">‹</button><strong id="move-label">시작</strong><button id="next" title="다음 수" aria-label="다음 수">›</button></div></div>
+        <div id="replay" class="replay" hidden><div class="replay-title"><span>기보</span><span id="move-count">0 / 0</span></div><div class="replay-controls"><button id="prev" title="이전 수" aria-label="이전 수">‹</button><strong id="move-label">시작</strong><button id="next" title="다음 수" aria-label="다음 수">›</button></div><button id="decisive" class="decisive-move" type="button" hidden>승부를 결정한 수 보기 ↗</button></div>
         <div class="side-spacer"></div>
         <a class="secondary solo-online" href="/playroom/omokmaru/">사람과 대국하기 ↗</a>
       </aside>

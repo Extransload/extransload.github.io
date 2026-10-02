@@ -5,6 +5,7 @@ import type { PublicRoom } from './protocol';
 import { mountRulesHelp } from './rules-help';
 import { mountMoveConfirm } from './move-confirm';
 import { guestClientId, guestName, saveGuestName } from './identity';
+import { mountGameSound } from './sound';
 
 const $ = <T extends HTMLElement>(selector: string) => document.querySelector<T>(selector)!;
 const api = (
@@ -12,6 +13,8 @@ const api = (
   (location.hostname === 'localhost' || location.hostname === '127.0.0.1' ? 'http://localhost:8787' : '')
 ).replace(/\/$/, '');
 const board = new RenjuBoard($('#canvas'));
+const sound = mountGameSound();
+board.onMoveCommitted = () => sound.playStone();
 const moveConfirm = mountMoveConfirm(board, (point) => {
   if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'move', ...point }));
 });
@@ -23,11 +26,10 @@ let socket: WebSocket | null = null;
 let retry = 0;
 let replayMove = 0;
 let offline = false;
-let overlayTimer = 0;
-let briefOverlay = false;
 let previousStatus: RoomSnapshot['status'] | null = null;
 let serverOffset = 0;
 let lastBoardSignature = '';
+let lastRenderedStatus: RoomSnapshot['status'] | null = null;
 let name = guestName();
 const clientId = guestClientId();
 $('#guest-name').textContent = name;
@@ -144,11 +146,6 @@ function renderOverlay() {
           : `${readyCount}/2 준비 · 모두 준비하면 자동 시작`;
     kicker = role === 'spectator' ? 'SPECTATOR' : `READY ${readyCount}/2`;
     mode = 'waiting';
-  } else if (briefOverlay) {
-    title = '대국 시작';
-    subtitle = '흑이 먼저 둡니다';
-    kicker = 'START';
-    mode = 'start';
   }
   overlay.hidden = !title;
   overlay.dataset.mode = mode;
@@ -166,12 +163,21 @@ function render() {
   const moves = finished ? state!.moves.slice(0, replayMove) : state?.moves || [];
   const boardSignature = `${moves.map((move) => `${move.x},${move.y}`).join(';')}|${role}|${myTurn}`;
   if (boardSignature !== lastBoardSignature) {
-    board.setState(moves, role === 'black' ? 1 : role === 'white' ? 2 : null, !!myTurn);
+    board.setState(
+      moves,
+      role === 'black' ? 1 : role === 'white' ? 2 : null,
+      !!myTurn,
+      lastRenderedStatus === 'playing' && (!!playing || !!finished),
+    );
     lastBoardSignature = boardSignature;
   }
+  lastRenderedStatus = state?.status ?? null;
   moveConfirm.setAvailable(!!myTurn, role === 'white' ? 'white' : 'black');
   board.setSeats(role, playing ? turn : null, { black: !!state?.players.black, white: !!state?.players.white });
-  if (finished && state?.winner && state.winner !== 'draw') board.celebrate(state.winner);
+  if (finished && state?.winner && state.winner !== 'draw' && replayMove === state.moves.length)
+    board.celebrate(state.winner, state.reason === 'five');
+  else if (finished && state && replayMove < state.moves.length && board.clearCelebration()) board.reset();
+  $('#decisive').hidden = !finished || state?.reason !== 'five';
   for (const seat of ['black', 'white'] as const) {
     const card = $(`#${seat}-player`);
     const mine = role === seat;
@@ -311,8 +317,15 @@ function render() {
   }
   $('#kick-white').hidden = !waiting || role !== 'black' || !state?.joined;
   $<HTMLButtonElement>('#kick-white').disabled = !online;
-  $('#stage-hint').textContent =
-    !state?.moves.length && playing ? '첫 수는 중앙에서 시작합니다' : finished ? '화살표로 기보를 넘겨보세요' : '';
+  $('#stage-hint').textContent = playing
+    ? offline
+      ? '연결 복구 중'
+      : Object.keys(state?.disconnects || {}).length
+        ? '상대 재접속 대기 중'
+        : `${role === 'spectator' ? '관전 중' : myTurn ? '내 차례' : '상대 차례'}${state?.moves.length ? '' : ' · 첫 수는 중앙 H8'}`
+    : finished
+      ? '화살표로 기보를 넘겨보세요'
+      : '';
   if (state && (waiting || finished)) {
     $<HTMLSelectElement>('#main-minutes').value = String(state.settings.mainMinutes);
     $<HTMLSelectElement>('#byo-seconds').value = String(state.settings.byoSeconds);
@@ -368,16 +381,10 @@ function connect() {
         board.reset();
         replayMove = 0;
       }
-      if ((was === 'waiting' || was === 'finished') && state.status === 'playing') {
-        briefOverlay = true;
-        window.clearTimeout(overlayTimer);
-        overlayTimer = window.setTimeout(() => {
-          briefOverlay = false;
-          renderOverlay();
-        }, 1900);
-      }
+      const started = (was === 'waiting' || was === 'finished') && state.status === 'playing';
       previousStatus = state.status;
       render();
+      if (started && matchMedia('(max-width: 970px)').matches) requestAnimationFrame(() => window.scrollTo(0, 0));
     } else if (message.type === 'kicked') {
       if (currentRoom) localStorage.removeItem(`renju:${currentRoom}`);
       leaveRoom(false, false);
@@ -677,6 +684,12 @@ $('#prev').addEventListener('click', () => {
 });
 $('#next').addEventListener('click', () => {
   replayMove = Math.min(state?.moves.length || 0, replayMove + 1);
+  render();
+});
+$('#decisive').addEventListener('click', () => {
+  if (!state) return;
+  replayMove = state.moves.length;
+  board.reset();
   render();
 });
 $('#view').addEventListener('click', () => {

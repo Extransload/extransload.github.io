@@ -74,9 +74,3 @@
 .door-control:focus-visible .door-light {
   opacity: 1;
 }
-@media (prefers-reduced-motion: reduce) {
-  .door-leaf,
-  .door-light {
-    transition: none;
-  }
-}

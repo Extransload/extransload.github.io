@@ -138,3 +138,11 @@ export function analyzeMove(
     board[index(x, y)] = 0;
   }
 }
+
+export function winningLineFromMoves(moves: Move[]): Point[] {
+  const move = moves.at(-1);
+  if (!move) return [];
+  const verdict = analyzeMove(boardFromMoves(moves.slice(0, -1)), move.x, move.y, move.color);
+  if (!verdict.win) return [];
+  return [...verdict.causes].sort((a, b) => a.x - b.x || a.y - b.y);
+}

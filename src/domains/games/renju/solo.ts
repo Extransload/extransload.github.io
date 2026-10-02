@@ -3,9 +3,12 @@ import { analyzeMove, boardFromMoves, SIZE, type Color, type Move, type Point } 
 import type { Difficulty } from './ai';
 import { mountRulesHelp } from './rules-help';
 import { mountMoveConfirm } from './move-confirm';
+import { mountGameSound } from './sound';
 
 const $ = <T extends HTMLElement>(selector: string) => document.querySelector<T>(selector)!;
 const board = new RenjuBoard($('#canvas'));
+const sound = mountGameSound();
+board.onMoveCommitted = () => sound.playStone();
 const moveConfirm = mountMoveConfirm(board, (point) => {
   if (!playing || thinking || (moves.length % 2 ? 2 : 1) !== player) return;
   if (add(point, player)) {
@@ -22,6 +25,7 @@ let finished = false;
 let thinking = false;
 let replayMove = 0;
 let winner: Color | 'draw' | null = null;
+let wonByFive = false;
 let lastBoardSignature = '';
 
 function render() {
@@ -31,12 +35,14 @@ function render() {
   const interactive = playing && !thinking && (moves.length % 2 ? 2 : 1) === player;
   const boardSignature = `${shown.map((move) => `${move.x},${move.y}`).join(';')}|${player}|${interactive}`;
   if (boardSignature !== lastBoardSignature) {
-    board.setState(shown, player, interactive);
+    board.setState(shown, player, interactive, !finished);
     lastBoardSignature = boardSignature;
   }
   moveConfirm.setAvailable(interactive, player === 1 ? 'black' : 'white');
   board.setSeats(player === 1 ? 'black' : 'white', playing ? (moves.length % 2 ? 'white' : 'black') : null);
-  if (finished && winner !== null && winner !== 'draw') board.celebrate(winner === 1 ? 'black' : 'white');
+  if (finished && winner !== null && winner !== 'draw' && replayMove === moves.length)
+    board.celebrate(winner === 1 ? 'black' : 'white', wonByFive);
+  else if (finished && replayMove < moves.length && board.clearCelebration()) board.reset();
   for (const [color, seat] of [
     [1, 'black'],
     [2, 'white'],
@@ -45,6 +51,7 @@ function render() {
     $(`#${seat}-name`).textContent = mine ? '나' : 'AI';
     $(`#${seat}-player`).classList.toggle('self', mine);
     $(`#${seat}-player`).classList.toggle('active', playing && (moves.length % 2 ? 2 : 1) === color);
+    $(`#${seat}-player`).classList.toggle('thinking', playing && thinking && !mine);
     $(`#${seat}-detail`).textContent = finished
       ? winner === color
         ? '승리'
@@ -70,6 +77,13 @@ function render() {
         ? 'AI가 생각 중…'
         : '내 차례'
       : 'AI 대국 준비';
+  $('#stage-hint').textContent = playing
+    ? thinking
+      ? 'AI가 생각 중…'
+      : `내 차례${moves.length ? '' : ' · 첫 수는 중앙 H8'}`
+    : finished
+      ? '화살표로 기보를 넘겨보세요'
+      : '';
   const overlay = $('#stage-overlay');
   overlay.hidden = playing;
   if (!playing) {
@@ -89,6 +103,7 @@ function render() {
   $('#start').textContent = finished ? '다시 대국' : '대국 시작';
   $('#resign-solo').hidden = !playing;
   $('#replay').hidden = !finished;
+  $('#decisive').hidden = !finished || !wonByFive;
   if (finished) {
     $('#move-count').textContent = `${replayMove} / ${moves.length}`;
     const move = moves[replayMove - 1];
@@ -109,8 +124,11 @@ function add(point: Point, color: Color) {
   const verdict = analyzeMove(boardFromMoves(moves), point.x, point.y, color);
   if (!verdict.legal) return false;
   moves.push({ ...point, color });
-  if (verdict.win) finish(color);
-  else if (moves.length === SIZE * SIZE) finish('draw');
+  if (verdict.win) {
+    render();
+    wonByFive = true;
+    finish(color);
+  } else if (moves.length === SIZE * SIZE) finish('draw');
   return true;
 }
 function aiTurn() {
@@ -184,11 +202,13 @@ $('#start').addEventListener('click', () => {
   lastBoardSignature = '';
   moves = [];
   winner = null;
+  wonByFive = false;
   finished = false;
   playing = true;
   thinking = false;
   render();
   aiTurn();
+  if (matchMedia('(max-width: 970px)').matches) requestAnimationFrame(() => window.scrollTo(0, 0));
 });
 $('#resign-solo').addEventListener('click', () => {
   if (!playing || !window.confirm('대국을 기권하시겠습니까?')) return;
@@ -216,6 +236,11 @@ $('#prev').addEventListener('click', () => {
 });
 $('#next').addEventListener('click', () => {
   replayMove = Math.min(moves.length, replayMove + 1);
+  render();
+});
+$('#decisive').addEventListener('click', () => {
+  replayMove = moves.length;
+  board.reset();
   render();
 });
 $('#view').addEventListener('click', () => {

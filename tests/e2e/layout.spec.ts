@@ -649,6 +649,50 @@ test('playroom lists Omokmaru, opens its board, and About remains standalone', a
   await expect(page.locator('.site-header')).toHaveCount(0);
 });
 
+test('Playroom animations stay active under reduced motion', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/playroom/');
+  expect(await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches)).toBe(true);
+  for (const selector of ['.door-leaf', '.door-light', '.game-card', '.game-card-board', '.game-card-cta span']) {
+    expect(
+      await page
+        .locator(selector)
+        .first()
+        .evaluate((element) => getComputedStyle(element).transitionDuration),
+    ).not.toBe('0s');
+  }
+  await page.goto('/playroom/omokmaru/solo/');
+  await expect(page.locator('#stage-overlay .overlay-card')).toHaveCSS('animation-name', 'overlay-enter');
+  await page.locator('#side-white').click();
+  await page.locator('#difficulty').selectOption('easy');
+  await page.locator('#start').click();
+  await expect(page.locator('#status')).toHaveText('내 차례');
+  await expect(page.locator('.player.active .piece')).toHaveCSS('animation-name', 'turn-piece-pulse');
+  await expect(page.locator('#sound')).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('#sound').click();
+  await expect(page.locator('#sound')).toHaveAttribute('aria-pressed', 'false');
+  await page.locator('#sound').click();
+  const canvas = page.locator('.canvas canvas');
+  const firstPulse = await canvas.screenshot();
+  await page.waitForTimeout(250);
+  expect((await canvas.screenshot()).equals(firstPulse)).toBe(false);
+  page.once('dialog', (dialog) => void dialog.accept());
+  await page.locator('#resign-solo').click();
+  const firstVictory = await canvas.screenshot();
+  await page.waitForTimeout(300);
+  expect((await canvas.screenshot()).equals(firstVictory)).toBe(false);
+
+  await page.goto('/playroom/omokmaru/');
+  await page.evaluate(() => {
+    const clock = document.querySelector<HTMLElement>('#clock-black')!;
+    clock.classList.add('urgent');
+    const ready = document.querySelector<HTMLElement>('#black-ready')!;
+    ready.classList.add('is-ready');
+  });
+  await expect(page.locator('#clock-black')).toHaveCSS('animation-name', 'clock-pulse');
+  await expect(page.locator('#black-ready')).toHaveCSS('animation-name', 'ready-pop');
+});
+
 test('solo match replaces start with resign until the match ends', async ({ page }) => {
   await page.goto('/playroom/');
   const homeDoor = await page.locator('.playroom-home').boundingBox();
@@ -689,6 +733,79 @@ test('desktop board click places a stone immediately', async ({ page }) => {
   await canvas.click({ position: center });
   await expect(page.locator('#undo')).toBeVisible();
   await expect(page.locator('#move-confirm')).toBeHidden();
+});
+
+test('solo board renders the AI reply after the player move', async ({ page }) => {
+  await page.goto('/playroom/omokmaru/solo/');
+  await page.locator('#difficulty').selectOption('easy');
+  await page.locator('#start').click();
+  const canvas = page.locator('.canvas canvas');
+  const bounds = await canvas.boundingBox();
+  await canvas.click({ position: { x: bounds!.width / 2, y: bounds!.height / 2 } });
+  await expect(page.locator('#canvas')).toHaveAttribute('data-rendered-moves', '2');
+  await page.locator('#undo').click();
+  await expect(page.locator('#canvas')).toHaveAttribute('data-rendered-moves', '0');
+});
+
+test('Omokmaru sound setting persists between visits', async ({ page }) => {
+  await page.goto('/playroom/omokmaru/solo/');
+  await expect(page.locator('#sound')).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('#sound').click();
+  await page.reload();
+  await expect(page.locator('#sound')).toHaveAttribute('aria-pressed', 'false');
+  await page.locator('#sound').click();
+  await expect(page.locator('#sound')).toHaveAttribute('aria-pressed', 'true');
+});
+
+test('keyboard can inspect coordinates and place a solo move', async ({ page }) => {
+  await page.goto('/playroom/omokmaru/solo/');
+  await page.locator('#difficulty').selectOption('easy');
+  await page.locator('#start').click();
+  const canvas = page.locator('.canvas canvas');
+  await expect(canvas).toHaveAttribute('tabindex', '0');
+  await canvas.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(page.locator('#board-keyboard-status')).toContainText('J8');
+  await page.keyboard.press('ArrowLeft');
+  await expect(page.locator('#board-keyboard-status')).toContainText('H8');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#undo')).toBeVisible();
+});
+
+test('small solo screen returns to the board when play starts', async ({ browser }) => {
+  const context = await browser.newContext({ hasTouch: true, isMobile: true, viewport: { width: 320, height: 568 } });
+  const page = await context.newPage();
+  try {
+    await page.goto('/playroom/omokmaru/solo/');
+    await page.locator('#start').click();
+    await expect.poll(() => page.evaluate(() => Math.round(window.scrollY))).toBe(0);
+    await expect(page.locator('#stage-hint')).toContainText('내 차례');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(320);
+    for (const button of await page.locator('.toolbar button').all()) {
+      const bounds = await button.boundingBox();
+      expect(bounds!.y).toBeGreaterThanOrEqual(0);
+      expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(320);
+    }
+  } finally {
+    await context.close();
+  }
+});
+
+test('small online room keeps its controls inside the viewport', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.goto('/playroom/omokmaru/');
+  await page.evaluate(() => {
+    document.querySelector<HTMLElement>('#lobby')!.hidden = true;
+    document.querySelector<HTMLElement>('#game')!.hidden = false;
+    document.querySelector<HTMLElement>('#room-setup')!.hidden = false;
+    document.querySelector<HTMLElement>('#settings')!.hidden = false;
+    document.querySelector<HTMLElement>('#ready')!.hidden = false;
+    document.querySelector<HTMLElement>('#black-name')!.textContent = 'VeryLongPlayerName123456789';
+    document.querySelector<HTMLElement>('#white-name')!.textContent = 'AnotherLongPlayerName123456';
+  });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(320);
+  const ready = await page.locator('#ready').boundingBox();
+  expect(ready!.x + ready!.width).toBeLessThanOrEqual(320);
 });
 
 test('touch board tap previews a stone until the move button confirms it', async ({ browser }) => {

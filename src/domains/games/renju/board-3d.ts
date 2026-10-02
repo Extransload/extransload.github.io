@@ -1,7 +1,18 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { analyzeMove, boardFromMoves, index, inside, type Color, type Move, type Point, type Verdict } from './rules';
+import {
+  analyzeMove,
+  boardFromMoves,
+  index,
+  inside,
+  SIZE,
+  winningLineFromMoves,
+  type Color,
+  type Move,
+  type Point,
+  type Verdict,
+} from './rules';
 
 const START = -6.3,
   STEP = 0.9,
@@ -17,7 +28,9 @@ export class RenjuBoard {
   private board = new THREE.Group();
   private stones = new THREE.Group();
   private preview = new THREE.Group();
-  private stoneGeometry = new THREE.SphereGeometry(0.36, 32, 22);
+  private stoneGeometry = new THREE.SphereGeometry(0.42, 32, 22);
+  private whiteRimGeometry = new THREE.TorusGeometry(0.4, 0.018, 6, 48);
+  private whiteRimMaterial = new THREE.MeshBasicMaterial({ color: 0x4e4335 });
   private stoneMaterials = {
     black: new THREE.MeshPhysicalMaterial({ color: 0x09131d, roughness: 0.21, metalness: 0.15, clearcoat: 0.9 }),
     white: new THREE.MeshPhysicalMaterial({ color: 0xfff9ee, roughness: 0.24, metalness: 0.02, clearcoat: 0.78 }),
@@ -26,6 +39,13 @@ export class RenjuBoard {
   private lastMove = new THREE.Group();
   private lastMoveFrame = 0;
   private lastMovePulses: THREE.Mesh<THREE.RingGeometry, THREE.MeshBasicMaterial>[] = [];
+  private impact = new THREE.Group();
+  private impactFrame = 0;
+  private winningLine = new THREE.Group();
+  private winningStroke?: THREE.Line<THREE.BufferGeometry, THREE.LineBasicMaterial>;
+  private winningPoints: THREE.Vector3[] = [];
+  private stateReady = false;
+  private turn: Seat | null = null;
   private avatars: Record<Seat, AvatarRig>;
   private seatRole: Seat | 'spectator' | null | undefined;
   private celebrating: Seat | null = null;
@@ -43,11 +63,14 @@ export class RenjuBoard {
   private multiTouch = false;
   private hoverKey: string | null = null;
   private selected: Point | null = null;
+  private keyboardPoint: Point = { x: 7, y: 7 };
+  private keyboardStatus: HTMLElement;
   private topView = false;
   private saved?: { position: THREE.Vector3; target: THREE.Vector3 };
   onSelectionChange?: (point: Point | null) => void;
   onImmediateMove?: (point: Point) => void;
   onForbidden?: (point: Point | null, verdict?: Verdict, screen?: { x: number; y: number }) => void;
+  onMoveCommitted?: (move: Move) => void;
 
   constructor(private host: HTMLElement) {
     this.camera.position.set(0, host.clientWidth < 600 ? 25 : 23, host.clientWidth < 600 ? 25 : 26);
@@ -57,7 +80,17 @@ export class RenjuBoard {
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.45;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-    host.append(this.renderer.domElement);
+    const canvas = this.renderer.domElement;
+    canvas.tabIndex = 0;
+    canvas.setAttribute('role', 'application');
+    canvas.setAttribute('aria-label', '오목 바둑판');
+    canvas.setAttribute('aria-describedby', 'board-keyboard-status');
+    this.keyboardStatus = document.createElement('span');
+    this.keyboardStatus.id = 'board-keyboard-status';
+    this.keyboardStatus.className = 'board-keyboard-status';
+    this.keyboardStatus.setAttribute('role', 'status');
+    this.keyboardStatus.textContent = '방향키로 좌표 이동, Enter 또는 스페이스로 착수합니다.';
+    host.append(canvas, this.keyboardStatus);
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableDamping = false;
     this.controls.enablePan = true;
@@ -93,7 +126,7 @@ export class RenjuBoard {
     this.scene.add(rim);
     this.scene.add(this.board);
     this.makeBoard();
-    this.board.add(this.stones, this.preview, this.highlights, this.lastMove);
+    this.board.add(this.stones, this.preview, this.highlights, this.lastMove, this.impact, this.winningLine);
     const black = this.makeAvatar('black');
     const white = this.makeAvatar('white');
     this.avatars = { black, white };
@@ -148,6 +181,43 @@ export class RenjuBoard {
     });
     this.renderer.domElement.addEventListener('pointerleave', (event) => {
       if (event.pointerType !== 'touch') this.clearHighlight();
+    });
+    canvas.addEventListener('focus', () => this.showKeyboardPoint());
+    canvas.addEventListener('blur', () => this.clearHighlight());
+    canvas.addEventListener('keydown', (event) => {
+      const movement: Record<string, Point> = {
+        ArrowLeft: { x: -1, y: 0 },
+        ArrowRight: { x: 1, y: 0 },
+        ArrowUp: { x: 0, y: -1 },
+        ArrowDown: { x: 0, y: 1 },
+      };
+      const step = movement[event.key];
+      if (step) {
+        event.preventDefault();
+        this.keyboardPoint = {
+          x: THREE.MathUtils.clamp(this.keyboardPoint.x + step.x, 0, SIZE - 1),
+          y: THREE.MathUtils.clamp(this.keyboardPoint.y + step.y, 0, SIZE - 1),
+        };
+        this.showKeyboardPoint();
+      } else if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        const point = this.keyboardPoint;
+        if (!this.interactive || !this.color) {
+          this.keyboardStatus.textContent = '지금은 착수할 수 없습니다.';
+          return;
+        }
+        const current = boardFromMoves(this.moves);
+        if (current[index(point.x, point.y)] || (this.moves.length === 0 && (point.x !== 7 || point.y !== 7))) {
+          this.showKeyboardPoint();
+          return;
+        }
+        const verdict = analyzeMove(current, point.x, point.y, this.color);
+        if (!verdict.legal) {
+          this.showKeyboardPoint();
+          return;
+        }
+        this.onImmediateMove?.(point);
+      }
     });
     new ResizeObserver(() => this.resize()).observe(host);
     this.resize();
@@ -302,16 +372,31 @@ export class RenjuBoard {
       }
       this.seatRole = role;
     }
+    if (turn !== this.turn && turn) {
+      const rig = this.avatars[turn];
+      rig.halo.scale.setScalar(1.32);
+      const started = performance.now();
+      const pulse = (now: number) => {
+        if (this.turn !== turn || this.celebrating) return;
+        const progress = Math.min(1, (now - started) / 420);
+        rig.halo.scale.setScalar(1.32 - 0.32 * (1 - (1 - progress) ** 3));
+        this.render();
+        if (progress < 1) requestAnimationFrame(pulse);
+      };
+      requestAnimationFrame(pulse);
+    }
+    this.turn = turn;
     for (const color of ['black', 'white'] as const) {
       this.avatars[color].character.visible = occupied[color];
       this.avatars[color].halo.visible = turn === color || this.celebrating === color;
     }
     this.render();
   }
-  celebrate(winner: Seat) {
+  celebrate(winner: Seat, five = false) {
     if (this.celebrating === winner) return;
     this.clearCelebration();
     this.celebrating = winner;
+    if (five) this.drawWinningLine();
     const loser = this.avatars[winner === 'black' ? 'white' : 'black'];
     this.celebrationStarted = performance.now();
     const rig = this.avatars[winner];
@@ -325,23 +410,13 @@ export class RenjuBoard {
     const targetStart = this.controls.target.clone();
     const baseY = rig.group.position.y;
     const baseRotation = rig.group.rotation.y;
-    const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (reducedMotion) {
-      loser.character.rotation.z = Math.PI / 2;
-      this.camera.position.copy(cameraEnd);
-      this.controls.target.copy(center);
-      rig.group.rotation.y = outwardRotation;
-      rig.halo.visible = true;
-      this.controls.update();
-      return;
-    }
     let lastFrame = 0;
     const frame = (now: number) => {
       if (this.celebrating !== winner) return;
       this.celebrationFrame = requestAnimationFrame(frame);
       if (now - lastFrame < 30) return;
       lastFrame = now;
-      const elapsed = now - this.celebrationStarted;
+      const elapsed = Math.max(0, now - this.celebrationStarted - (this.winningPoints.length ? 680 : 0));
       const fall = 1 - (1 - Math.min(1, elapsed / 800)) ** 3;
       loser.character.rotation.z = (Math.PI / 2) * fall;
       const progress = Math.min(1, Math.max(0, (elapsed - 600) / 1150));
@@ -366,8 +441,10 @@ export class RenjuBoard {
     this.celebrationFrame = requestAnimationFrame(frame);
   }
   clearCelebration() {
+    if (this.celebrating === null && !this.winningStroke) return false;
     cancelAnimationFrame(this.celebrationFrame);
     this.celebrating = null;
+    this.clearWinningLine();
     for (const color of ['black', 'white'] as const) {
       const rig = this.avatars[color];
       rig.character.rotation.z = 0;
@@ -379,6 +456,7 @@ export class RenjuBoard {
       rig.halo.visible = false;
     }
     this.render();
+    return true;
   }
   private render() {
     this.renderer.render(this.scene, this.camera);
@@ -429,6 +507,33 @@ export class RenjuBoard {
     else this.mark(point, this.color === 1 ? 0x182936 : 0xd2bb8d, 0.32);
     this.render();
   }
+  private showKeyboardPoint() {
+    this.clearHighlight();
+    const point = this.keyboardPoint;
+    const position = coordinate(point.x, point.y);
+    if (!this.interactive || !this.color) {
+      this.keyboardStatus.textContent = `${position}. 지금은 착수할 수 없습니다.`;
+      return;
+    }
+    const current = boardFromMoves(this.moves);
+    if (current[index(point.x, point.y)]) {
+      this.keyboardStatus.textContent = `${position}. 이미 돌이 놓인 자리입니다.`;
+      this.mark(point, 0xc65c56, 0.37);
+    } else if (this.moves.length === 0 && (point.x !== 7 || point.y !== 7)) {
+      this.keyboardStatus.textContent = `${position}. 첫 수는 중앙 H8에 놓으세요.`;
+      this.mark(point, 0xc65c56, 0.37);
+    } else {
+      const verdict = analyzeMove(current, point.x, point.y, this.color);
+      const forbidden = verdict.forbidden
+        ? { overline: '장목', 'double-four': '4·4', 'double-three': '3·3' }[verdict.forbidden]
+        : '착수할 수 없는 자리';
+      this.keyboardStatus.textContent = verdict.legal
+        ? `${position}. 빈 자리. Enter 또는 스페이스로 착수합니다.`
+        : `${position}. ${forbidden}입니다.`;
+      this.mark(point, verdict.legal ? 0x3b7f6d : 0xc65c56, 0.37);
+    }
+    this.render();
+  }
   get selectedPoint(): Point | null {
     return this.selected ? { ...this.selected } : null;
   }
@@ -439,12 +544,12 @@ export class RenjuBoard {
       color: this.color === 1 ? 0x09131d : 0xfff9ee,
       roughness: 0.25,
       transparent: true,
-      opacity: 0.58,
+      opacity: 0.86,
       depthWrite: false,
     });
     const stone = new THREE.Mesh(this.stoneGeometry, material);
-    stone.scale.y = 0.5;
-    stone.position.set(START + point.x * STEP, 0.51, START + point.y * STEP);
+    stone.scale.y = 0.56;
+    stone.position.set(START + point.x * STEP, 0.55, START + point.y * STEP);
     this.preview.add(stone);
     this.onSelectionChange?.(this.selectedPoint);
   }
@@ -499,7 +604,6 @@ export class RenjuBoard {
     glow.position.set(x, 0.402, z);
     this.lastMove.add(glow);
 
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     this.lastMovePulses = Array.from({ length: 2 }, () => {
       const pulse = new THREE.Mesh(
         new THREE.RingGeometry(0.38, 0.44, 48),
@@ -533,6 +637,78 @@ export class RenjuBoard {
     };
     this.lastMoveFrame = requestAnimationFrame(animate);
   }
+  private clearImpact() {
+    cancelAnimationFrame(this.impactFrame);
+    for (const child of [...this.impact.children]) {
+      this.impact.remove(child);
+      (child as THREE.Mesh).geometry.dispose();
+      ((child as THREE.Mesh).material as THREE.Material).dispose();
+    }
+  }
+  private animateImpact(stone: THREE.Mesh, move: Move) {
+    this.clearImpact();
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(0.35, 0.42, 48),
+      new THREE.MeshBasicMaterial({
+        color: 0xffd17a,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.75,
+        depthWrite: false,
+        toneMapped: false,
+      }),
+    );
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.set(START + move.x * STEP, 0.415, START + move.y * STEP);
+    this.impact.add(ring);
+    const started = performance.now();
+    const frame = (now: number) => {
+      const t = Math.min(1, (now - started) / 360);
+      const settle = Math.min(1, t / 0.62);
+      stone.position.y = 0.55 + (1 - settle) ** 2 * 0.9 - Math.sin(settle * Math.PI) * 0.045;
+      stone.scale.setScalar(0.8 + 0.2 * settle);
+      stone.scale.y *= 0.56;
+      ring.scale.setScalar(1 + t * 1.45);
+      ring.material.opacity = 0.75 * (1 - t) ** 2;
+      this.render();
+      if (t < 1) this.impactFrame = requestAnimationFrame(frame);
+      else this.clearImpact();
+    };
+    this.impactFrame = requestAnimationFrame(frame);
+  }
+  private clearWinningLine() {
+    for (const child of [...this.winningLine.children]) {
+      this.winningLine.remove(child);
+      (child as THREE.Line).geometry.dispose();
+      ((child as THREE.Line).material as THREE.Material).dispose();
+    }
+    this.winningStroke = undefined;
+    this.winningPoints = [];
+  }
+  private drawWinningLine() {
+    const points = winningLineFromMoves(this.moves);
+    if (!points.length) return;
+    this.winningPoints = points.map((point) => new THREE.Vector3(START + point.x * STEP, 0.92, START + point.y * STEP));
+    const geometry = new THREE.BufferGeometry().setFromPoints([this.winningPoints[0], this.winningPoints[0]]);
+    const material = new THREE.LineBasicMaterial({
+      color: 0xffb949,
+      transparent: true,
+      opacity: 0.96,
+      depthTest: false,
+    });
+    this.winningStroke = new THREE.Line(geometry, material);
+    this.winningLine.add(this.winningStroke);
+    const started = performance.now();
+    const frame = (now: number) => {
+      if (!this.winningStroke || this.celebrating === null) return;
+      const progress = Math.min(1, (now - started) / 620);
+      const end = this.winningPoints[0].clone().lerp(this.winningPoints.at(-1)!, progress);
+      this.winningStroke.geometry.setFromPoints([this.winningPoints[0], end]);
+      this.render();
+      if (progress < 1) requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+  }
   private clearHighlight() {
     this.hoverKey = null;
     for (const child of [...this.highlights.children]) {
@@ -543,14 +719,35 @@ export class RenjuBoard {
     this.onForbidden?.(null);
     this.render();
   }
-  setState(moves: Move[], color: Color | null, interactive: boolean) {
+  setState(moves: Move[], color: Color | null, interactive: boolean, live = true) {
+    if (
+      this.stateReady &&
+      moves.length === this.moves.length &&
+      moves.every(
+        (move, i) => move.x === this.moves[i].x && move.y === this.moves[i].y && move.color === this.moves[i].color,
+      )
+    ) {
+      this.color = color;
+      this.interactive = interactive;
+      return;
+    }
+    const committed =
+      this.stateReady &&
+      live &&
+      moves.length === this.moves.length + 1 &&
+      this.moves.every((move, i) => move.x === moves[i].x && move.y === moves[i].y && move.color === moves[i].color)
+        ? moves.at(-1)
+        : undefined;
+    this.stateReady = true;
+    this.clearImpact();
     cancelAnimationFrame(this.lastMoveFrame);
     this.lastMovePulses = [];
     this.clearSelection();
-    this.moves = moves;
+    this.moves = moves.map((move) => ({ ...move }));
     this.color = color;
     this.interactive = interactive;
     this.stones.clear();
+    this.clearWinningLine();
     this.clearHighlight();
     for (const child of [...this.lastMove.children]) {
       this.lastMove.remove(child);
@@ -562,13 +759,23 @@ export class RenjuBoard {
         this.stoneGeometry,
         move.color === 1 ? this.stoneMaterials.black : this.stoneMaterials.white,
       );
-      stone.scale.y = 0.5;
-      stone.position.set(START + move.x * STEP, 0.51, START + move.y * STEP);
+      stone.scale.y = 0.56;
+      stone.position.set(START + move.x * STEP, 0.55, START + move.y * STEP);
       stone.castShadow = true;
       stone.receiveShadow = true;
       this.stones.add(stone);
+      if (move.color === 2) {
+        const rim = new THREE.Mesh(this.whiteRimGeometry, this.whiteRimMaterial);
+        rim.rotation.x = Math.PI / 2;
+        rim.position.set(stone.position.x, 0.46, stone.position.z);
+        this.stones.add(rim);
+      }
+      if (move === committed) this.animateImpact(stone, move);
     }
+    this.host.dataset.renderedMoves = String(moves.length);
     if (moves.length) this.markLastMove(moves[moves.length - 1]);
+    if (committed) this.onMoveCommitted?.(committed);
+    if (document.activeElement === this.renderer.domElement) this.showKeyboardPoint();
     this.render();
   }
   reset() {

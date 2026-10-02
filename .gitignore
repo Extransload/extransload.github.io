@@ -13,6 +13,8 @@ renju/.wrangler/
 
 # Local AI agent instructions and working notes
 AGENTS.md
+# Keep the shared Playroom motion rule in the repository.
+!/AGENTS.md
 CLAUDE.md
 GEMINI.md
 COPILOT.md
