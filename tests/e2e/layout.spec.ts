@@ -884,13 +884,22 @@ test('touch board tap previews a stone until the move button confirms it', async
     await page.locator('#difficulty').selectOption('easy');
     await page.locator('#start').click();
     const box = await page.locator('.canvas canvas').boundingBox();
-    const neighbor = { x: box!.x + box!.width / 2 + 20, y: box!.y + box!.height / 2 };
-    await page.touchscreen.tap(neighbor.x, neighbor.y);
+    const center = { x: box!.x + box!.width / 2, y: box!.y + box!.height / 2 };
+    let neighbor: { x: number; y: number } | undefined;
+    for (const offset of [50, 80, -50, -80, 110, -110]) {
+      const candidate = { x: center.x + offset, y: center.y };
+      await page.touchscreen.tap(candidate.x, candidate.y);
+      if (await page.locator('#place-move').isEnabled()) {
+        neighbor = candidate;
+        break;
+      }
+    }
+    expect(neighbor, 'a touch should select an empty board intersection').toBeDefined();
     await expect(page.locator('#place-label')).toHaveText(/착수/);
     await expect(page.locator('#undo')).toBeHidden();
     await page.locator('#cancel-move').click();
     await expect(page.locator('#move-confirm')).toBeHidden();
-    await page.touchscreen.tap(neighbor.x, neighbor.y);
+    await page.touchscreen.tap(neighbor!.x, neighbor!.y);
     await page.locator('#place-move').click();
     await expect(page.locator('#undo')).toBeVisible();
   } finally {
