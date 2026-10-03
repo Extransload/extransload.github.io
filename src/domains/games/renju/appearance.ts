@@ -1,4 +1,4 @@
-export const STONES = ['classic', 'jade', 'slate', 'amber', 'rose'] as const;
+export const STONES = ['classic', 'jade', 'slate', 'amber', 'rose', 'flower', 'heart'] as const;
 export const AVATARS = ['classic', 'coral', 'mint', 'royal', 'sunflower', 'shadow'] as const;
 export const ACCESSORIES = ['none', 'flower', 'leaf', 'crown', 'sun'] as const;
 export const BOARDS = ['oak', 'walnut', 'linen', 'ink', 'meadow'] as const;
@@ -40,19 +40,21 @@ export const APPEARANCE_OPTIONS = {
     { id: 'jade', name: '팔각 비취', detail: '면이 반짝이는 팔각 보석', colors: ['#123b38', '#e8f4dc'] },
     { id: 'slate', name: '열두 각 먹돌', detail: '평평한 윗면과 각진 옆면', colors: ['#23272e', '#e5e3de'] },
     { id: 'amber', name: '호박 원석', detail: '울퉁불퉁한 원석의 윤곽', colors: ['#493018', '#fff1d2'] },
-    { id: 'rose', name: '장미 사각돌', detail: '모서리가 둥근 사각 돌', colors: ['#442433', '#ffe8ee'] },
+    { id: 'rose', name: '장미꽃', detail: '흑은 붉은 장미, 백은 노란 장미', colors: ['#b72f48', '#f0c84d'] },
+    { id: 'flower', name: '꽃송이', detail: '진한 청록과 연한 민트 꽃잎', colors: ['#148b82', '#b2e6d0'] },
+    { id: 'heart', name: '하트', detail: '짙은 베리와 연분홍 하트', colors: ['#ab368a', '#ffd0dc'] },
   ],
   avatar: [
     { id: 'classic', name: '마루', detail: '동글동글한 오목마루의 얼굴', colors: ['#182d3a', '#e4bd77'] },
-    { id: 'coral', name: '파도 선장', detail: '삼각 모자와 스카프를 두른 항해사', colors: ['#815160', '#f2bd89'] },
-    { id: 'mint', name: '숲의 파수꾼', detail: '나뭇가지 뿔과 잎 망토를 지닌 친구', colors: ['#3b6961', '#e6ce9e'] },
-    { id: 'royal', name: '별술사', detail: '뾰족 모자와 별 망토를 걸친 마법사', colors: ['#343e6a', '#e4c176'] },
-    { id: 'sunflower', name: '꼬마 용', detail: '작은 뿔과 날개, 꼬리가 달린 용', colors: ['#755534', '#efc45b'] },
+    { id: 'coral', name: '장미 요정', detail: '꽃잎 치마와 꽃봉오리 머리의 요정', colors: ['#a6536c', '#eaa5a3'] },
+    { id: 'mint', name: '버섯 꼬마', detail: '넓은 갓 아래 숨어 있는 숲 친구', colors: ['#3b6961', '#e6ce9e'] },
+    { id: 'royal', name: '구름 고양이', detail: '구름 꼬리와 쫑긋한 귀를 가진 고양이', colors: ['#343e6a', '#e4c176'] },
+    { id: 'sunflower', name: '노랑 병아리', detail: '작은 날개와 주황 부리의 병아리', colors: ['#e9ad48', '#ffdf80'] },
     {
       id: 'shadow',
-      name: '그림자 주자',
-      detail: '후드와 얼굴 가리개를 쓴 달리기 선수',
-      colors: ['#353b4d', '#bbc6d1'],
+      name: '달토끼',
+      detail: '긴 귀와 초승달 배를 가진 토끼',
+      colors: ['#66627f', '#aaa4c8'],
     },
   ],
   accessory: [

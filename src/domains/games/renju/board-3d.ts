@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { flowerStoneGeometry, heartStoneGeometry, roseStoneGeometry } from './cute-stones';
 import {
   DEFAULT_APPEARANCE,
   type AccessoryStyle,
@@ -36,6 +37,11 @@ type AvatarRig = {
   head: THREE.Mesh;
   arms: THREE.Mesh[];
   ears: THREE.Mesh[];
+  basePieces: THREE.Mesh[];
+  variantHeads: Partial<Record<AvatarStyle, THREE.Mesh>>;
+  variantArms: Partial<Record<AvatarStyle, THREE.Mesh[]>>;
+  activeHead: THREE.Mesh;
+  activeArms: THREE.Mesh[];
   shell: THREE.MeshPhysicalMaterial;
   face: THREE.MeshStandardMaterial;
   accent: THREE.MeshStandardMaterial;
@@ -74,7 +80,9 @@ export class RenjuBoard {
     jade: new THREE.IcosahedronGeometry(0.43, 1),
     slate: new THREE.CylinderGeometry(0.4, 0.4, 0.7, 12),
     amber: new THREE.DodecahedronGeometry(0.43, 0),
-    rose: new RoundedBoxGeometry(0.68, 0.7, 0.68, 3, 0.12),
+    rose: roseStoneGeometry(),
+    flower: flowerStoneGeometry(),
+    heart: heartStoneGeometry(),
   };
   private avatarBodies = {
     round: new THREE.SphereGeometry(0.82, 32, 22),
@@ -564,13 +572,18 @@ export class RenjuBoard {
     );
     const arms: THREE.Mesh[] = [];
     const ears: THREE.Mesh[] = [];
+    const basePieces: THREE.Mesh[] = [body, belly, head];
     for (const side of [-1, 1]) {
       const arm = add(new THREE.SphereGeometry(0.25, 20, 16), shell, side * 0.78, 1.07, 0.22);
       arm.scale.set(0.85, 1.45, 0.9);
       arms.push(arm);
+      basePieces.push(arm);
       const eyeMesh = add(new THREE.SphereGeometry(0.078, 16, 12), eye, side * 0.24, 1.93, 0.69);
       eyeMesh.scale.z = 0.35;
-      ears.push(add(new THREE.SphereGeometry(0.16, 18, 14), accent, side * 0.41, 2.46, -0.06));
+      basePieces.push(eyeMesh);
+      const ear = add(new THREE.SphereGeometry(0.16, 18, 14), accent, side * 0.41, 2.46, -0.06);
+      ears.push(ear);
+      basePieces.push(ear);
     }
     const variants: Partial<Record<AvatarStyle, THREE.Group>> = {};
     const variant = (style: AvatarStyle) => {
@@ -598,135 +611,215 @@ export class RenjuBoard {
       parent.add(mesh);
       return mesh;
     };
-    const captain = variant('coral');
-    piece(
-      captain,
-      new THREE.CylinderGeometry(0.74, 0.78, 0.12, 3),
-      accent,
-      0,
-      2.48,
-      0.08,
-      [1, 1, 1],
-      [0, Math.PI / 2, 0],
+    const variantHeads: Partial<Record<AvatarStyle, THREE.Mesh>> = {};
+    const variantArms: Partial<Record<AvatarStyle, THREE.Mesh[]>> = {};
+    const detail = new THREE.MeshStandardMaterial({ color: isBlack ? 0x291e27 : 0x42363a, roughness: 0.8 });
+    const blush = new THREE.MeshStandardMaterial({ color: 0xee8d91, roughness: 0.85 });
+    const warm = new THREE.MeshStandardMaterial({ color: 0xffb969, roughness: 0.55 });
+    const creature = (
+      style: AvatarStyle,
+      bodyGeometry: THREE.BufferGeometry,
+      bodyScale: [number, number, number],
+      headGeometry: THREE.BufferGeometry,
+      headScale: [number, number, number],
+      headY = 1.85,
+    ) => {
+      const set = variant(style);
+      piece(set, bodyGeometry, shell, 0, 0.91, 0, bodyScale);
+      const h = piece(set, headGeometry, face, 0, headY, 0.08, headScale);
+      const hands: THREE.Mesh[] = [];
+      for (const side of [-1, 1]) {
+        hands.push(
+          piece(
+            set,
+            new THREE.SphereGeometry(0.23, 20, 14),
+            shell,
+            side * (style === 'coral' ? 0.57 : 0.7),
+            1.07,
+            0.28,
+            [0.8, 1.15, 0.7],
+          ),
+        );
+        piece(set, new THREE.SphereGeometry(0.073, 14, 10), detail, side * 0.25, headY + 0.06, 0.76, [1, 1, 0.4]);
+      }
+      variantHeads[style] = h;
+      piece(
+        set,
+        new THREE.TorusGeometry(0.12, 0.014, 5, 18, Math.PI),
+        detail,
+        0,
+        headY - 0.17,
+        0.78,
+        [1, 0.78, 1],
+        [0, 0, Math.PI],
+      );
+      variantArms[style] = hands;
+      return set;
+    };
+    const rose = creature(
+      'coral',
+      new THREE.ConeGeometry(0.91, 1.67, 9),
+      [1, 1, 0.81],
+      new THREE.SphereGeometry(0.65, 32, 20),
+      [1, 0.88, 0.78],
     );
-    piece(captain, new THREE.ConeGeometry(0.62, 0.52, 3), shell, 0, 2.76, 0.05, [1, 1, 1], [0, Math.PI / 2, 0]);
-    const patch = new THREE.MeshStandardMaterial({ color: 0x182b32, roughness: 0.72 });
-    piece(captain, new THREE.SphereGeometry(0.15, 16, 12), patch, -0.24, 1.93, 0.73, [1, 0.84, 0.3]);
-    piece(captain, new THREE.BoxGeometry(0.65, 0.04, 0.04), patch, 0, 2.05, 0.7, [1, 1, 1], [0, 0, -0.22]);
-    piece(captain, new THREE.TorusGeometry(0.52, 0.1, 8, 32), accent, 0, 1.28, 0.06, [1, 1, 1], [Math.PI / 2, 0, 0]);
-    for (const side of [-1, 1])
+    for (let i = 0; i < 7; i++) {
+      const angle = (i * Math.PI * 2) / 7;
       piece(
-        captain,
-        new THREE.BoxGeometry(0.08, 0.66, 0.05),
-        accent,
-        side * 0.4,
-        0.88,
-        0.64,
-        [1, 1, 1],
-        [0, 0, side * 0.2],
-      );
-
-    const forest = variant('mint');
-    for (const side of [-1, 1]) {
-      piece(
-        forest,
-        new THREE.CylinderGeometry(0.055, 0.1, 0.85, 8),
-        accent,
-        side * 0.5,
-        2.72,
-        0.06,
-        [1, 1, 1],
-        [0, 0, -side * 0.36],
-      );
-      piece(
-        forest,
-        new THREE.CylinderGeometry(0.035, 0.06, 0.46, 8),
-        accent,
-        side * 0.74,
-        2.93,
-        0.05,
-        [1, 1, 1],
-        [0, 0, -side * 0.88],
-      );
-      piece(
-        forest,
-        new THREE.ConeGeometry(0.3, 0.74, 5),
-        face,
-        side * 0.87,
-        1.16,
-        -0.18,
-        [1, 1, 1],
-        [0, 0, side * 0.48],
+        rose,
+        new THREE.SphereGeometry(0.32, 16, 12),
+        shell,
+        Math.sin(angle) * 0.71,
+        0.34,
+        Math.cos(angle) * 0.52,
+        [1, 0.52, 0.72],
       );
     }
-
-    const mage = variant('royal');
-    piece(mage, new THREE.CylinderGeometry(0.78, 0.8, 0.09, 24), accent, 0, 2.45, 0.06);
-    piece(mage, new THREE.ConeGeometry(0.59, 1.02, 16), shell, 0, 2.93, 0.04, [1, 1, 1], [0, 0, -0.1]);
-    piece(mage, new THREE.OctahedronGeometry(0.15), accent, 0.1, 3.48, 0.02);
-    for (const side of [-1, 1])
-      piece(
-        mage,
-        new THREE.ConeGeometry(0.36, 1.32, 4),
-        shell,
-        side * 0.72,
-        0.91,
-        -0.45,
-        [1, 1, 1],
-        [0, 0, side * 0.24],
-      );
-
-    const dragon = variant('sunflower');
     for (const side of [-1, 1]) {
       piece(
-        dragon,
-        new THREE.ConeGeometry(0.19, 0.56, 8),
-        accent,
+        rose,
+        new THREE.SphereGeometry(0.32, 16, 12),
+        shell,
         side * 0.48,
-        2.63,
-        0.05,
-        [1, 1, 1],
-        [0, 0, -side * 0.3],
-      );
-      piece(
-        dragon,
-        new THREE.ConeGeometry(0.43, 1.13, 3),
-        face,
-        side * 1.02,
-        1.28,
-        -0.28,
-        [1, 1, 1],
-        [0, 0, side * 0.65],
-      );
-    }
-    piece(dragon, new RoundedBoxGeometry(0.66, 0.3, 0.43, 3, 0.09), face, 0, 1.69, 0.77);
-    const nostril = new THREE.MeshStandardMaterial({ color: 0x513721, roughness: 0.9 });
-    for (const side of [-1, 1]) piece(dragon, new THREE.SphereGeometry(0.035, 10, 8), nostril, side * 0.16, 1.73, 1.0);
-    piece(dragon, new THREE.CylinderGeometry(0.14, 0.28, 0.8, 8), shell, 1.03, 0.52, -0.48, [1, 1, 1], [0, 0, -1.1]);
-    piece(dragon, new THREE.ConeGeometry(0.25, 0.44, 6), accent, 1.39, 0.64, -0.5, [1, 1, 1], [0, 0, -1.18]);
-
-    const runner = variant('shadow');
-    piece(runner, new THREE.ConeGeometry(0.68, 0.8, 8), shell, 0, 2.5, 0.02);
-    piece(runner, new RoundedBoxGeometry(1.04, 0.28, 0.12, 2, 0.04), face, 0, 1.51, 0.71);
-    piece(runner, new THREE.BoxGeometry(1.17, 0.09, 0.1), accent, 0, 2.24, 0.29);
-    for (const side of [-1, 1])
-      piece(
-        runner,
-        new THREE.ConeGeometry(0.27, 0.91, 4),
-        shell,
-        side * 0.87,
-        1.02,
-        -0.27,
-        [1, 1, 1],
+        2.31,
+        0.12,
+        [0.9, 1.45, 0.73],
         [0, 0, side * 0.5],
       );
+      piece(rose, new THREE.SphereGeometry(0.12, 12, 10), blush, side * 0.41, 1.79, 0.69, [1.35, 0.56, 0.42]);
+    }
+    piece(rose, new THREE.SphereGeometry(0.17, 16, 12), accent, 0, 2.48, 0.18);
+
+    const mushroom = creature(
+      'mint',
+      new THREE.CylinderGeometry(0.46, 0.7, 1.42, 12),
+      [1, 1, 0.78],
+      new THREE.SphereGeometry(0.61, 24, 16),
+      [1, 0.89, 0.78],
+      1.73,
+    );
+    piece(mushroom, new THREE.SphereGeometry(1.05, 32, 16), shell, 0, 2.34, 0, [1, 0.51, 0.87]);
+    piece(mushroom, new THREE.CylinderGeometry(0.89, 0.98, 0.13, 32), accent, 0, 2.11, 0);
+    for (const [x, z, size] of [
+      [-0.48, 0.49, 0.17],
+      [0.3, 0.63, 0.13],
+      [0.1, -0.48, 0.2],
+    ])
+      piece(mushroom, new THREE.SphereGeometry(size, 14, 10), face, x, 2.76, z, [1, 0.46, 1]);
+
+    const cat = creature(
+      'royal',
+      new THREE.SphereGeometry(0.76, 28, 20),
+      [1, 1.07, 0.77],
+      new THREE.SphereGeometry(0.72, 28, 18),
+      [1.1, 0.85, 0.8],
+    );
+    for (const side of [-1, 1]) {
+      piece(
+        cat,
+        new THREE.ConeGeometry(0.29, 0.7, 4),
+        shell,
+        side * 0.54,
+        2.43,
+        0.04,
+        [1, 1, 0.8],
+        [0, 0, -side * 0.19],
+      );
+      piece(cat, new THREE.SphereGeometry(0.27, 16, 12), face, side * 0.37, 1.67, 0.64, [1, 0.55, 0.48]);
+    }
+    piece(cat, new THREE.SphereGeometry(0.1, 12, 8), blush, 0, 1.77, 0.79, [1, 0.65, 0.45]);
+    piece(
+      cat,
+      new THREE.TorusGeometry(0.42, 0.13, 8, 28, Math.PI * 1.35),
+      face,
+      0.85,
+      1.08,
+      -0.32,
+      [1, 1, 1],
+      [0, Math.PI / 2, 0.6],
+    );
+
+    const chick = creature(
+      'sunflower',
+      new THREE.SphereGeometry(0.83, 28, 20),
+      [1.08, 1.13, 0.86],
+      new THREE.SphereGeometry(0.7, 28, 18),
+      [1, 0.9, 0.85],
+      1.88,
+    );
+    piece(chick, new THREE.ConeGeometry(0.21, 0.48, 4), warm, 0, 1.77, 0.83, [1, 1, 1], [Math.PI / 2, Math.PI / 4, 0]);
+    for (const side of [-1, 1]) {
+      piece(
+        chick,
+        new THREE.SphereGeometry(0.41, 18, 12),
+        shell,
+        side * 0.72,
+        0.95,
+        0,
+        [0.59, 0.72, 0.34],
+        [0, 0, side * 0.25],
+      );
+      piece(chick, new THREE.SphereGeometry(0.17, 12, 8), warm, side * 0.41, 0.13, 0.44, [1.25, 0.44, 0.6]);
+    }
+    piece(chick, new THREE.ConeGeometry(0.16, 0.39, 5), accent, 0, 2.63, 0.03, [1, 1, 1], [0, 0, -0.24]);
+
+    const rabbit = creature(
+      'shadow',
+      new THREE.SphereGeometry(0.74, 28, 18),
+      [0.87, 1.19, 0.77],
+      new THREE.SphereGeometry(0.68, 28, 18),
+      [1, 0.9, 0.8],
+    );
+    for (const side of [-1, 1]) {
+      piece(
+        rabbit,
+        new THREE.SphereGeometry(0.27, 18, 14),
+        shell,
+        side * 0.39,
+        2.8,
+        -0.03,
+        [0.72, 2.0, 0.53],
+        [0, 0, -side * 0.13],
+      );
+      piece(
+        rabbit,
+        new THREE.SphereGeometry(0.14, 14, 10),
+        blush,
+        side * 0.39,
+        2.84,
+        0.09,
+        [0.65, 2.3, 0.27],
+        [0, 0, -side * 0.13],
+      );
+    }
+    piece(rabbit, new THREE.SphereGeometry(0.35, 16, 12), face, 0, 0.96, 0.55, [0.8, 0.93, 0.25]);
+    piece(rabbit, new THREE.SphereGeometry(0.11, 12, 8), blush, 0, 1.73, 0.72, [1, 0.7, 0.45]);
     const halo = add(new THREE.TorusGeometry(1.3, 0.035, 8, 64), accent, 0, 0.04, 0);
     halo.rotation.x = Math.PI / 2;
     halo.visible = false;
     const character = new THREE.Group();
     group.add(character);
     for (const child of [...group.children]) if (child !== plinth && child !== character) character.add(child);
-    return { group, character, halo, body, belly, head, arms, ears, shell, face, accent, decorations, variants };
+    return {
+      group,
+      character,
+      halo,
+      body,
+      belly,
+      head,
+      arms,
+      ears,
+      basePieces,
+      variantHeads,
+      variantArms,
+      activeHead: head,
+      activeArms: arms,
+      shell,
+      face,
+      accent,
+      decorations,
+      variants,
+    };
   }
   setBoardStyle(style: BoardStyle) {
     if (!this.boardMaterials) return;
@@ -746,7 +839,15 @@ export class RenjuBoard {
   private placeShowcaseStone(style?: StoneStyle) {
     if (style) {
       this.showcaseStoneMesh.geometry = this.stoneGeometries[style];
-      this.showcaseStoneMesh.scale.y = { classic: 1.35, jade: 0.9, slate: 0.65, amber: 0.85, rose: 0.65 }[style];
+      this.showcaseStoneMesh.scale.y = {
+        classic: 1.35,
+        jade: 0.9,
+        slate: 0.65,
+        amber: 0.85,
+        rose: 1.5,
+        flower: 1.5,
+        heart: 1.5,
+      }[style];
     }
     const geometry = this.showcaseStoneMesh.geometry;
     if (!geometry.boundingBox) geometry.computeBoundingBox();
@@ -764,7 +865,9 @@ export class RenjuBoard {
       jade: seat === 'black' ? [0x123b38, 0.16, 0.08] : [0xe8f4dc, 0.18, 0.04],
       slate: seat === 'black' ? [0x23272e, 0.68, 0.02] : [0xe5e3de, 0.62, 0.01],
       amber: seat === 'black' ? [0x493018, 0.24, 0.12] : [0xfff1d2, 0.24, 0.05],
-      rose: seat === 'black' ? [0x442433, 0.27, 0.1] : [0xffe8ee, 0.24, 0.03],
+      rose: seat === 'black' ? [0xb72f48, 0.29, 0.03] : [0xf0c84d, 0.28, 0.03],
+      flower: seat === 'black' ? [0x148b82, 0.37, 0.02] : [0xb2e6d0, 0.33, 0.02],
+      heart: seat === 'black' ? [0xab368a, 0.31, 0.04] : [0xffd0dc, 0.3, 0.02],
     }[appearance.stone];
     const material = this.stoneMaterials[seat];
     material.color.setHex(stone[0]);
@@ -786,38 +889,24 @@ export class RenjuBoard {
     const rig = this.avatars[seat];
     const avatar = {
       classic: seat === 'black' ? [0x182d3a, 0x304859, 0xe4bd77] : [0xf5ecd8, 0xfff9e9, 0x677f88],
-      coral: seat === 'black' ? [0x583240, 0x815160, 0xf2bd89] : [0xffe2d4, 0xfff2e8, 0xc36566],
+      coral: seat === 'black' ? [0xa6536c, 0xeaa5a3, 0xffd28f] : [0xef9db0, 0xffe1df, 0xc36566],
       mint: seat === 'black' ? [0x1e4946, 0x3b6961, 0xe6ce9e] : [0xe0f0e4, 0xf6fcf3, 0x58a592],
       royal: seat === 'black' ? [0x242e56, 0x394874, 0xe4c176] : [0xe0e5fa, 0xf9faff, 0x8b77b9],
-      sunflower: seat === 'black' ? [0x634222, 0x8d6537, 0xefc45b] : [0xffedb5, 0xfff9dc, 0xcc9b3b],
-      shadow: seat === 'black' ? [0x252c3d, 0x47546a, 0xb1bfce] : [0xc4cad2, 0xe8edf0, 0x53637a],
+      sunflower: seat === 'black' ? [0xe9ad48, 0xffdf80, 0xefc45b] : [0xffd86e, 0xfff5b8, 0xcc9b3b],
+      shadow: seat === 'black' ? [0x66627f, 0xaaa4c8, 0xb1bfce] : [0xc4cad2, 0xe8edf0, 0x53637a],
     }[appearance.avatar as AvatarStyle];
     rig.shell.color.setHex(avatar[0]);
     rig.face.color.setHex(avatar[1]);
     rig.accent.color.setHex(avatar[2]);
-    rig.body.geometry =
-      appearance.avatar === 'royal'
-        ? this.avatarBodies.cloak
-        : appearance.avatar === 'shadow'
-          ? this.avatarBodies.runner
-          : this.avatarBodies.round;
-    rig.body.scale.set(
-      appearance.avatar === 'sunflower' ? 1.14 : appearance.avatar === 'coral' ? 1.04 : 1,
-      appearance.avatar === 'royal' || appearance.avatar === 'shadow' ? 1 : 1.18,
-      appearance.avatar === 'royal' ? 0.82 : 0.78,
-    );
-    rig.head.geometry =
-      appearance.avatar === 'sunflower'
-        ? this.avatarHeads.dragon
-        : appearance.avatar === 'shadow'
-          ? this.avatarHeads.runner
-          : this.avatarHeads.round;
-    rig.head.scale.set(appearance.avatar === 'mint' ? 0.92 : 1, appearance.avatar === 'royal' ? 1.08 : 0.91, 0.84);
-    rig.belly.visible = appearance.avatar !== 'royal' && appearance.avatar !== 'shadow';
+    const isClassic = appearance.avatar === 'classic';
+    for (const mesh of rig.basePieces) mesh.visible = isClassic;
+    rig.activeHead.rotation.z = 0;
+    for (const arm of rig.activeArms) arm.rotation.z = 0;
+    rig.activeHead = rig.variantHeads[appearance.avatar] ?? rig.head;
+    rig.activeArms = rig.variantArms[appearance.avatar] ?? rig.arms;
     for (const [style, decoration] of Object.entries(rig.decorations))
       decoration!.visible = style === appearance.accessory;
     for (const [style, variant] of Object.entries(rig.variants)) variant!.visible = style === appearance.avatar;
-    for (const ear of rig.ears) ear.visible = appearance.avatar === 'classic';
     if (this.selected && this.color === (seat === 'black' ? 1 : 2)) {
       const preview = this.preview.children[0] as THREE.Mesh | undefined;
       if (preview) {
@@ -948,10 +1037,10 @@ export class RenjuBoard {
       if (elapsed > 650) {
         rig.group.position.y =
           baseY + Math.abs(Math.sin(beat * (style === 'spin' ? 4 : 7))) * (style === 'bow' ? 0.04 : 0.28);
-        rig.head.rotation.z = style === 'bow' ? 0.22 + Math.sin(beat * 3) * 0.06 : Math.sin(beat * 5) * 0.15;
+        rig.activeHead.rotation.z = style === 'bow' ? 0.22 + Math.sin(beat * 3) * 0.06 : Math.sin(beat * 5) * 0.15;
         rig.group.rotation.x = style === 'bow' ? -0.16 - Math.sin(beat * 3) * 0.04 : 0;
-        rig.arms[0].rotation.z = style === 'cheer' ? -1.65 : -0.55 - Math.sin(beat * 7) * 0.45;
-        rig.arms[1].rotation.z = style === 'cheer' ? 1.65 : 0.55 + Math.sin(beat * 7 + Math.PI) * 0.45;
+        rig.activeArms[0].rotation.z = style === 'cheer' ? -1.65 : -0.55 - Math.sin(beat * 7) * 0.45;
+        rig.activeArms[1].rotation.z = style === 'cheer' ? 1.65 : 0.55 + Math.sin(beat * 7 + Math.PI) * 0.45;
         rig.halo.scale.setScalar(1 + Math.sin(beat * 6) * 0.08);
       }
       this.render();
@@ -969,8 +1058,8 @@ export class RenjuBoard {
       rig.group.position.y = -0.08;
       rig.group.rotation.x = 0;
       rig.group.rotation.y = Math.atan2(-rig.group.position.x, -rig.group.position.z);
-      rig.head.rotation.z = 0;
-      for (const arm of rig.arms) arm.rotation.z = 0;
+      rig.activeHead.rotation.z = 0;
+      for (const arm of rig.activeArms) arm.rotation.z = 0;
       rig.halo.scale.setScalar(1);
       rig.halo.visible = false;
     }

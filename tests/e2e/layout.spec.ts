@@ -703,6 +703,7 @@ test('Playroom animations stay active under reduced motion', async ({ page }) =>
   for (const category of ['stone', 'avatar', 'accessory', 'board'] as const) {
     if (category !== 'stone') await page.locator(`.studio-tabs [data-category="${category}"]`).click();
     await expect(page.locator('#studio-canvas')).toHaveAttribute('data-focus', category);
+    if (category === 'avatar') await page.locator('[data-item-id="shadow"]').click();
     await expect(page.locator('#studio-stage-label')).toContainText('왼쪽 버튼이나 손가락으로 드래그');
     const canvas = page.locator('#studio-canvas canvas');
     const beforeOrbit = await canvas.screenshot();
@@ -716,6 +717,11 @@ test('Playroom animations stay active under reduced motion', async ({ page }) =>
     expect(await page.evaluate(() => window.scrollY)).toBe(scrollY);
     expect((await canvas.screenshot()).equals(beforeOrbit)).toBe(false);
   }
+  await page.locator('.studio-tabs [data-category="victory"]').click();
+  const customVictory = await page.locator('#studio-canvas canvas').screenshot();
+  await page.locator('#studio-victory').click();
+  await page.waitForTimeout(950);
+  expect((await page.locator('#studio-canvas canvas').screenshot()).equals(customVictory)).toBe(false);
 });
 
 test('solo match replaces start with resign until the match ends', async ({ page }) => {
@@ -797,6 +803,18 @@ test('Omokmaru studio previews, saves, and reuses a free look', async ({ page })
   await expect(page.locator('#studio-canvas')).toHaveAttribute('data-focus', 'stone');
   await expect(page.locator('.studio-item[aria-pressed="true"]')).toHaveCount(1);
   const before = await page.locator('#studio-canvas canvas').screenshot();
+  await expect(page.locator('#studio-items .studio-item')).toHaveCount(7);
+  await page.locator('[data-item-id="rose"]').click();
+  await expect(page.locator('#studio-current-label')).toContainText('장미꽃');
+  const redRose = await page.locator('#studio-canvas canvas').screenshot();
+  expect(redRose.equals(before)).toBe(false);
+  await page.locator('[data-seat="white"]').click();
+  expect((await page.locator('#studio-canvas canvas').screenshot()).equals(redRose)).toBe(false);
+  await page.locator('[data-seat="black"]').click();
+  await page.locator('[data-item-id="flower"]').click();
+  await expect(page.locator('#studio-current-label')).toContainText('꽃송이');
+  await page.locator('[data-item-id="heart"]').click();
+  await expect(page.locator('#studio-current-label')).toContainText('하트');
   await page.locator('[data-item-id="jade"]').click();
   await expect(page.locator('.studio-item[aria-pressed="true"]')).toHaveCount(1);
   await expect(page.locator('[data-item-id="jade"]')).toHaveAttribute('aria-pressed', 'true');
@@ -818,7 +836,7 @@ test('Omokmaru studio previews, saves, and reuses a free look', async ({ page })
   await expect(page.locator('#studio-victory')).toBeVisible();
   await page.locator('[data-item-id="spin"]').click();
   await expect(page.locator('#studio-current-label')).toHaveText(
-    '팔각 비취 · 파도 선장 · 별 왕관 · 호두나무 · 빙글 회전',
+    '팔각 비취 · 장미 요정 · 별 왕관 · 호두나무 · 빙글 회전',
   );
   await page.locator('#studio-victory').click();
   await expect(page.locator('#studio-victory')).toHaveText(/다시 보기/);
@@ -829,11 +847,11 @@ test('Omokmaru studio previews, saves, and reuses a free look', async ({ page })
   await expect(page.locator('#studio-current-label')).toContainText('클래식');
   await page.locator('.studio-slot').first().getByRole('button', { name: '적용' }).click();
   await expect(page.locator('#studio-current-label')).toHaveText(
-    '팔각 비취 · 파도 선장 · 별 왕관 · 호두나무 · 빙글 회전',
+    '팔각 비취 · 장미 요정 · 별 왕관 · 호두나무 · 빙글 회전',
   );
   await page.reload();
   await expect(page.locator('#studio-current-label')).toHaveText(
-    '팔각 비취 · 파도 선장 · 별 왕관 · 호두나무 · 빙글 회전',
+    '팔각 비취 · 장미 요정 · 별 왕관 · 호두나무 · 빙글 회전',
   );
   await page.goto('/playroom/omokmaru/solo/');
   await expect(page.locator('.wardrobe-link')).toBeVisible();
@@ -841,7 +859,7 @@ test('Omokmaru studio previews, saves, and reuses a free look', async ({ page })
   await expect(page.locator('#canvas')).toHaveAttribute('data-rendered-moves', '2');
   await page.goto('/playroom/omokmaru/');
   await expect(page.locator('#lobby-style-card')).toHaveAttribute('data-stone', 'jade');
-  await expect(page.locator('#lobby-style-current')).toHaveText('파도 선장 · 팔각 비취');
+  await expect(page.locator('#lobby-style-current')).toHaveText('장미 요정 · 팔각 비취');
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('omokmaru-appearance-v1') || 'null'))).toEqual({
     stone: 'jade',
     avatar: 'coral',

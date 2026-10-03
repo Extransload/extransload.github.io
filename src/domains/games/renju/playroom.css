@@ -154,8 +154,48 @@ button:disabled {
   clip-path: polygon(35% 0, 73% 8%, 100% 42%, 87% 82%, 51% 100%, 9% 84%, 0 45%);
 }
 .lobby-style-card[data-stone='rose'] .lobby-style-stone {
-  border-radius: 8px;
-  background: linear-gradient(135deg, #9b6073, #422330 72%);
+  clip-path: polygon(
+    50% 2%,
+    65% 18%,
+    88% 12%,
+    87% 37%,
+    100% 52%,
+    82% 68%,
+    76% 94%,
+    49% 84%,
+    24% 94%,
+    18% 68%,
+    0 52%,
+    13% 37%,
+    12% 12%,
+    35% 18%
+  );
+  background: linear-gradient(135deg, #e7677e, #a61f3e 72%);
+}
+.lobby-style-card[data-stone='flower'] .lobby-style-stone {
+  clip-path: polygon(
+    50% 9%,
+    65% 0,
+    75% 16%,
+    95% 21%,
+    91% 42%,
+    100% 55%,
+    84% 68%,
+    75% 94%,
+    55% 91%,
+    39% 100%,
+    27% 82%,
+    3% 75%,
+    9% 51%,
+    0 37%,
+    21% 28%,
+    28% 5%
+  );
+  background: linear-gradient(135deg, #64c5b8, #09786f 72%);
+}
+.lobby-style-card[data-stone='heart'] .lobby-style-stone {
+  clip-path: polygon(50% 100%, 8% 60%, 0 29%, 8% 8%, 29% 0, 50% 16%, 71% 0, 92% 8%, 100% 29%, 92% 60%);
+  background: linear-gradient(135deg, #d675b6, #962670 72%);
 }
 .lobby-style-copy {
   display: grid;
