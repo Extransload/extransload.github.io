@@ -698,6 +698,20 @@ test('Playroom animations stay active under reduced motion', async ({ page }) =>
   });
   await expect(page.locator('#clock-black')).toHaveCSS('animation-name', 'clock-pulse');
   await expect(page.locator('#ready-motion-probe')).toHaveCSS('animation-name', 'ready-pop');
+
+  await page.goto('/playroom/omokmaru/wardrobe/');
+  await expect(page.locator('#studio-canvas')).toHaveAttribute('data-focus', 'stone');
+  const stoneCanvas = page.locator('#studio-canvas canvas');
+  const stoneView = await stoneCanvas.boundingBox();
+  expect(stoneView).not.toBeNull();
+  const beforeOrbit = await stoneCanvas.screenshot();
+  await page.mouse.move(stoneView!.x + stoneView!.width / 2, stoneView!.y + stoneView!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(stoneView!.x + stoneView!.width / 2 + 90, stoneView!.y + stoneView!.height / 2 + 25, {
+    steps: 8,
+  });
+  await page.mouse.up();
+  expect((await stoneCanvas.screenshot()).equals(beforeOrbit)).toBe(false);
 });
 
 test('solo match replaces start with resign until the match ends', async ({ page }) => {

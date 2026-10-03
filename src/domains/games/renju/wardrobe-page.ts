@@ -99,7 +99,7 @@ function showScene() {
   board.setSeats(seat, null);
   board.focusShowcase(category, seat);
   $('#studio-stage-label').textContent = {
-    stone: '돌을 가까이 보는 중 · 휠로 더 확대',
+    stone: '돌을 가까이 보는 중 · 드래그로 돌려 보기',
     avatar: '내 아바타만 가까이 보는 중',
     accessory: '머리 장식을 가까이 보는 중',
     board: '바둑판 전체를 보는 중',
