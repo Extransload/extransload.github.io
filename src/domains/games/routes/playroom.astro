@@ -40,7 +40,8 @@ const apiUrl = import.meta.env.PUBLIC_RENJU_API_URL ?? '';
           <button id="zoom-in" title="확대" aria-label="확대">＋</button>
           <button id="zoom-out" title="축소" aria-label="축소">−</button>
           <button id="reset" title="시점 초기화" aria-label="시점 초기화">↺</button>
-          <button id="sound" title="효과음 끄기" aria-label="효과음 끄기" aria-pressed="true">♫</button>
+          <button id="sound" type="button" title="효과음 설정" aria-label="효과음 설정" aria-controls="sound-panel" aria-expanded="false">♫</button>
+          <div id="sound-panel" class="sound-panel" hidden><label for="sound-volume">착수음 <output id="sound-volume-value" for="sound-volume">75%</output></label><input id="sound-volume" type="range" min="0" max="100" step="5" value="75" aria-label="착수음 크기" /><button id="sound-toggle" type="button" aria-pressed="true">효과음 켜짐</button></div>
           <button id="rules" title="렌주 규칙" aria-label="렌주 규칙">☷</button>
           <button id="help" title="조작 방법" aria-label="조작 방법">?</button>
         </div>

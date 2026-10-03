@@ -669,10 +669,13 @@ test('Playroom animations stay active under reduced motion', async ({ page }) =>
   await page.locator('#start').click();
   await expect(page.locator('#status')).toHaveText('내 차례');
   await expect(page.locator('.player.active .piece')).toHaveCSS('animation-name', 'turn-piece-pulse');
-  await expect(page.locator('#sound')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#sound')).toHaveAttribute('aria-expanded', 'false');
   await page.locator('#sound').click();
-  await expect(page.locator('#sound')).toHaveAttribute('aria-pressed', 'false');
-  await page.locator('#sound').click();
+  await expect(page.locator('#sound-panel')).toBeVisible();
+  await expect(page.locator('#sound-volume')).toHaveValue('75');
+  await page.locator('#sound-toggle').click();
+  await expect(page.locator('#sound-toggle')).toHaveAttribute('aria-pressed', 'false');
+  await page.locator('#sound-toggle').click();
   const canvas = page.locator('.canvas canvas');
   const bounds = await canvas.boundingBox();
   expect(bounds).not.toBeNull();
@@ -788,12 +791,20 @@ test('solo board renders the AI reply after the player move', async ({ page }) =
 
 test('Omokmaru sound setting persists between visits', async ({ page }) => {
   await page.goto('/playroom/omokmaru/solo/');
-  await expect(page.locator('#sound')).toHaveAttribute('aria-pressed', 'true');
   await page.locator('#sound').click();
+  await expect(page.locator('#sound-volume')).toHaveValue('75');
+  await page.locator('#sound-volume').evaluate((slider: HTMLInputElement) => {
+    slider.value = '35';
+    slider.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await expect(page.locator('#sound-volume-value')).toHaveText('35%');
+  await page.locator('#sound-toggle').click();
   await page.reload();
-  await expect(page.locator('#sound')).toHaveAttribute('aria-pressed', 'false');
   await page.locator('#sound').click();
-  await expect(page.locator('#sound')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#sound-toggle')).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('#sound-volume')).toHaveValue('35');
+  await page.locator('#sound-toggle').click();
+  await expect(page.locator('#sound-toggle')).toHaveAttribute('aria-pressed', 'true');
 });
 
 test('Omokmaru studio previews, saves, and reuses a free look', async ({ page }) => {
@@ -803,7 +814,7 @@ test('Omokmaru studio previews, saves, and reuses a free look', async ({ page })
   await expect(page.locator('#studio-canvas')).toHaveAttribute('data-focus', 'stone');
   await expect(page.locator('.studio-item[aria-pressed="true"]')).toHaveCount(1);
   const before = await page.locator('#studio-canvas canvas').screenshot();
-  await expect(page.locator('#studio-items .studio-item')).toHaveCount(7);
+  await expect(page.locator('#studio-items .studio-item')).toHaveCount(13);
   await page.locator('[data-item-id="rose"]').click();
   await expect(page.locator('#studio-current-label')).toContainText('장미꽃');
   const redRose = await page.locator('#studio-canvas canvas').screenshot();
@@ -811,17 +822,28 @@ test('Omokmaru studio previews, saves, and reuses a free look', async ({ page })
   await page.locator('[data-seat="white"]').click();
   expect((await page.locator('#studio-canvas canvas').screenshot()).equals(redRose)).toBe(false);
   await page.locator('[data-seat="black"]').click();
-  await page.locator('[data-item-id="flower"]').click();
-  await expect(page.locator('#studio-current-label')).toContainText('꽃송이');
-  await page.locator('[data-item-id="heart"]').click();
-  await expect(page.locator('#studio-current-label')).toContainText('하트');
+  for (const [id, name] of [
+    ['chick', '병아리 얼굴'],
+    ['puppy', '강아지 얼굴'],
+    ['kitten', '고양이 얼굴'],
+    ['bunny', '토끼 얼굴'],
+    ['fox', '여우 얼굴'],
+    ['panda', '판다 얼굴'],
+    ['frog', '개구리 얼굴'],
+    ['owl', '올빼미 얼굴'],
+    ['star', '별의 핵'],
+    ['dragon', '용의 알'],
+  ]) {
+    await page.locator(`[data-item-id="${id}"]`).click();
+    await expect(page.locator('#studio-current-label')).toContainText(name);
+  }
   await page.locator('[data-item-id="jade"]').click();
   await expect(page.locator('.studio-item[aria-pressed="true"]')).toHaveCount(1);
   await expect(page.locator('[data-item-id="jade"]')).toHaveAttribute('aria-pressed', 'true');
   expect((await page.locator('#studio-canvas canvas').screenshot()).equals(before)).toBe(false);
   await page.locator('[data-category="avatar"]').click();
   await expect(page.locator('#studio-canvas')).toHaveAttribute('data-focus', 'avatar');
-  await expect(page.locator('#studio-items .studio-item')).toHaveCount(6);
+  await expect(page.locator('#studio-items .studio-item')).toHaveCount(5);
   const originalAvatar = await page.locator('#studio-canvas canvas').screenshot();
   await page.locator('[data-item-id="coral"]').click();
   expect((await page.locator('#studio-canvas canvas').screenshot()).equals(originalAvatar)).toBe(false);

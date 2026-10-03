@@ -143,59 +143,54 @@ button:disabled {
   background: linear-gradient(135deg, #3e8075, #102d2b 72%);
   clip-path: polygon(30% 0, 70% 0, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0 70%, 0 30%);
 }
-.lobby-style-card[data-stone='slate'] .lobby-style-stone {
-  border-radius: 0;
-  background: linear-gradient(135deg, #586069, #1b2027 72%);
-  clip-path: polygon(25% 0, 75% 0, 100% 25%, 100% 75%, 75% 100%, 25% 100%, 0 75%, 0 25%);
-}
-.lobby-style-card[data-stone='amber'] .lobby-style-stone {
-  border-radius: 0;
-  background: linear-gradient(135deg, #ad773e, #493018 72%);
-  clip-path: polygon(35% 0, 73% 8%, 100% 42%, 87% 82%, 51% 100%, 9% 84%, 0 45%);
-}
 .lobby-style-card[data-stone='rose'] .lobby-style-stone {
-  clip-path: polygon(
-    50% 2%,
-    65% 18%,
-    88% 12%,
-    87% 37%,
-    100% 52%,
-    82% 68%,
-    76% 94%,
-    49% 84%,
-    24% 94%,
-    18% 68%,
-    0 52%,
-    13% 37%,
-    12% 12%,
-    35% 18%
-  );
-  background: linear-gradient(135deg, #e7677e, #a61f3e 72%);
+  border-radius: 43% 57% 48% 52%;
+  background: conic-gradient(from 25deg, #9c1028, #4e0919, #c72c38, #841027, #4e0919, #c72c38, #9c1028);
 }
-.lobby-style-card[data-stone='flower'] .lobby-style-stone {
-  clip-path: polygon(
-    50% 9%,
-    65% 0,
-    75% 16%,
-    95% 21%,
-    91% 42%,
-    100% 55%,
-    84% 68%,
-    75% 94%,
-    55% 91%,
-    39% 100%,
-    27% 82%,
-    3% 75%,
-    9% 51%,
-    0 37%,
-    21% 28%,
-    28% 5%
-  );
-  background: linear-gradient(135deg, #64c5b8, #09786f 72%);
+.lobby-style-card[data-stone='chick'] .lobby-style-stone,
+.lobby-style-card[data-stone='puppy'] .lobby-style-stone,
+.lobby-style-card[data-stone='kitten'] .lobby-style-stone,
+.lobby-style-card[data-stone='bunny'] .lobby-style-stone,
+.lobby-style-card[data-stone='fox'] .lobby-style-stone,
+.lobby-style-card[data-stone='panda'] .lobby-style-stone,
+.lobby-style-card[data-stone='frog'] .lobby-style-stone,
+.lobby-style-card[data-stone='owl'] .lobby-style-stone {
+  background:
+    radial-gradient(circle at 34% 43%, #253038 0 2px, transparent 3px),
+    radial-gradient(circle at 66% 43%, #253038 0 2px, transparent 3px), var(--stone-face);
 }
-.lobby-style-card[data-stone='heart'] .lobby-style-stone {
-  clip-path: polygon(50% 100%, 8% 60%, 0 29%, 8% 8%, 29% 0, 50% 16%, 71% 0, 92% 8%, 100% 29%, 92% 60%);
-  background: linear-gradient(135deg, #d675b6, #962670 72%);
+.lobby-style-card[data-stone='chick'] .lobby-style-stone {
+  --stone-face: #d18b2d;
+}
+.lobby-style-card[data-stone='puppy'] .lobby-style-stone {
+  --stone-face: #83553f;
+}
+.lobby-style-card[data-stone='kitten'] .lobby-style-stone {
+  --stone-face: #545578;
+}
+.lobby-style-card[data-stone='bunny'] .lobby-style-stone {
+  --stone-face: #9474a4;
+}
+.lobby-style-card[data-stone='fox'] .lobby-style-stone {
+  --stone-face: #bd5a34;
+}
+.lobby-style-card[data-stone='panda'] .lobby-style-stone {
+  --stone-face: #f8f4e9;
+}
+.lobby-style-card[data-stone='frog'] .lobby-style-stone {
+  --stone-face: #277b5c;
+}
+.lobby-style-card[data-stone='owl'] .lobby-style-stone {
+  --stone-face: #655074;
+}
+.lobby-style-card[data-stone='star'] .lobby-style-stone {
+  border-radius: 0;
+  background: #3859a7;
+  clip-path: polygon(50% 0, 63% 34%, 100% 38%, 73% 61%, 82% 100%, 50% 78%, 18% 100%, 27% 61%, 0 38%, 37% 34%);
+}
+.lobby-style-card[data-stone='dragon'] .lobby-style-stone {
+  border-radius: 50% 50% 43% 43%;
+  background: radial-gradient(circle at 54% 54%, #75ddd1 0 4px, transparent 5px), #2b6d69;
 }
 .lobby-style-copy {
   display: grid;
@@ -406,6 +401,45 @@ button:disabled {
 .toolbar #sound:not(.active) {
   color: #9a8e7b;
   text-decoration: line-through;
+}
+.toolbar .sound-panel {
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + 9px);
+  right: 0;
+  display: grid;
+  gap: 10px;
+  width: 210px;
+  padding: 14px;
+  border: 1px solid #cbbd9f;
+  border-radius: 13px;
+  background: #fffaf0;
+  box-shadow: 0 12px 30px #2e31283d;
+  color: #354a49;
+}
+.toolbar .sound-panel[hidden] {
+  display: none;
+}
+.sound-panel label {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.sound-panel output {
+  font-variant-numeric: tabular-nums;
+}
+.sound-panel input {
+  width: 100%;
+  accent-color: #648d7e;
+}
+.toolbar .sound-panel button {
+  width: 100%;
+  height: 34px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
 }
 .stage-hint {
   position: absolute;

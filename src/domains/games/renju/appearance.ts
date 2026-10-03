@@ -1,5 +1,19 @@
-export const STONES = ['classic', 'jade', 'slate', 'amber', 'rose', 'flower', 'heart'] as const;
-export const AVATARS = ['classic', 'coral', 'mint', 'royal', 'sunflower', 'shadow'] as const;
+export const STONES = [
+  'classic',
+  'jade',
+  'rose',
+  'chick',
+  'puppy',
+  'kitten',
+  'bunny',
+  'fox',
+  'panda',
+  'frog',
+  'owl',
+  'star',
+  'dragon',
+] as const;
+export const AVATARS = ['classic', 'coral', 'royal', 'sunflower', 'shadow'] as const;
 export const ACCESSORIES = ['none', 'flower', 'leaf', 'crown', 'sun'] as const;
 export const BOARDS = ['oak', 'walnut', 'linen', 'ink', 'meadow'] as const;
 export const VICTORIES = ['dance', 'spin', 'bow', 'cheer'] as const;
@@ -38,16 +52,21 @@ export const APPEARANCE_OPTIONS = {
   stone: [
     { id: 'classic', name: '클래식', detail: '매끈하고 둥근 기본 돌', colors: ['#09131d', '#fff9ee'] },
     { id: 'jade', name: '팔각 비취', detail: '면이 반짝이는 팔각 보석', colors: ['#123b38', '#e8f4dc'] },
-    { id: 'slate', name: '열두 각 먹돌', detail: '평평한 윗면과 각진 옆면', colors: ['#23272e', '#e5e3de'] },
-    { id: 'amber', name: '호박 원석', detail: '울퉁불퉁한 원석의 윤곽', colors: ['#493018', '#fff1d2'] },
-    { id: 'rose', name: '장미꽃', detail: '흑은 붉은 장미, 백은 노란 장미', colors: ['#b72f48', '#f0c84d'] },
-    { id: 'flower', name: '꽃송이', detail: '진한 청록과 연한 민트 꽃잎', colors: ['#148b82', '#b2e6d0'] },
-    { id: 'heart', name: '하트', detail: '짙은 베리와 연분홍 하트', colors: ['#ab368a', '#ffd0dc'] },
+    { id: 'rose', name: '장미꽃', detail: '말린 꽃잎이 겹친 붉은·노란 장미', colors: ['#9c1028', '#edb72f'] },
+    { id: 'chick', name: '병아리 얼굴', detail: '도톰한 볼과 입체 부리', colors: ['#d18b2d', '#ffe9a3'] },
+    { id: 'puppy', name: '강아지 얼굴', detail: '처진 귀와 통통한 주둥이', colors: ['#83553f', '#e9c9a5'] },
+    { id: 'kitten', name: '고양이 얼굴', detail: '뾰족한 귀와 작은 수염', colors: ['#545578', '#e6ddef'] },
+    { id: 'bunny', name: '토끼 얼굴', detail: '길게 솟은 귀와 분홍 코', colors: ['#9474a4', '#f7e5f0'] },
+    { id: 'fox', name: '여우 얼굴', detail: '각진 얼굴과 뾰족한 귀', colors: ['#bd5a34', '#f4c999'] },
+    { id: 'panda', name: '판다 얼굴', detail: '둥근 귀와 눈 주위 무늬', colors: ['#35434b', '#f8f4e9'] },
+    { id: 'frog', name: '개구리 얼굴', detail: '튀어나온 두 눈과 큰 미소', colors: ['#277b5c', '#b7e6a3'] },
+    { id: 'owl', name: '올빼미 얼굴', detail: '큰 두 눈과 작은 부리', colors: ['#655074', '#ddcfe2'] },
+    { id: 'star', name: '별의 핵', detail: '다섯 갈래 별 속의 보석', colors: ['#3859a7', '#bad6f8'] },
+    { id: 'dragon', name: '용의 알', detail: '뿔과 빛나는 보석이 있는 알', colors: ['#2b6d69', '#bbe3d3'] },
   ],
   avatar: [
     { id: 'classic', name: '마루', detail: '동글동글한 오목마루의 얼굴', colors: ['#182d3a', '#e4bd77'] },
     { id: 'coral', name: '장미 요정', detail: '꽃잎 치마와 꽃봉오리 머리의 요정', colors: ['#a6536c', '#eaa5a3'] },
-    { id: 'mint', name: '버섯 꼬마', detail: '넓은 갓 아래 숨어 있는 숲 친구', colors: ['#3b6961', '#e6ce9e'] },
     { id: 'royal', name: '구름 고양이', detail: '구름 꼬리와 쫑긋한 귀를 가진 고양이', colors: ['#343e6a', '#e4c176'] },
     { id: 'sunflower', name: '노랑 병아리', detail: '작은 날개와 주황 부리의 병아리', colors: ['#e9ad48', '#ffdf80'] },
     {

@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { flowerStoneGeometry, heartStoneGeometry, roseStoneGeometry } from './cute-stones';
+import { roseStoneGeometry } from './rose-stone';
+import { CHARACTER_STONE_BODIES, createStoneDetails } from './stone-designs';
 import {
   DEFAULT_APPEARANCE,
   type AccessoryStyle,
@@ -78,21 +79,14 @@ export class RenjuBoard {
       48,
     ),
     jade: new THREE.IcosahedronGeometry(0.43, 1),
-    slate: new THREE.CylinderGeometry(0.4, 0.4, 0.7, 12),
-    amber: new THREE.DodecahedronGeometry(0.43, 0),
     rose: roseStoneGeometry(),
-    flower: flowerStoneGeometry(),
-    heart: heartStoneGeometry(),
+    ...CHARACTER_STONE_BODIES,
   };
   private avatarBodies = {
     round: new THREE.SphereGeometry(0.82, 32, 22),
-    cloak: new THREE.ConeGeometry(0.98, 1.84, 12),
-    runner: new RoundedBoxGeometry(1.46, 1.76, 1.14, 4, 0.3),
   };
   private avatarHeads = {
     round: new THREE.SphereGeometry(0.73, 32, 22),
-    dragon: new THREE.DodecahedronGeometry(0.76, 1),
-    runner: new THREE.IcosahedronGeometry(0.76, 1),
   };
   private whiteRimGeometry = new THREE.TorusGeometry(0.4, 0.03, 6, 48);
   private whiteRimMaterial = new THREE.MeshBasicMaterial({ color: 0x4e4335 });
@@ -112,6 +106,7 @@ export class RenjuBoard {
       clearcoatRoughness: 0.2,
     }),
   };
+  private stoneDetailsTemplates: Record<Seat, Partial<Record<StoneStyle, THREE.Group>>> = { black: {}, white: {} };
   private appearance: Record<Seat, PlayerAppearance> = {
     black: { ...DEFAULT_APPEARANCE },
     white: { ...DEFAULT_APPEARANCE },
@@ -690,23 +685,6 @@ export class RenjuBoard {
     }
     piece(rose, new THREE.SphereGeometry(0.17, 16, 12), accent, 0, 2.48, 0.18);
 
-    const mushroom = creature(
-      'mint',
-      new THREE.CylinderGeometry(0.46, 0.7, 1.42, 12),
-      [1, 1, 0.78],
-      new THREE.SphereGeometry(0.61, 24, 16),
-      [1, 0.89, 0.78],
-      1.73,
-    );
-    piece(mushroom, new THREE.SphereGeometry(1.05, 32, 16), shell, 0, 2.34, 0, [1, 0.51, 0.87]);
-    piece(mushroom, new THREE.CylinderGeometry(0.89, 0.98, 0.13, 32), accent, 0, 2.11, 0);
-    for (const [x, z, size] of [
-      [-0.48, 0.49, 0.17],
-      [0.3, 0.63, 0.13],
-      [0.1, -0.48, 0.2],
-    ])
-      piece(mushroom, new THREE.SphereGeometry(size, 14, 10), face, x, 2.76, z, [1, 0.46, 1]);
-
     const cat = creature(
       'royal',
       new THREE.SphereGeometry(0.76, 28, 20),
@@ -842,12 +820,19 @@ export class RenjuBoard {
       this.showcaseStoneMesh.scale.y = {
         classic: 1.35,
         jade: 0.9,
-        slate: 0.65,
-        amber: 0.85,
-        rose: 1.5,
-        flower: 1.5,
-        heart: 1.5,
+        rose: 2.25,
+        chick: 2.35,
+        puppy: 2.3,
+        kitten: 2.35,
+        bunny: 2.25,
+        fox: 2.3,
+        panda: 2.35,
+        frog: 2.35,
+        owl: 2.3,
+        star: 1.55,
+        dragon: 2.25,
       }[style];
+      this.applyStoneDetails(this.showcaseStoneMesh, this.showcaseSeat, style);
     }
     const geometry = this.showcaseStoneMesh.geometry;
     if (!geometry.boundingBox) geometry.computeBoundingBox();
@@ -856,28 +841,58 @@ export class RenjuBoard {
   private stoneRestY(style: StoneStyle) {
     const geometry = this.stoneGeometries[style];
     if (!geometry.boundingBox) geometry.computeBoundingBox();
-    return SURFACE - (geometry.boundingBox?.min.y ?? -0.42) * 0.56 + 0.005;
+    return SURFACE - (geometry.boundingBox?.min.y ?? -0.42) * this.stoneScaleY(style) + 0.005;
+  }
+  private stoneScaleY(style: StoneStyle) {
+    return style === 'classic' || style === 'jade' ? 0.56 : style === 'star' ? 0.85 : 0.94;
+  }
+  private stoneScaleXZ(style: StoneStyle) {
+    return ['chick', 'puppy', 'kitten', 'bunny', 'fox', 'panda', 'frog', 'owl'].includes(style) ? 0.86 : 1;
+  }
+  private applyStoneDetails(stone: THREE.Mesh, seat: Seat, style: StoneStyle) {
+    const current = stone.getObjectByName('stone-details');
+    if (current) stone.remove(current);
+    if (style === 'classic' || style === 'jade' || style === 'rose') return;
+    let template = this.stoneDetailsTemplates[seat][style];
+    if (!template) {
+      template = createStoneDetails(style, seat, this.stoneMaterials[seat])!;
+      this.stoneDetailsTemplates[seat][style] = template;
+    }
+    stone.add(template.clone(true));
   }
   setAppearance(seat: Seat, appearance: PlayerAppearance) {
     this.appearance[seat] = appearance;
     const stone = {
       classic: seat === 'black' ? [0x09131d, 0.31, 0.04] : [0xfff9ee, 0.3, 0.02],
       jade: seat === 'black' ? [0x123b38, 0.16, 0.08] : [0xe8f4dc, 0.18, 0.04],
-      slate: seat === 'black' ? [0x23272e, 0.68, 0.02] : [0xe5e3de, 0.62, 0.01],
-      amber: seat === 'black' ? [0x493018, 0.24, 0.12] : [0xfff1d2, 0.24, 0.05],
-      rose: seat === 'black' ? [0xb72f48, 0.29, 0.03] : [0xf0c84d, 0.28, 0.03],
-      flower: seat === 'black' ? [0x148b82, 0.37, 0.02] : [0xb2e6d0, 0.33, 0.02],
-      heart: seat === 'black' ? [0xab368a, 0.31, 0.04] : [0xffd0dc, 0.3, 0.02],
+      rose: seat === 'black' ? [0x9c1028, 0.29, 0.03] : [0xedb72f, 0.28, 0.03],
+      chick: seat === 'black' ? [0xd18b2d, 0.43, 0.01] : [0xffe9a3, 0.43, 0.01],
+      puppy: seat === 'black' ? [0x83553f, 0.53, 0.01] : [0xe9c9a5, 0.5, 0.01],
+      kitten: seat === 'black' ? [0x545578, 0.41, 0.02] : [0xe6ddef, 0.42, 0.01],
+      bunny: seat === 'black' ? [0x9474a4, 0.52, 0.01] : [0xf7e5f0, 0.49, 0.01],
+      fox: seat === 'black' ? [0xbd5a34, 0.49, 0.01] : [0xf4c999, 0.48, 0.01],
+      panda: seat === 'black' ? [0x35434b, 0.48, 0.01] : [0xf8f4e9, 0.46, 0.01],
+      frog: seat === 'black' ? [0x277b5c, 0.45, 0.01] : [0xb7e6a3, 0.45, 0.01],
+      owl: seat === 'black' ? [0x655074, 0.51, 0.01] : [0xddcfe2, 0.5, 0.01],
+      star: seat === 'black' ? [0x3859a7, 0.24, 0.24] : [0xbad6f8, 0.27, 0.17],
+      dragon: seat === 'black' ? [0x2b6d69, 0.26, 0.18] : [0xbbe3d3, 0.28, 0.13],
     }[appearance.stone];
     const material = this.stoneMaterials[seat];
     material.color.setHex(stone[0]);
-    material.roughness = stone[1];
+    material.roughness = appearance.stone === 'rose' ? 0.68 : stone[1];
     material.metalness = stone[2];
+    material.clearcoat = appearance.stone === 'rose' ? 0.14 : 0.68;
+    material.vertexColors = appearance.stone === 'rose';
+    material.side = appearance.stone === 'rose' ? THREE.DoubleSide : THREE.FrontSide;
+    material.needsUpdate = true;
     for (const child of this.stones.children) {
       if (child.userData.seat !== seat) continue;
       if (child.userData.stone) {
         (child as THREE.Mesh).geometry = this.stoneGeometries[appearance.stone];
+        child.scale.x = child.scale.z = this.stoneScaleXZ(appearance.stone);
+        child.scale.y = this.stoneScaleY(appearance.stone);
         child.position.y = this.stoneRestY(appearance.stone);
+        this.applyStoneDetails(child as THREE.Mesh, seat, appearance.stone);
       }
       if (child.userData.rim) child.visible = appearance.stone === 'classic';
     }
@@ -890,7 +905,6 @@ export class RenjuBoard {
     const avatar = {
       classic: seat === 'black' ? [0x182d3a, 0x304859, 0xe4bd77] : [0xf5ecd8, 0xfff9e9, 0x677f88],
       coral: seat === 'black' ? [0xa6536c, 0xeaa5a3, 0xffd28f] : [0xef9db0, 0xffe1df, 0xc36566],
-      mint: seat === 'black' ? [0x1e4946, 0x3b6961, 0xe6ce9e] : [0xe0f0e4, 0xf6fcf3, 0x58a592],
       royal: seat === 'black' ? [0x242e56, 0x394874, 0xe4c176] : [0xe0e5fa, 0xf9faff, 0x8b77b9],
       sunflower: seat === 'black' ? [0xe9ad48, 0xffdf80, 0xefc45b] : [0xffd86e, 0xfff5b8, 0xcc9b3b],
       shadow: seat === 'black' ? [0x66627f, 0xaaa4c8, 0xb1bfce] : [0xc4cad2, 0xe8edf0, 0x53637a],
@@ -911,8 +925,15 @@ export class RenjuBoard {
       const preview = this.preview.children[0] as THREE.Mesh | undefined;
       if (preview) {
         preview.geometry = this.stoneGeometries[appearance.stone];
+        preview.scale.x = preview.scale.z = this.stoneScaleXZ(appearance.stone);
+        preview.scale.y = this.stoneScaleY(appearance.stone);
         preview.position.y = this.stoneRestY(appearance.stone);
-        (preview.material as THREE.MeshPhysicalMaterial).color.setHex(stone[0]);
+        this.applyStoneDetails(preview, seat, appearance.stone);
+        const previewMaterial = preview.material as THREE.MeshPhysicalMaterial;
+        previewMaterial.color.setHex(stone[0]);
+        previewMaterial.vertexColors = appearance.stone === 'rose';
+        previewMaterial.side = appearance.stone === 'rose' ? THREE.DoubleSide : THREE.FrontSide;
+        previewMaterial.needsUpdate = true;
       }
     }
     this.render();
@@ -1154,12 +1175,20 @@ export class RenjuBoard {
       transparent: true,
       opacity: 0.86,
       depthWrite: false,
+      vertexColors: this.appearance[this.color === 1 ? 'black' : 'white'].stone === 'rose',
+      side: this.appearance[this.color === 1 ? 'black' : 'white'].stone === 'rose' ? THREE.DoubleSide : THREE.FrontSide,
     });
     const stone = new THREE.Mesh(
       this.stoneGeometries[this.appearance[this.color === 1 ? 'black' : 'white'].stone],
       material,
     );
-    stone.scale.y = 0.56;
+    this.applyStoneDetails(
+      stone,
+      this.color === 1 ? 'black' : 'white',
+      this.appearance[this.color === 1 ? 'black' : 'white'].stone,
+    );
+    const style = this.appearance[this.color === 1 ? 'black' : 'white'].stone;
+    stone.scale.set(this.stoneScaleXZ(style), this.stoneScaleY(style), this.stoneScaleXZ(style));
     stone.position.set(
       START + point.x * STEP,
       this.stoneRestY(this.appearance[this.color === 1 ? 'black' : 'white'].stone),
@@ -1283,7 +1312,10 @@ export class RenjuBoard {
       const settle = Math.min(1, t / 0.62);
       stone.position.y = restY + (1 - settle) ** 2 * 0.9 - Math.sin(settle * Math.PI) * 0.045;
       stone.scale.setScalar(0.8 + 0.2 * settle);
-      stone.scale.y *= 0.56;
+      const style = this.appearance[move.color === 1 ? 'black' : 'white'].stone;
+      stone.scale.x *= this.stoneScaleXZ(style);
+      stone.scale.z *= this.stoneScaleXZ(style);
+      stone.scale.y *= this.stoneScaleY(style);
       ring.scale.setScalar(1 + t * 1.45);
       ring.material.opacity = 0.75 * (1 - t) ** 2;
       this.render();
@@ -1373,9 +1405,11 @@ export class RenjuBoard {
     for (const move of moves) {
       const seat = move.color === 1 ? 'black' : 'white';
       const stone = new THREE.Mesh(this.stoneGeometries[this.appearance[seat].stone], this.stoneMaterials[seat]);
+      this.applyStoneDetails(stone, seat, this.appearance[seat].stone);
       stone.userData.seat = seat;
       stone.userData.stone = true;
-      stone.scale.y = 0.56;
+      const style = this.appearance[seat].stone;
+      stone.scale.set(this.stoneScaleXZ(style), this.stoneScaleY(style), this.stoneScaleXZ(style));
       stone.position.set(START + move.x * STEP, this.stoneRestY(this.appearance[seat].stone), START + move.y * STEP);
       stone.castShadow = true;
       stone.receiveShadow = true;
