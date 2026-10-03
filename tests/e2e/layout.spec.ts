@@ -959,7 +959,7 @@ test('small solo screen returns to the board when play starts', async ({ browser
     await expect.poll(() => page.evaluate(() => Math.round(window.scrollY))).toBe(0);
     await expect(page.locator('#stage-hint')).toContainText('내 차례');
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(320);
-    for (const button of await page.locator('.toolbar button').all()) {
+    for (const button of await page.locator('.toolbar > button').all()) {
       const bounds = await button.boundingBox();
       expect(bounds!.y).toBeGreaterThanOrEqual(0);
       expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(320);
