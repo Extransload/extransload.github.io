@@ -164,6 +164,12 @@ export class RenjuBoard {
     canvas.setAttribute('role', 'application');
     canvas.setAttribute('aria-label', '오목 바둑판');
     canvas.setAttribute('aria-describedby', 'board-keyboard-status');
+    canvas.addEventListener('pointerdown', (event) => {
+      if (event.button === 1) event.preventDefault();
+    });
+    canvas.addEventListener('auxclick', (event) => {
+      if (event.button === 1) event.preventDefault();
+    });
     this.keyboardStatus = document.createElement('span');
     this.keyboardStatus.id = 'board-keyboard-status';
     this.keyboardStatus.className = 'board-keyboard-status';
@@ -840,8 +846,8 @@ export class RenjuBoard {
     this.placeShowcaseStone(this.appearance[seat].stone);
     this.showcaseStoneRim.position.y = this.showcaseStoneMesh.position.y - 0.2;
     this.showcaseStoneRim.visible = seat === 'white' && this.appearance[seat].stone === 'classic';
-    this.controls.mouseButtons.LEFT = focus === 'stone' ? THREE.MOUSE.ROTATE : null;
-    this.controls.touches.ONE = focus === 'stone' ? THREE.TOUCH.ROTATE : null;
+    this.controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
+    this.controls.touches.ONE = THREE.TOUCH.ROTATE;
     for (const color of ['black', 'white'] as const) {
       const rig = this.avatars[color];
       rig.group.visible = (focus === 'avatar' || focus === 'accessory' || focus === 'victory') && color === seat;

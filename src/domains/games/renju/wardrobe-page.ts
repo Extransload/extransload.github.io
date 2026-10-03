@@ -99,11 +99,11 @@ function showScene() {
   board.setSeats(seat, null);
   board.focusShowcase(category, seat);
   $('#studio-stage-label').textContent = {
-    stone: '돌을 가까이 보는 중 · 드래그로 돌려 보기',
-    avatar: '내 아바타만 가까이 보는 중',
-    accessory: '머리 장식을 가까이 보는 중',
-    board: '바둑판 전체를 보는 중',
-    victory: '승리 동작을 보는 중',
+    stone: '돌 회전 · 왼쪽 버튼이나 손가락으로 드래그',
+    avatar: '아바타 회전 · 왼쪽 버튼이나 손가락으로 드래그',
+    accessory: '장식 회전 · 왼쪽 버튼이나 손가락으로 드래그',
+    board: '바둑판 회전 · 왼쪽 버튼이나 손가락으로 드래그',
+    victory: '승리 장면 회전 · 왼쪽 버튼이나 손가락으로 드래그',
   }[category];
   $('#studio-preview-actions').hidden = category !== 'victory';
   $('#studio-view').hidden = category !== 'board';
@@ -115,7 +115,7 @@ function showVictory() {
   board.setState(winningMoves[seat], null, false, false);
   board.setSeats(seat, null);
   board.focusShowcase('victory', seat);
-  $('#studio-stage-label').textContent = '내 아바타의 승리 동작을 보는 중';
+  $('#studio-stage-label').textContent = '승리 장면 회전 · 왼쪽 버튼이나 손가락으로 드래그';
   $('#studio-preview-actions').hidden = false;
   $('#studio-view').hidden = true;
   board.celebrate(seat);

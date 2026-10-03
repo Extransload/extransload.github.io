@@ -544,6 +544,14 @@
   background: radial-gradient(ellipse at 50% 40%, #faf8ef, #e8e2d5);
 }
 
+.studio-stage canvas {
+  cursor: grab;
+}
+
+.studio-stage canvas:active {
+  cursor: grabbing;
+}
+
 .studio-stage-label {
   position: absolute;
   bottom: 12px;
