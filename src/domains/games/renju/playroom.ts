@@ -6,7 +6,13 @@ import { mountRulesHelp } from './rules-help';
 import { mountMoveConfirm } from './move-confirm';
 import { guestClientId, guestName, saveGuestName } from './identity';
 import { mountGameSound } from './sound';
-import { appearanceForSeat, DEFAULT_APPEARANCE, watchAppearance, type Appearance } from './appearance';
+import {
+  APPEARANCE_OPTIONS,
+  appearanceForSeat,
+  DEFAULT_APPEARANCE,
+  watchAppearance,
+  type Appearance,
+} from './appearance';
 
 const $ = <T extends HTMLElement>(selector: string) => document.querySelector<T>(selector)!;
 const api = (
@@ -37,6 +43,10 @@ watchAppearance((next) => {
   appearance = next;
   board.setBoardStyle(next.board);
   if (role === 'black' || role === 'white') board.setAppearance(role, next);
+  $('#lobby-style-card').dataset.stone = next.stone;
+  const avatar = APPEARANCE_OPTIONS.avatar.find((option) => option.id === next.avatar)!;
+  const stone = APPEARANCE_OPTIONS.stone.find((option) => option.id === next.stone)!;
+  $('#lobby-style-current').textContent = `${avatar.name} · ${stone.name}`;
 });
 const clientId = guestClientId();
 $('#guest-name').textContent = name;

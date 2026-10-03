@@ -48,7 +48,7 @@ button:disabled {
   align-items: center;
   justify-content: center;
   gap: 20px;
-  margin-bottom: clamp(72px, 10vh, 100px);
+  margin-bottom: clamp(54px, 7vh, 72px);
   text-align: center;
 }
 .lobby-heading::after {
@@ -73,6 +73,121 @@ button:disabled {
   grid-template-columns: minmax(270px, 360px) minmax(0, 1fr);
   gap: 22px;
   align-items: start;
+}
+.lobby-aside {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+  min-width: 0;
+}
+.lobby-style-card {
+  display: grid;
+  grid-template-columns: 118px minmax(0, 1fr) 35px;
+  align-items: center;
+  gap: 21px;
+  min-height: 134px;
+  padding: 15px 21px 15px 15px;
+  border: 1px solid #39544f;
+  border-radius: 15px;
+  background: linear-gradient(115deg, #193640, #24463f);
+  box-shadow: 0 12px 32px #18382b24;
+  color: #fff8e8;
+  text-decoration: none;
+}
+.lobby-style-card:hover {
+  border-color: #bd9d64;
+  background: linear-gradient(115deg, #1c4149, #2c5146);
+}
+.lobby-style-card:focus-visible {
+  outline: 3px solid #bc9757;
+  outline-offset: 3px;
+}
+.lobby-style-scene {
+  position: relative;
+  display: block;
+  width: 118px;
+  height: 102px;
+  overflow: hidden;
+  border: 4px solid #8f704a;
+  border-radius: 10px;
+  background-color: #c49b68;
+  background-image:
+    repeating-linear-gradient(0deg, transparent 0 23px, #5e432b8c 23px 24px),
+    repeating-linear-gradient(90deg, transparent 0 23px, #5e432b8c 23px 24px);
+  box-shadow: inset 0 2px 9px #4b301b55;
+}
+.lobby-style-stone,
+.lobby-style-stone-alt {
+  position: absolute;
+  display: block;
+  aspect-ratio: 1;
+  box-shadow: 0 5px 6px #3a281e66;
+}
+.lobby-style-stone {
+  top: 34px;
+  left: 41px;
+  width: 37px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 25%, #60747b, #101a22 72%);
+}
+.lobby-style-stone-alt {
+  top: 8px;
+  left: 16px;
+  width: 24px;
+  border: 1px solid #a79c8a;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 25%, #fffefa, #ded2bb 84%);
+}
+.lobby-style-card[data-stone='jade'] .lobby-style-stone {
+  border-radius: 0;
+  background: linear-gradient(135deg, #3e8075, #102d2b 72%);
+  clip-path: polygon(30% 0, 70% 0, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0 70%, 0 30%);
+}
+.lobby-style-card[data-stone='slate'] .lobby-style-stone {
+  border-radius: 0;
+  background: linear-gradient(135deg, #586069, #1b2027 72%);
+  clip-path: polygon(25% 0, 75% 0, 100% 25%, 100% 75%, 75% 100%, 25% 100%, 0 75%, 0 25%);
+}
+.lobby-style-card[data-stone='amber'] .lobby-style-stone {
+  border-radius: 0;
+  background: linear-gradient(135deg, #ad773e, #493018 72%);
+  clip-path: polygon(35% 0, 73% 8%, 100% 42%, 87% 82%, 51% 100%, 9% 84%, 0 45%);
+}
+.lobby-style-card[data-stone='rose'] .lobby-style-stone {
+  border-radius: 8px;
+  background: linear-gradient(135deg, #9b6073, #422330 72%);
+}
+.lobby-style-copy {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.lobby-style-eyebrow {
+  color: #d2b981;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+}
+.lobby-style-copy strong {
+  font-size: clamp(17px, 1.8vw, 23px);
+  letter-spacing: -0.03em;
+}
+.lobby-style-copy small {
+  overflow: hidden;
+  color: #d7e1d7;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lobby-style-arrow {
+  display: grid;
+  place-items: center;
+  width: 35px;
+  height: 35px;
+  border: 1px solid #afc4a499;
+  border-radius: 50%;
+  color: #e5d5a7;
+  font-size: 19px;
 }
 .lobby-actions-panel,
 .lobby-room-panel {
@@ -932,7 +1047,7 @@ button:disabled {
   .lobby-heading {
     flex-direction: column;
     gap: 16px;
-    margin-bottom: 64px;
+    margin-bottom: 50px;
   }
   .lobby-content {
     grid-template-columns: 1fr;
@@ -941,6 +1056,39 @@ button:disabled {
   .lobby-actions-panel,
   .lobby-room-panel {
     padding: 19px;
+  }
+  .lobby-aside {
+    gap: 14px;
+  }
+  .lobby-style-card {
+    grid-template-columns: 83px minmax(0, 1fr) 31px;
+    gap: 14px;
+    min-height: 106px;
+    padding: 11px 15px 11px 11px;
+  }
+  .lobby-style-scene {
+    width: 83px;
+    height: 82px;
+  }
+  .lobby-style-stone {
+    top: 28px;
+    left: 30px;
+    width: 28px;
+  }
+  .lobby-style-stone-alt {
+    top: 6px;
+    left: 12px;
+    width: 19px;
+  }
+  .lobby-style-copy {
+    gap: 4px;
+  }
+  .lobby-style-copy strong {
+    font-size: 17px;
+  }
+  .lobby-style-arrow {
+    width: 31px;
+    height: 31px;
   }
   .lobby-room-panel .public-rooms {
     min-height: 140px;
@@ -1008,6 +1156,34 @@ button:disabled {
   }
 }
 @media (max-width: 360px) {
+  .lobby-style-card {
+    grid-template-columns: 67px minmax(0, 1fr) 27px;
+    gap: 9px;
+    min-height: 98px;
+    padding: 10px;
+  }
+  .lobby-style-scene {
+    width: 67px;
+    height: 70px;
+  }
+  .lobby-style-stone {
+    top: 26px;
+    left: 24px;
+    width: 25px;
+  }
+  .lobby-style-stone-alt {
+    top: 6px;
+    left: 8px;
+    width: 17px;
+  }
+  .lobby-style-copy strong {
+    font-size: 16px;
+  }
+  .lobby-style-arrow {
+    width: 27px;
+    height: 27px;
+    font-size: 16px;
+  }
   .players {
     grid-template-columns: minmax(0, 1fr);
   }

@@ -23,11 +23,14 @@ const apiUrl = import.meta.env.PUBLIC_RENJU_API_URL ?? '';
           <a class="mode-link" href="/playroom/omokmaru/solo/"><span class="mode-link-copy"><strong>AI와 대국</strong><small>혼자 연습하기</small></span><span>↗</span></a>
           <button id="match" class="primary" disabled>⚡ 빠른 매칭</button>
           <div class="lobby-actions"><button id="create-public" class="secondary" disabled>공개 방 만들기</button><button id="create" class="secondary" disabled>비공개 방 만들기</button></div>
-          <a class="wardrobe-link" href="/playroom/omokmaru/wardrobe/" target="_blank" rel="noopener"><span>✦ 꾸미기 스튜디오</span><small>3D 미리보기 ↗</small></a>
-        </div><div class="lobby-room-panel"><div class="room-list-heading"><strong>공개 대국</strong><button id="refresh-rooms" class="room-list-refresh" aria-label="방 목록 새로고침" title="새로고침">↻</button></div>
+        </div><div class="lobby-aside"><a id="lobby-style-card" class="lobby-style-card" href="/playroom/omokmaru/wardrobe/" target="_blank" rel="noopener" data-stone="classic" aria-label="꾸미기 스튜디오, 새 탭에서 열기" aria-describedby="lobby-style-current">
+          <span class="lobby-style-scene" aria-hidden="true"><span class="lobby-style-stone"></span><span class="lobby-style-stone-alt"></span></span>
+          <span class="lobby-style-copy"><span class="lobby-style-eyebrow">내 스타일 · 무료</span><strong>꾸미기 스튜디오</strong><small id="lobby-style-current">마루 · 클래식</small></span>
+          <span class="lobby-style-arrow" aria-hidden="true">↗</span>
+        </a><div class="lobby-room-panel"><div class="room-list-heading"><strong>공개 대국</strong><button id="refresh-rooms" class="room-list-refresh" aria-label="방 목록 새로고침" title="새로고침">↻</button></div>
           <div id="public-rooms" class="public-rooms" aria-live="polite">방 목록 불러오는 중…</div>
           <p id="lobby-note"></p>
-        </div></div></div></main>
+        </div></div></div></div></main>
 
     <main id="game" class="game" hidden>
       <section class="stage" aria-label="3D 렌주 바둑판">

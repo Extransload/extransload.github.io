@@ -690,11 +690,14 @@ test('Playroom animations stay active under reduced motion', async ({ page }) =>
   await page.evaluate(() => {
     const clock = document.querySelector<HTMLElement>('#clock-black')!;
     clock.classList.add('urgent');
-    const ready = document.querySelector<HTMLElement>('#black-ready')!;
+    const ready = document.querySelector<HTMLElement>('#black-ready')!.cloneNode(true) as HTMLElement;
+    ready.id = 'ready-motion-probe';
+    ready.hidden = false;
     ready.classList.add('is-ready');
+    document.querySelector('#lobby')!.append(ready);
   });
   await expect(page.locator('#clock-black')).toHaveCSS('animation-name', 'clock-pulse');
-  await expect(page.locator('#black-ready')).toHaveCSS('animation-name', 'ready-pop');
+  await expect(page.locator('#ready-motion-probe')).toHaveCSS('animation-name', 'ready-pop');
 });
 
 test('solo match replaces start with resign until the match ends', async ({ page }) => {
@@ -819,7 +822,8 @@ test('Omokmaru studio previews, saves, and reuses a free look', async ({ page })
   await page.locator('#start').click();
   await expect(page.locator('#canvas')).toHaveAttribute('data-rendered-moves', '2');
   await page.goto('/playroom/omokmaru/');
-  await expect(page.locator('#lobby .wardrobe-link')).toBeVisible();
+  await expect(page.locator('#lobby-style-card')).toHaveAttribute('data-stone', 'jade');
+  await expect(page.locator('#lobby-style-current')).toHaveText('파도 선장 · 팔각 비취');
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('omokmaru-appearance-v1') || 'null'))).toEqual({
     stone: 'jade',
     avatar: 'coral',
@@ -827,6 +831,29 @@ test('Omokmaru studio previews, saves, and reuses a free look', async ({ page })
     board: 'walnut',
     victory: 'spin',
   });
+});
+
+test('Omokmaru lobby separates play actions, styling, and public rooms', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  try {
+    await page.goto('/playroom/omokmaru/');
+    const actions = await page.locator('.lobby-actions-panel').boundingBox();
+    const styling = await page.locator('#lobby-style-card').boundingBox();
+    const rooms = await page.locator('.lobby-room-panel').boundingBox();
+    expect(styling!.x).toBeGreaterThan(actions!.x + actions!.width);
+    expect(rooms!.y).toBeGreaterThan(styling!.y + styling!.height);
+    await page.setViewportSize({ width: 320, height: 720 });
+    const mobileActions = await page.locator('.lobby-actions-panel').boundingBox();
+    const mobileStyling = await page.locator('#lobby-style-card').boundingBox();
+    const mobileRooms = await page.locator('.lobby-room-panel').boundingBox();
+    expect(mobileStyling!.y).toBeGreaterThan(mobileActions!.y + mobileActions!.height);
+    expect(mobileRooms!.y).toBeGreaterThan(mobileStyling!.y + mobileStyling!.height);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
+    await expect(page.locator('#lobby-style-card .lobby-style-copy strong')).toHaveText('꾸미기 스튜디오');
+  } finally {
+    await context.close();
+  }
 });
 
 test('Omokmaru studio puts the 3D preview before options on a phone', async ({ browser }) => {
