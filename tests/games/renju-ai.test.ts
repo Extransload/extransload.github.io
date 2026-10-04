@@ -35,6 +35,24 @@ describe('Renju AI', () => {
     for (const difficulty of [4, 5, 6, 7, 8, 9] as const)
       expect(chooseAiMove(board.slice(), 1, difficulty)).toEqual({ x: 11, y: 7 });
   });
+  it('creates a two-sided winning threat at the highest levels', () => {
+    const board = emptyBoard();
+    for (const x of [5, 6, 7]) board[index(x, 7)] = 2;
+    board[index(7, 5)] = 1;
+    const before = board.slice();
+    for (const difficulty of [7, 8, 9] as const) {
+      const point = chooseAiMove(board, 2, difficulty);
+      expect(point?.y).toBe(7);
+      expect([4, 8]).toContain(point?.x);
+      expect(board).toEqual(before);
+    }
+  });
+  it('blocks the opponent’s unique two-sided winning threat', () => {
+    const board = emptyBoard();
+    for (const x of [6, 7, 8]) board[index(x, 7)] = 2;
+    board[index(10, 7)] = 1;
+    expect(chooseAiMove(board, 1, 9)).toEqual({ x: 5, y: 7 });
+  });
   it('never selects a black double-three forbidden point', () => {
     const board = emptyBoard();
     for (const [x, y] of [

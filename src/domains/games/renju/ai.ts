@@ -7,11 +7,11 @@ const LEVELS: Record<Difficulty, { picks: number; depth: number; beam: number; t
   2: { picks: 5, depth: 0, beam: 0, time: 0 },
   3: { picks: 3, depth: 0, beam: 0, time: 0 },
   4: { picks: 1, depth: 0, beam: 0, time: 0 },
-  5: { picks: 1, depth: 2, beam: 4, time: 300 },
-  6: { picks: 1, depth: 3, beam: 5, time: 850 },
-  7: { picks: 1, depth: 5, beam: 7, time: 2800 },
-  8: { picks: 1, depth: 7, beam: 8, time: 5000 },
-  9: { picks: 1, depth: 9, beam: 10, time: 8500 },
+  5: { picks: 1, depth: 2, beam: 4, time: 250 },
+  6: { picks: 1, depth: 3, beam: 5, time: 500 },
+  7: { picks: 1, depth: 5, beam: 6, time: 850 },
+  8: { picks: 1, depth: 7, beam: 7, time: 1250 },
+  9: { picks: 1, depth: 9, beam: 8, time: 1800 },
 };
 
 export function normalizeDifficulty(value: unknown): Difficulty {
@@ -25,6 +25,33 @@ const directions = [
   [1, -1],
 ] as const;
 const other = (color: Color): Color => (color === 1 ? 2 : 1);
+
+function wouldCompleteFive(board: Board, point: Point, color: Color): boolean {
+  for (const [dx, dy] of directions) {
+    let length = 1;
+    for (const sign of [-1, 1]) {
+      let x = point.x + dx * sign;
+      let y = point.y + dy * sign;
+      while (inside(x, y) && board[index(x, y)] === color) {
+        length++;
+        x += dx * sign;
+        y += dy * sign;
+      }
+    }
+    if (color === 2 ? length >= 5 : length === 5) return true;
+  }
+  return false;
+}
+
+function immediateWins(board: Board, color: Color, limit = 2): Point[] {
+  const wins: Point[] = [];
+  for (const point of candidates(board)) {
+    if (!wouldCompleteFive(board, point, color)) continue;
+    if (analyzeMove(board, point.x, point.y, color).win) wins.push(point);
+    if (wins.length >= limit) break;
+  }
+  return wins;
+}
 
 function candidates(board: Board): Point[] {
   const nearby = new Set<number>();
@@ -120,10 +147,10 @@ function ranked(board: Board, color: Color, search?: Search): Candidate[] {
       return { point, offense, defense, center, score: offense + defense * 0.82 + center };
     })
     .sort((a, b) => b.score - a.score);
-  // Deep search spends its time on promising local moves while immediate wins
-  // and blocks stay at the front of the list through their five-in-a-row score.
-  const shortlist = search ? scored.slice(0, Math.max(18, search.beam * 2)) : scored;
-  for (const { point, offense, defense, center } of shortlist) {
+  // Immediate wins and blocks rank first. Search only needs a few extra legal
+  // moves beyond its beam; scanning all legal points dominates its runtime.
+  const needed = search ? search.beam + 3 : Infinity;
+  for (const { point, offense, defense, center } of scored) {
     const verdict = analyzeMove(board, point.x, point.y, color, legality);
     if (!verdict.legal) continue;
     const legalDefense = analyzeMove(board, point.x, point.y, other(color), legality).legal ? defense : 0;
@@ -133,6 +160,7 @@ function ranked(board: Board, color: Color, search?: Search): Candidate[] {
       offense,
       win: verdict.win,
     });
+    if (result.length >= needed) break;
   }
   result.sort((a, b) => Number(b.win) - Number(a.win) || b.score - a.score);
   search?.positions.set(key, result);
@@ -212,12 +240,43 @@ export function chooseAiMove(board: Board, color: Color, difficulty: Difficulty)
   const winning = choices.find((choice) => choice.win);
   if (winning) return winning.point;
   if (level.picks > 1) return choices[Math.floor(Math.random() * Math.min(level.picks, choices.length))].point;
-  const threats = ranked(board, other(color)).filter((choice) => choice.win);
+  if (color === 2 && board[index(7, 7)] === 1 && board.reduce((count, cell) => count + Number(cell !== 0), 0) === 1)
+    return choices[0].point;
+  const enemyChoices = ranked(board, other(color));
+  const threats = enemyChoices.filter((choice) => choice.win);
   const threatCells = new Set(threats.map((move) => index(move.point.x, move.point.y)));
   const roots = threats.length ? choices.filter((move) => threatCells.has(index(move.point.x, move.point.y))) : choices;
   if (!roots.length) return choices[0].point;
   if (roots.length === 1) return roots[0].point;
   if (!level.depth) return roots[0].point;
+  if (difficulty >= 7 && !threats.length) {
+    for (const move of roots.slice(0, 12)) {
+      const cell = index(move.point.x, move.point.y);
+      board[cell] = color;
+      try {
+        if (immediateWins(board, other(color), 1).length) continue;
+        if (immediateWins(board, color).length > 1) return move.point;
+      } finally {
+        board[cell] = 0;
+      }
+    }
+    const enemyForks: Point[] = [];
+    for (const move of enemyChoices.slice(0, 12)) {
+      const cell = index(move.point.x, move.point.y);
+      board[cell] = other(color);
+      try {
+        if (immediateWins(board, color, 1).length) continue;
+        if (immediateWins(board, other(color)).length > 1) enemyForks.push(move.point);
+      } finally {
+        board[cell] = 0;
+      }
+      if (enemyForks.length > 1) break;
+    }
+    if (enemyForks.length === 1) {
+      const block = roots.find((move) => move.point.x === enemyForks[0].x && move.point.y === enemyForks[0].y);
+      if (block) return block.point;
+    }
+  }
   const search: Search = {
     deadline: Date.now() + level.time,
     beam: level.beam,

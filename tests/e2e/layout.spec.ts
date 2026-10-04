@@ -792,11 +792,11 @@ test('solo board renders the AI reply after the player move', async ({ page }) =
 });
 
 test('level nine AI finishes a searched reply', async ({ page }) => {
-  test.setTimeout(45_000);
+  test.setTimeout(20_000);
   await page.goto('/playroom/omokmaru/solo/');
   await page.locator('#difficulty').selectOption('9');
   await page.locator('#start').click();
-  await expect(page.locator('#canvas')).toHaveAttribute('data-rendered-moves', '2', { timeout: 20_000 });
+  await expect(page.locator('#canvas')).toHaveAttribute('data-rendered-moves', '2', { timeout: 5_000 });
   await page.locator('.canvas canvas').focus();
   for (let step = 0; step < 5; step++) {
     await page.keyboard.press('ArrowRight');
@@ -804,7 +804,7 @@ test('level nine AI finishes a searched reply', async ({ page }) => {
   }
   await expect(page.locator('#board-keyboard-status')).toContainText('빈 자리');
   await page.keyboard.press('Enter');
-  await expect(page.locator('#canvas')).toHaveAttribute('data-rendered-moves', '4', { timeout: 20_000 });
+  await expect(page.locator('#canvas')).toHaveAttribute('data-rendered-moves', '4', { timeout: 5_000 });
   await expect(page.locator('#status')).toHaveText('내 차례');
   await page.reload();
   await expect(page.locator('#difficulty')).toHaveValue('9');
