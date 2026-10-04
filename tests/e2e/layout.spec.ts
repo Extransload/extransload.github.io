@@ -665,7 +665,7 @@ test('Playroom animations stay active under reduced motion', async ({ page }) =>
   await page.goto('/playroom/omokmaru/solo/');
   await expect(page.locator('#stage-overlay .overlay-card')).toHaveCSS('animation-name', 'overlay-enter');
   await page.locator('#side-white').click();
-  await page.locator('#difficulty').selectOption('easy');
+  await page.locator('#difficulty').selectOption('1');
   await page.locator('#start').click();
   await expect(page.locator('#status')).toHaveText('내 차례');
   await expect(page.locator('.player.active .piece')).toHaveCSS('animation-name', 'turn-piece-pulse');
@@ -758,7 +758,7 @@ test('solo match replaces start with resign until the match ends', async ({ page
 test('desktop board click places a stone immediately', async ({ page }) => {
   await page.goto('/playroom/omokmaru/solo/');
   await page.locator('#side-white').click();
-  await page.locator('#difficulty').selectOption('easy');
+  await page.locator('#difficulty').selectOption('1');
   await page.locator('#start').click();
   const canvas = page.locator('.canvas canvas');
   const box = await canvas.boundingBox();
@@ -773,7 +773,9 @@ test('desktop board click places a stone immediately', async ({ page }) => {
 
 test('solo board renders the AI reply after the player move', async ({ page }) => {
   await page.goto('/playroom/omokmaru/solo/');
-  await page.locator('#difficulty').selectOption('easy');
+  await expect(page.locator('#difficulty option')).toHaveCount(9);
+  await expect(page.locator('#difficulty')).toHaveValue('5');
+  await page.locator('#difficulty').selectOption('1');
   await page.locator('#start').click();
   await expect(page.locator('#canvas')).toHaveAttribute('data-rendered-moves', '2');
   const canvas = page.locator('.canvas canvas');
@@ -787,6 +789,25 @@ test('solo board renders the AI reply after the player move', async ({ page }) =
   await expect(page.locator('#canvas')).toHaveAttribute('data-rendered-moves', '4');
   await page.locator('#undo').click();
   await expect(page.locator('#canvas')).toHaveAttribute('data-rendered-moves', '2');
+});
+
+test('level nine AI finishes a searched reply', async ({ page }) => {
+  test.setTimeout(45_000);
+  await page.goto('/playroom/omokmaru/solo/');
+  await page.locator('#difficulty').selectOption('9');
+  await page.locator('#start').click();
+  await expect(page.locator('#canvas')).toHaveAttribute('data-rendered-moves', '2', { timeout: 20_000 });
+  await page.locator('.canvas canvas').focus();
+  for (let step = 0; step < 5; step++) {
+    await page.keyboard.press('ArrowRight');
+    if ((await page.locator('#board-keyboard-status').textContent())?.includes('빈 자리')) break;
+  }
+  await expect(page.locator('#board-keyboard-status')).toContainText('빈 자리');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#canvas')).toHaveAttribute('data-rendered-moves', '4', { timeout: 20_000 });
+  await expect(page.locator('#status')).toHaveText('내 차례');
+  await page.reload();
+  await expect(page.locator('#difficulty')).toHaveValue('9');
 });
 
 test('Omokmaru sound setting persists between visits', async ({ page }) => {
@@ -938,7 +959,7 @@ test('Omokmaru studio puts the 3D preview before options on a phone', async ({ b
 test('keyboard can inspect coordinates and place a solo move', async ({ page }) => {
   await page.goto('/playroom/omokmaru/solo/');
   await page.locator('#side-white').click();
-  await page.locator('#difficulty').selectOption('easy');
+  await page.locator('#difficulty').selectOption('1');
   await page.locator('#start').click();
   const canvas = page.locator('.canvas canvas');
   await expect(canvas).toHaveAttribute('tabindex', '0');
@@ -991,7 +1012,7 @@ test('touch board tap previews a stone until the move button confirms it', async
   const page = await context.newPage();
   try {
     await page.goto('/playroom/omokmaru/solo/');
-    await page.locator('#difficulty').selectOption('easy');
+    await page.locator('#difficulty').selectOption('1');
     await page.locator('#start').click();
     const box = await page.locator('.canvas canvas').boundingBox();
     const center = { x: box!.x + box!.width / 2, y: box!.y + box!.height / 2 };

@@ -1,6 +1,23 @@
 import { analyzeMove, index, inside, SIZE, type Board, type Color, type Point } from './rules';
 
-export type Difficulty = 'easy' | 'normal' | 'hard' | 'master';
+export type Difficulty = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+
+const LEVELS: Record<Difficulty, { picks: number; depth: number; beam: number; time: number }> = {
+  1: { picks: 8, depth: 0, beam: 0, time: 0 },
+  2: { picks: 5, depth: 0, beam: 0, time: 0 },
+  3: { picks: 3, depth: 0, beam: 0, time: 0 },
+  4: { picks: 1, depth: 0, beam: 0, time: 0 },
+  5: { picks: 1, depth: 2, beam: 4, time: 300 },
+  6: { picks: 1, depth: 3, beam: 5, time: 850 },
+  7: { picks: 1, depth: 5, beam: 7, time: 2800 },
+  8: { picks: 1, depth: 7, beam: 8, time: 5000 },
+  9: { picks: 1, depth: 9, beam: 10, time: 8500 },
+};
+
+export function normalizeDifficulty(value: unknown): Difficulty {
+  const number = Number(value);
+  return Number.isInteger(number) && number >= 1 && number <= 9 ? (number as Difficulty) : 5;
+}
 const directions = [
   [1, 0],
   [0, 1],
@@ -72,7 +89,7 @@ function lineScore(board: Board, point: Point, color: Color): number {
         if (board[index(x, y)] === color) mine++;
         else blank++;
       }
-      if (!blocked && blank && mine >= 3) score += mine === 4 ? 1400 : 90;
+      if (!blocked && blank && mine >= 3) score += mine === 4 ? 5000 : 500;
     }
   }
   board[index(point.x, point.y)] = 0;
@@ -94,16 +111,25 @@ function ranked(board: Board, color: Color, search?: Search): Candidate[] {
   const cached = search?.positions.get(key);
   if (cached) return cached;
   const result: Candidate[] = [];
-  for (const point of candidates(board)) {
-    const verdict = analyzeMove(board, point.x, point.y, color);
+  const legality = new Map<string, ReturnType<typeof analyzeMove>>();
+  const scored = candidates(board)
+    .map((point) => {
+      const offense = lineScore(board, point, color);
+      const defense = lineScore(board, point, other(color));
+      const center = (7 - Math.abs(7 - point.x) + 7 - Math.abs(7 - point.y)) * 2;
+      return { point, offense, defense, center, score: offense + defense * 0.82 + center };
+    })
+    .sort((a, b) => b.score - a.score);
+  // Deep search spends its time on promising local moves while immediate wins
+  // and blocks stay at the front of the list through their five-in-a-row score.
+  const shortlist = search ? scored.slice(0, Math.max(18, search.beam * 2)) : scored;
+  for (const { point, offense, defense, center } of shortlist) {
+    const verdict = analyzeMove(board, point.x, point.y, color, legality);
     if (!verdict.legal) continue;
-    const offense = lineScore(board, point, color);
-    const defense = analyzeMove(board, point.x, point.y, other(color)).legal
-      ? lineScore(board, point, other(color))
-      : 0;
+    const legalDefense = analyzeMove(board, point.x, point.y, other(color), legality).legal ? defense : 0;
     result.push({
       point,
-      score: offense + defense * 0.82 + (7 - Math.abs(7 - point.x) + 7 - Math.abs(7 - point.y)) * 2,
+      score: offense + legalDefense * 0.82 + center,
       offense,
       win: verdict.win,
     });
@@ -179,26 +205,27 @@ function searchPosition(
 }
 
 export function chooseAiMove(board: Board, color: Color, difficulty: Difficulty): Point | null {
+  const level = LEVELS[normalizeDifficulty(difficulty)];
   const choices = ranked(board, color);
   if (!choices.length) return null;
   if (choices.length === 1) return choices[0].point;
   const winning = choices.find((choice) => choice.win);
   if (winning) return winning.point;
-  if (difficulty === 'easy') return choices[Math.floor(Math.random() * Math.min(6, choices.length))].point;
+  if (level.picks > 1) return choices[Math.floor(Math.random() * Math.min(level.picks, choices.length))].point;
   const threats = ranked(board, other(color)).filter((choice) => choice.win);
   const threatCells = new Set(threats.map((move) => index(move.point.x, move.point.y)));
   const roots = threats.length ? choices.filter((move) => threatCells.has(index(move.point.x, move.point.y))) : choices;
   if (!roots.length) return choices[0].point;
   if (roots.length === 1) return roots[0].point;
-  if (difficulty === 'normal') return roots[0].point;
+  if (!level.depth) return roots[0].point;
   const search: Search = {
-    deadline: Date.now() + (difficulty === 'master' ? 2800 : 850),
-    beam: difficulty === 'master' ? 7 : 5,
+    deadline: Date.now() + level.time,
+    beam: level.beam,
     positions: new Map(),
     transpositions: new Map(),
   };
   let best = roots[0];
-  const maximumDepth = difficulty === 'master' ? 5 : 3;
+  const maximumDepth = level.depth;
   for (let depth = 1; depth <= maximumDepth; depth++) {
     let iteration = best,
       bestScore = -Infinity,

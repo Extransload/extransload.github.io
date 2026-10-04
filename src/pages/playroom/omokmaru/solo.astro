@@ -47,7 +47,8 @@ import SeoHead from '../../../shared/components/SeoHead.astro';
         <div class="solo-settings">
           <strong>AI 대국</strong>
           <div class="solo-field"><span>내 돌</span><div class="segmented"><button id="side-black" class="selected" type="button">● 흑</button><button id="side-white" type="button">○ 백</button></div></div>
-          <label class="solo-field"><span>난이도</span><select id="difficulty"><option value="easy">쉬움</option><option value="normal" selected>보통</option><option value="hard">어려움</option><option value="master">마스터</option></select></label>
+          <label class="solo-field"><span>난이도</span><select id="difficulty"><option value="1">1단계 · 입문</option><option value="2">2단계</option><option value="3">3단계</option><option value="4">4단계</option><option value="5" selected>5단계 · 보통</option><option value="6">6단계</option><option value="7">7단계</option><option value="8">8단계</option><option value="9">9단계 · 최상</option></select></label>
+          <small class="solo-ai-hint">7~9단계는 깊게 수를 읽으며, 9단계는 최대 약 9초 생각합니다.</small>
           <button id="start" class="primary">대국 시작</button>
           <button id="resign-solo" class="secondary" hidden>기권</button>
           <button id="undo" class="secondary" hidden>↶ 한 수 되돌리기</button>

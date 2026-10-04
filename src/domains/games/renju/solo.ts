@@ -1,12 +1,18 @@
 import { RenjuBoard, coordinate } from './board-3d';
 import { analyzeMove, boardFromMoves, openingMove, SIZE, type Color, type Move, type Point } from './rules';
-import type { Difficulty } from './ai';
+import { normalizeDifficulty } from './ai';
 import { mountRulesHelp } from './rules-help';
 import { mountMoveConfirm } from './move-confirm';
 import { mountGameSound } from './sound';
 import { appearanceForSeat, DEFAULT_APPEARANCE, watchAppearance, type Appearance } from './appearance';
 
 const $ = <T extends HTMLElement>(selector: string) => document.querySelector<T>(selector)!;
+const difficultySelect = $<HTMLSelectElement>('#difficulty');
+const savedDifficulty = localStorage.getItem('omokmaru:ai-level');
+if (savedDifficulty !== null) difficultySelect.value = String(normalizeDifficulty(savedDifficulty));
+difficultySelect.addEventListener('change', () => {
+  localStorage.setItem('omokmaru:ai-level', String(normalizeDifficulty(difficultySelect.value)));
+});
 const board = new RenjuBoard($('#canvas'));
 let appearance: Appearance = { ...DEFAULT_APPEARANCE };
 function applySeatAppearance() {
@@ -151,7 +157,7 @@ function aiTurn() {
   worker.postMessage({
     board: boardFromMoves(moves),
     color: player === 1 ? 2 : 1,
-    difficulty: $<HTMLSelectElement>('#difficulty').value as Difficulty,
+    difficulty: normalizeDifficulty(difficultySelect.value),
     id,
   });
 }
