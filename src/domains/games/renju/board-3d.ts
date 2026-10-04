@@ -820,17 +820,17 @@ export class RenjuBoard {
       this.showcaseStoneMesh.scale.y = {
         classic: 1.35,
         jade: 0.9,
-        rose: 2.25,
-        chick: 2.35,
-        puppy: 2.3,
-        kitten: 2.35,
-        bunny: 2.25,
-        fox: 2.3,
-        panda: 2.35,
-        frog: 2.35,
-        owl: 2.3,
+        rose: 1.55,
+        chick: 1.35,
+        puppy: 1.35,
+        kitten: 1.35,
+        bunny: 1.35,
+        fox: 1.35,
+        panda: 1.35,
+        frog: 1.35,
+        owl: 1.35,
         star: 1.55,
-        dragon: 2.25,
+        dragon: 1.45,
       }[style];
       this.applyStoneDetails(this.showcaseStoneMesh, this.showcaseSeat, style);
     }
@@ -844,7 +844,7 @@ export class RenjuBoard {
     return SURFACE - (geometry.boundingBox?.min.y ?? -0.42) * this.stoneScaleY(style) + 0.005;
   }
   private stoneScaleY(style: StoneStyle) {
-    return style === 'classic' || style === 'jade' ? 0.56 : style === 'star' ? 0.85 : 0.94;
+    return style === 'classic' || style === 'jade' ? 0.56 : style === 'star' ? 0.85 : 0.65;
   }
   private stoneScaleXZ(style: StoneStyle) {
     return ['chick', 'puppy', 'kitten', 'bunny', 'fox', 'panda', 'frog', 'owl'].includes(style) ? 0.86 : 1;
@@ -969,7 +969,7 @@ export class RenjuBoard {
     this.controls.minDistance = focus === 'board' ? 11 : 2.6;
     this.controls.maxDistance = focus === 'board' ? 58 : 22;
     const view = {
-      stone: { position: [3.8, 3.2, 5.9], target: [0, 0.25, 0] },
+      stone: { position: [3.6, 5.3, 5.7], target: [0, 0.25, 0] },
       avatar: { position: [0, 3, 7.8], target: [0, 1.45, 0] },
       accessory: { position: [0, 2.9, 5.5], target: [0, 2.25, 0] },
       board: { position: [0, 23, 17], target: [0, 0, 0] },

@@ -13,6 +13,7 @@ describe('collectible stone models', () => {
       expect(body.boundingBox!.max.y - body.boundingBox!.min.y).toBeGreaterThan(0.2);
       const details = createStoneDetails(style, 'black', new THREE.MeshStandardMaterial());
       expect(details?.children.length).toBeGreaterThanOrEqual(3);
+      expect(details?.rotation.x).toBeCloseTo(style === 'star' || style === 'dragon' ? 0 : -Math.PI / 2);
     }
   });
 });

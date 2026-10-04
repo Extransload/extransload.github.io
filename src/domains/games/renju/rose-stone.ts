@@ -50,20 +50,13 @@ function rosePetal(
 }
 
 export function roseStoneGeometry() {
-  const core = new THREE.SphereGeometry(0.19, 24, 14).toNonIndexed();
-  core.scale(1, 0.72, 1);
-  core.translate(0, 0.15, 0);
-  core.deleteAttribute('uv');
-  core.setAttribute(
-    'color',
-    new THREE.Float32BufferAttribute(new Array(core.getAttribute('position').count * 3).fill(0.56), 3),
-  );
-  const layers = [core];
+  const layers: THREE.BufferGeometry[] = [];
   for (const [count, inner, outer, height, rise, spread, turn] of [
-    [7, 0.08, 0.35, 0.025, 0.3, 0.75, 0.15],
-    [6, 0.055, 0.29, 0.1, 0.29, 0.8, -0.18],
-    [5, 0.025, 0.22, 0.18, 0.27, 0.85, 0.27],
-    [5, 0.012, 0.145, 0.26, 0.25, 0.93, -0.11],
+    [8, 0.16, 0.4, 0.025, 0.17, 0.72, 0.15],
+    [7, 0.11, 0.31, 0.1, 0.17, 0.78, -0.18],
+    [6, 0.06, 0.23, 0.18, 0.15, 0.86, 0.27],
+    [5, 0.02, 0.15, 0.26, 0.13, 0.93, -0.11],
+    [4, 0.006, 0.09, 0.29, 0.09, 1.03, 0.12],
   ]) {
     for (let i = 0; i < count; i++) {
       const angle = (i / count) * Math.PI * 2 + turn;
@@ -74,7 +67,7 @@ export function roseStoneGeometry() {
     const t = index / 64;
     const angle = t * Math.PI * 4.2;
     const radius = 0.015 + t * 0.115;
-    return new THREE.Vector3(Math.cos(angle) * radius, 0.49 - t * 0.08, Math.sin(angle) * radius);
+    return new THREE.Vector3(Math.cos(angle) * radius, 0.39 - t * 0.05, Math.sin(angle) * radius);
   });
   const center = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(spiralPoints), 96, 0.014, 7, false).toNonIndexed();
   center.deleteAttribute('uv');

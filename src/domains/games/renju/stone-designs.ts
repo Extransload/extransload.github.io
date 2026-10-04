@@ -111,7 +111,7 @@ export function createStoneDetails(style: StoneStyle, seat: Seat, body: THREE.Ma
       break;
     case 'puppy':
       for (const side of [-1, 1])
-        add(sphere(0.19), dark, side * 0.37, 0.05, -0.02, [0.7, 1.44, 0.62], [0, 0, side * 0.26]);
+        add(sphere(0.19), dark, side * 0.37, 0.05, 0.16, [0.7, 1.44, 0.62], [0, 0, side * 0.26]);
       add(sphere(0.19), cream, 0, -0.13, 0.34, [1.2, 0.75, 0.73]);
       eyes(0.16, 0.07, 0.34);
       add(sphere(0.072), ink, 0, -0.09, 0.49, [1.2, 0.75, 0.6]);
@@ -119,7 +119,7 @@ export function createStoneDetails(style: StoneStyle, seat: Seat, body: THREE.Ma
       break;
     case 'kitten':
       for (const side of [-1, 1]) {
-        add(new THREE.ConeGeometry(0.17, 0.31, 4), body, side * 0.28, 0.32, -0.02, [1, 1, 0.72], [0, 0, -side * 0.18]);
+        add(new THREE.ConeGeometry(0.17, 0.31, 4), body, side * 0.28, 0.32, 0.18, [1, 1, 0.72], [0, 0, -side * 0.18]);
         add(sphere(0.16), cream, side * 0.16, -0.13, 0.33, [1, 0.54, 0.55]);
         add(
           new THREE.CylinderGeometry(0.007, 0.007, 0.26, 5),
@@ -136,7 +136,7 @@ export function createStoneDetails(style: StoneStyle, seat: Seat, body: THREE.Ma
       break;
     case 'bunny':
       for (const side of [-1, 1]) {
-        add(sphere(0.12), body, side * 0.2, 0.43, -0.05, [0.79, 2.35, 0.54], [0, 0, -side * 0.12]);
+        add(sphere(0.12), body, side * 0.2, 0.43, 0.16, [0.79, 2.35, 0.54], [0, 0, -side * 0.12]);
         add(sphere(0.075), blush, side * 0.2, 0.45, 0.025, [0.66, 2.25, 0.24], [0, 0, -side * 0.12]);
         add(sphere(0.065), blush, side * 0.265, -0.06, 0.3, [1.08, 0.62, 0.45]);
       }
@@ -151,7 +151,7 @@ export function createStoneDetails(style: StoneStyle, seat: Seat, body: THREE.Ma
           body,
           side * 0.32,
           0.32,
-          -0.03,
+          0.18,
           [1, 1, 0.8],
           [0, Math.PI / 2, -side * 0.17],
         );
@@ -164,7 +164,7 @@ export function createStoneDetails(style: StoneStyle, seat: Seat, body: THREE.Ma
       const patch = seat === 'black' ? cream : ink;
       const pupil = seat === 'black' ? ink : cream;
       for (const side of [-1, 1]) {
-        add(sphere(0.16), ink, side * 0.29, 0.3, -0.08);
+        add(sphere(0.16), ink, side * 0.29, 0.3, 0.16);
         add(sphere(0.14), patch, side * 0.16, 0.07, 0.33, [0.85, 1.16, 0.46], [0, 0, -side * 0.16]);
         add(sphere(0.046), pupil, side * 0.16, 0.075, 0.39, [1, 1, 0.52]);
       }
@@ -182,7 +182,7 @@ export function createStoneDetails(style: StoneStyle, seat: Seat, body: THREE.Ma
       break;
     case 'owl':
       for (const side of [-1, 1]) {
-        add(new THREE.ConeGeometry(0.13, 0.27, 5), body, side * 0.28, 0.38, -0.02, [1, 1, 0.75], [0, 0, -side * 0.2]);
+        add(new THREE.ConeGeometry(0.13, 0.27, 5), body, side * 0.28, 0.38, 0.18, [1, 1, 0.75], [0, 0, -side * 0.2]);
         add(sphere(0.165), cream, side * 0.17, 0.08, 0.3, [1, 1.05, 0.55]);
         add(sphere(0.072), ink, side * 0.17, 0.08, 0.39, [1, 1, 0.48]);
         add(sphere(0.17), body, side * 0.35, -0.12, -0.03, [0.55, 0.9, 0.5]);
@@ -197,21 +197,23 @@ export function createStoneDetails(style: StoneStyle, seat: Seat, body: THREE.Ma
       }
       break;
     case 'dragon':
-      add(new THREE.OctahedronGeometry(0.145, 0), gem, 0, 0.045, 0.35, [0.94, 1.28, 0.43]);
+      add(new THREE.OctahedronGeometry(0.145, 0), gem, 0, 0.43, 0, [0.94, 0.48, 0.94]);
       for (let i = 0; i < 5; i++) {
         const angle = (i / 5) * Math.PI * 2;
         add(
           new THREE.ConeGeometry(0.095, 0.22, 5),
           gold,
           Math.sin(angle) * 0.26,
-          0.25,
+          0.34,
           Math.cos(angle) * 0.26,
           [1, 1, 0.75],
           [0, 0, -Math.sin(angle) * 0.3],
         );
       }
-      for (const side of [-1, 1]) add(sphere(0.05), ink, side * 0.18, 0.09, 0.3, [1, 1, 0.42]);
+      for (const side of [-1, 1]) add(sphere(0.05), ink, side * 0.18, 0.38, 0.16, [1, 0.42, 1]);
       break;
   }
+  // The board is viewed from above: turn the sculpted face toward its top surface.
+  if (style !== 'star' && style !== 'dragon') group.rotation.x = -Math.PI / 2;
   return group;
 }
