@@ -42,7 +42,7 @@ let appearance: Appearance = { ...DEFAULT_APPEARANCE };
 watchAppearance((next) => {
   appearance = next;
   board.setBoardStyle(next.board);
-  if (role === 'black' || role === 'white') board.setAppearance(role, next);
+  for (const seat of ['black', 'white'] as const) board.setAppearance(seat, appearanceForSeat(seat, role, next));
   $('#lobby-style-card').dataset.stone = next.stone;
   const avatar = APPEARANCE_OPTIONS.avatar.find((option) => option.id === next.avatar)!;
   const stone = APPEARANCE_OPTIONS.stone.find((option) => option.id === next.stone)!;

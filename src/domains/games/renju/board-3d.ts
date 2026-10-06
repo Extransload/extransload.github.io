@@ -2,18 +2,13 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { TrackballControls } from 'three/addons/controls/TrackballControls.js';
 import { observeViewerAccess } from './avatar-access';
+import { loadLunaAvatar, type LunaAvatar } from './luna-avatar';
+import { FASHION_AVATARS, loadFashionAvatar, type FashionAvatar, type FashionStyle } from './fashion-avatar';
 import { loadPetalAvatar, type PetalAvatar, type AvatarMotion } from './petal-avatar';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { roseStoneGeometry } from './rose-stone';
 import { CHARACTER_STONE_BODIES, createStoneDetails } from './stone-designs';
-import {
-  DEFAULT_APPEARANCE,
-  type AccessoryStyle,
-  type AvatarStyle,
-  type BoardStyle,
-  type PlayerAppearance,
-  type StoneStyle,
-} from './appearance';
+import { DEFAULT_APPEARANCE, type BoardStyle, type PlayerAppearance, type StoneStyle } from './appearance';
 import {
   analyzeMove,
   boardFromMoves,
@@ -31,13 +26,21 @@ const START = -6.3,
   STEP = 0.9,
   SURFACE = 0.37;
 type Seat = 'black' | 'white';
-type ShowcaseFocus = 'stone' | 'avatar' | 'accessory' | 'board' | 'victory';
+type ShowcaseFocus = 'stone' | 'avatar' | 'board' | 'victory';
+const isFashionAvatar = (style: PlayerAppearance['avatar']): style is FashionStyle =>
+  (FASHION_AVATARS as readonly string[]).includes(style);
+const isRiggedAvatar = (style: PlayerAppearance['avatar']) =>
+  style === 'petal' || style === 'luna' || isFashionAvatar(style);
 type AvatarRig = {
   petal?: PetalAvatar;
   loadingPetal?: Promise<void>;
-  accessoryMount: THREE.Group;
+  luna?: LunaAvatar;
+  loadingLuna?: Promise<void>;
+  fashion: Partial<Record<FashionStyle, FashionAvatar>>;
+  loadingFashion: Partial<Record<FashionStyle, Promise<void>>>;
   group: THREE.Group;
   character: THREE.Group;
+  plinth: THREE.Mesh;
   halo: THREE.Mesh;
   body: THREE.Mesh;
   belly: THREE.Mesh;
@@ -45,15 +48,11 @@ type AvatarRig = {
   arms: THREE.Mesh[];
   ears: THREE.Mesh[];
   basePieces: THREE.Mesh[];
-  variantHeads: Partial<Record<AvatarStyle, THREE.Mesh>>;
-  variantArms: Partial<Record<AvatarStyle, THREE.Mesh[]>>;
   activeHead: THREE.Mesh;
   activeArms: THREE.Mesh[];
   shell: THREE.MeshPhysicalMaterial;
   face: THREE.MeshStandardMaterial;
   accent: THREE.MeshStandardMaterial;
-  decorations: Partial<Record<AccessoryStyle, THREE.Group>>;
-  variants: Partial<Record<AvatarStyle, THREE.Group>>;
 };
 export const coordinate = (x: number, y: number) => `${'ABCDEFGHJKLMNOP'[x]}${y + 1}`;
 export class RenjuBoard {
@@ -141,6 +140,8 @@ export class RenjuBoard {
   private avatars: Record<Seat, AvatarRig>;
   private seatRole: Seat | 'spectator' | null | undefined;
   private celebrating: Seat | null = null;
+  private hiddenCelebrationSeat: Seat | null = null;
+  private celebrationBackdrop?: { board: boolean; plinth: boolean; halo: boolean };
   private celebrationFrame = 0;
   private celebrationStarted = 0;
   private pointer = new THREE.Vector2();
@@ -261,8 +262,8 @@ export class RenjuBoard {
     this.scene.add(this.showcaseStone);
     this.makeBoard();
     this.board.add(this.stones, this.preview, this.highlights, this.lastMove, this.impact, this.winningLine);
-    const black = this.makeAvatar('black');
-    const white = this.makeAvatar('white');
+    const black = this.makeAvatar();
+    const white = this.makeAvatar();
     this.avatars = { black, white };
     this.scene.add(black.group, white.group);
     this.setSeats(null, null);
@@ -369,10 +370,18 @@ export class RenjuBoard {
       let animated = false;
       for (const seat of ['black', 'white'] as const) {
         const rig = this.avatars[seat];
-        if (this.appearance[seat].avatar !== 'petal' || !rig.petal || !rig.group.visible || !rig.character.visible)
-          continue;
-        rig.petal.update(delta);
-        rig.accessoryMount.matrix.copy(rig.petal.accessoryTransform);
+        if (!rig.group.visible || !rig.character.visible) continue;
+        const style = this.appearance[seat].avatar;
+        const model =
+          style === 'petal'
+            ? rig.petal
+            : style === 'luna'
+              ? rig.luna
+              : isFashionAvatar(style)
+                ? rig.fashion[style]
+                : undefined;
+        if (!model || !isRiggedAvatar(this.appearance[seat].avatar)) continue;
+        model.update(delta);
         animated = true;
       }
       if (animated) this.render();
@@ -395,7 +404,7 @@ export class RenjuBoard {
     const target = this.controls?.target.clone() ?? new THREE.Vector3();
     this.controls?.dispose();
     this.camera.up.set(0, 1, 0);
-    const avatarView = ['avatar', 'accessory', 'victory'].includes(this.showcaseFocus ?? '');
+    const avatarView = this.showcaseFocus === 'avatar' || this.showcaseFocus === 'victory';
     if (avatarView && this.freeAvatarRotation) {
       const controls = new TrackballControls(this.camera, this.renderer.domElement);
       controls.rotateSpeed = 3;
@@ -564,21 +573,20 @@ export class RenjuBoard {
         meadow.group.add(leaf);
       }
   }
-  private makeAvatar(color: 'black' | 'white') {
+  private makeAvatar() {
     const group = new THREE.Group();
-    const isBlack = color === 'black';
     const shell = new THREE.MeshPhysicalMaterial({
-      color: isBlack ? 0x182d3a : 0xf5ecd8,
+      color: 0x182d3a,
       roughness: 0.34,
       clearcoat: 0.72,
     });
-    const face = new THREE.MeshStandardMaterial({ color: isBlack ? 0x304859 : 0xfff9e9, roughness: 0.57 });
+    const face = new THREE.MeshStandardMaterial({ color: 0x304859, roughness: 0.57 });
     const accent = new THREE.MeshStandardMaterial({
-      color: isBlack ? 0xe4bd77 : 0x677f88,
+      color: 0xe4bd77,
       metalness: 0.26,
       roughness: 0.42,
     });
-    const eye = new THREE.MeshBasicMaterial({ color: isBlack ? 0xf8eacb : 0x213746 });
+    const eye = new THREE.MeshBasicMaterial({ color: 0xf8eacb });
     const add = (geometry: THREE.BufferGeometry, material: THREE.Material, x: number, y: number, z: number) => {
       const mesh = new THREE.Mesh(geometry, material);
       mesh.position.set(x, y, z);
@@ -594,58 +602,6 @@ export class RenjuBoard {
     belly.scale.set(1, 0.82, 0.38);
     const head = add(this.avatarHeads.round, shell, 0, 1.84, 0.12);
     head.scale.set(1, 0.91, 0.84);
-    const decorations: Partial<Record<AccessoryStyle, THREE.Group>> = {};
-    const decorate = (
-      style: AccessoryStyle,
-      pieces: { geometry: THREE.BufferGeometry; x: number; y: number; z: number }[],
-    ) => {
-      const set = new THREE.Group();
-      for (const piece of pieces) {
-        const mesh = new THREE.Mesh(piece.geometry, accent);
-        mesh.position.set(piece.x, piece.y, piece.z);
-        mesh.castShadow = true;
-        set.add(mesh);
-      }
-      set.visible = false;
-      group.add(set);
-      decorations[style] = set;
-    };
-    decorate('flower', [
-      { geometry: new THREE.SphereGeometry(0.2, 16, 12), x: -0.49, y: 2.39, z: 0.42 },
-      { geometry: new THREE.SphereGeometry(0.12, 16, 12), x: -0.7, y: 2.24, z: 0.4 },
-    ]);
-    decorate('leaf', [
-      { geometry: new THREE.ConeGeometry(0.16, 0.43, 12), x: 0.31, y: 2.55, z: 0.14 },
-      { geometry: new THREE.ConeGeometry(0.12, 0.32, 12), x: 0.03, y: 2.57, z: 0.17 },
-    ]);
-    decorate(
-      'crown',
-      [-0.42, 0, 0.42].map((x) => ({
-        geometry: new THREE.ConeGeometry(0.17, x === 0 ? 0.55 : 0.42, 8),
-        x,
-        y: 2.59,
-        z: 0.12,
-      })),
-    );
-    decorate(
-      'sun',
-      Array.from({ length: 6 }, (_, i) => {
-        const angle = (i / 6) * Math.PI * 2;
-        return {
-          geometry: new THREE.SphereGeometry(0.17, 12, 10),
-          x: -0.48 + Math.cos(angle) * 0.2,
-          y: 2.36 + Math.sin(angle) * 0.2,
-          z: 0.48,
-        };
-      }),
-    );
-    const crownBand = new THREE.Mesh(new THREE.TorusGeometry(0.45, 0.055, 8, 32), accent);
-    crownBand.name = 'petal-crown-band';
-    crownBand.position.set(0, 2.37, 0.12);
-    crownBand.rotation.x = Math.PI / 2;
-    crownBand.castShadow = true;
-    crownBand.visible = false;
-    decorations.crown!.add(crownBand);
     const arms: THREE.Mesh[] = [];
     const ears: THREE.Mesh[] = [];
     const basePieces: THREE.Mesh[] = [body, belly, head];
@@ -661,212 +617,18 @@ export class RenjuBoard {
       ears.push(ear);
       basePieces.push(ear);
     }
-    const variants: Partial<Record<AvatarStyle, THREE.Group>> = {};
-    const variant = (style: AvatarStyle) => {
-      const set = new THREE.Group();
-      set.visible = false;
-      group.add(set);
-      variants[style] = set;
-      return set;
-    };
-    const piece = (
-      parent: THREE.Group,
-      geometry: THREE.BufferGeometry,
-      material: THREE.Material,
-      x: number,
-      y: number,
-      z: number,
-      scale: [number, number, number] = [1, 1, 1],
-      rotation: [number, number, number] = [0, 0, 0],
-    ) => {
-      const mesh = new THREE.Mesh(geometry, material);
-      mesh.position.set(x, y, z);
-      mesh.scale.set(...scale);
-      mesh.rotation.set(...rotation);
-      mesh.castShadow = true;
-      parent.add(mesh);
-      return mesh;
-    };
-    const variantHeads: Partial<Record<AvatarStyle, THREE.Mesh>> = {};
-    const variantArms: Partial<Record<AvatarStyle, THREE.Mesh[]>> = {};
-    const detail = new THREE.MeshStandardMaterial({ color: isBlack ? 0x291e27 : 0x42363a, roughness: 0.8 });
-    const blush = new THREE.MeshStandardMaterial({ color: 0xee8d91, roughness: 0.85 });
-    const warm = new THREE.MeshStandardMaterial({ color: 0xffb969, roughness: 0.55 });
-    const creature = (
-      style: AvatarStyle,
-      bodyGeometry: THREE.BufferGeometry,
-      bodyScale: [number, number, number],
-      headGeometry: THREE.BufferGeometry,
-      headScale: [number, number, number],
-      headY = 1.85,
-    ) => {
-      const set = variant(style);
-      piece(set, bodyGeometry, shell, 0, 0.91, 0, bodyScale);
-      const h = piece(set, headGeometry, face, 0, headY, 0.08, headScale);
-      const hands: THREE.Mesh[] = [];
-      for (const side of [-1, 1]) {
-        hands.push(
-          piece(
-            set,
-            new THREE.SphereGeometry(0.23, 20, 14),
-            shell,
-            side * (style === 'coral' ? 0.57 : 0.7),
-            1.07,
-            0.28,
-            [0.8, 1.15, 0.7],
-          ),
-        );
-        piece(set, new THREE.SphereGeometry(0.073, 14, 10), detail, side * 0.25, headY + 0.06, 0.76, [1, 1, 0.4]);
-      }
-      variantHeads[style] = h;
-      piece(
-        set,
-        new THREE.TorusGeometry(0.12, 0.014, 5, 18, Math.PI),
-        detail,
-        0,
-        headY - 0.17,
-        0.78,
-        [1, 0.78, 1],
-        [0, 0, Math.PI],
-      );
-      variantArms[style] = hands;
-      return set;
-    };
-    const rose = creature(
-      'coral',
-      new THREE.ConeGeometry(0.91, 1.67, 9),
-      [1, 1, 0.81],
-      new THREE.SphereGeometry(0.65, 32, 20),
-      [1, 0.88, 0.78],
-    );
-    for (let i = 0; i < 7; i++) {
-      const angle = (i * Math.PI * 2) / 7;
-      piece(
-        rose,
-        new THREE.SphereGeometry(0.32, 16, 12),
-        shell,
-        Math.sin(angle) * 0.71,
-        0.34,
-        Math.cos(angle) * 0.52,
-        [1, 0.52, 0.72],
-      );
-    }
-    for (const side of [-1, 1]) {
-      piece(
-        rose,
-        new THREE.SphereGeometry(0.32, 16, 12),
-        shell,
-        side * 0.48,
-        2.31,
-        0.12,
-        [0.9, 1.45, 0.73],
-        [0, 0, side * 0.5],
-      );
-      piece(rose, new THREE.SphereGeometry(0.12, 12, 10), blush, side * 0.41, 1.79, 0.69, [1.35, 0.56, 0.42]);
-    }
-    piece(rose, new THREE.SphereGeometry(0.17, 16, 12), accent, 0, 2.48, 0.18);
-
-    const cat = creature(
-      'royal',
-      new THREE.SphereGeometry(0.76, 28, 20),
-      [1, 1.07, 0.77],
-      new THREE.SphereGeometry(0.72, 28, 18),
-      [1.1, 0.85, 0.8],
-    );
-    for (const side of [-1, 1]) {
-      piece(
-        cat,
-        new THREE.ConeGeometry(0.29, 0.7, 4),
-        shell,
-        side * 0.54,
-        2.43,
-        0.04,
-        [1, 1, 0.8],
-        [0, 0, -side * 0.19],
-      );
-      piece(cat, new THREE.SphereGeometry(0.27, 16, 12), face, side * 0.37, 1.67, 0.64, [1, 0.55, 0.48]);
-    }
-    piece(cat, new THREE.SphereGeometry(0.1, 12, 8), blush, 0, 1.77, 0.79, [1, 0.65, 0.45]);
-    piece(
-      cat,
-      new THREE.TorusGeometry(0.42, 0.13, 8, 28, Math.PI * 1.35),
-      face,
-      0.85,
-      1.08,
-      -0.32,
-      [1, 1, 1],
-      [0, Math.PI / 2, 0.6],
-    );
-
-    const chick = creature(
-      'sunflower',
-      new THREE.SphereGeometry(0.83, 28, 20),
-      [1.08, 1.13, 0.86],
-      new THREE.SphereGeometry(0.7, 28, 18),
-      [1, 0.9, 0.85],
-      1.88,
-    );
-    piece(chick, new THREE.ConeGeometry(0.21, 0.48, 4), warm, 0, 1.77, 0.83, [1, 1, 1], [Math.PI / 2, Math.PI / 4, 0]);
-    for (const side of [-1, 1]) {
-      piece(
-        chick,
-        new THREE.SphereGeometry(0.41, 18, 12),
-        shell,
-        side * 0.72,
-        0.95,
-        0,
-        [0.59, 0.72, 0.34],
-        [0, 0, side * 0.25],
-      );
-      piece(chick, new THREE.SphereGeometry(0.17, 12, 8), warm, side * 0.41, 0.13, 0.44, [1.25, 0.44, 0.6]);
-    }
-    piece(chick, new THREE.ConeGeometry(0.16, 0.39, 5), accent, 0, 2.63, 0.03, [1, 1, 1], [0, 0, -0.24]);
-
-    const rabbit = creature(
-      'shadow',
-      new THREE.SphereGeometry(0.74, 28, 18),
-      [0.87, 1.19, 0.77],
-      new THREE.SphereGeometry(0.68, 28, 18),
-      [1, 0.9, 0.8],
-    );
-    for (const side of [-1, 1]) {
-      piece(
-        rabbit,
-        new THREE.SphereGeometry(0.27, 18, 14),
-        shell,
-        side * 0.39,
-        2.8,
-        -0.03,
-        [0.72, 2.0, 0.53],
-        [0, 0, -side * 0.13],
-      );
-      piece(
-        rabbit,
-        new THREE.SphereGeometry(0.14, 14, 10),
-        blush,
-        side * 0.39,
-        2.84,
-        0.09,
-        [0.65, 2.3, 0.27],
-        [0, 0, -side * 0.13],
-      );
-    }
-    piece(rabbit, new THREE.SphereGeometry(0.35, 16, 12), face, 0, 0.96, 0.55, [0.8, 0.93, 0.25]);
-    piece(rabbit, new THREE.SphereGeometry(0.11, 12, 8), blush, 0, 1.73, 0.72, [1, 0.7, 0.45]);
     const halo = add(new THREE.TorusGeometry(1.3, 0.035, 8, 64), accent, 0, 0.04, 0);
     halo.rotation.x = Math.PI / 2;
     halo.visible = false;
     const character = new THREE.Group();
     group.add(character);
     for (const child of [...group.children]) if (child !== plinth && child !== character) character.add(child);
-    const accessoryMount = new THREE.Group();
-    accessoryMount.matrixAutoUpdate = false;
-    character.add(accessoryMount);
-    for (const decoration of Object.values(decorations)) accessoryMount.add(decoration);
     return {
-      accessoryMount,
       group,
       character,
+      fashion: {},
+      loadingFashion: {},
+      plinth,
       halo,
       body,
       belly,
@@ -874,15 +636,11 @@ export class RenjuBoard {
       arms,
       ears,
       basePieces,
-      variantHeads,
-      variantArms,
       activeHead: head,
       activeArms: arms,
       shell,
       face,
       accent,
-      decorations,
-      variants,
     };
   }
   setBoardStyle(style: BoardStyle) {
@@ -988,36 +746,25 @@ export class RenjuBoard {
       this.showcaseStoneRim.visible = seat === 'white' && appearance.stone === 'classic';
     }
     const rig = this.avatars[seat];
-    const avatar = {
-      classic: seat === 'black' ? [0x182d3a, 0x304859, 0xe4bd77] : [0xf5ecd8, 0xfff9e9, 0x677f88],
-      coral: seat === 'black' ? [0xa6536c, 0xeaa5a3, 0xffd28f] : [0xef9db0, 0xffe1df, 0xc36566],
-      royal: seat === 'black' ? [0x242e56, 0x394874, 0xe4c176] : [0xe0e5fa, 0xf9faff, 0x8b77b9],
-      sunflower: seat === 'black' ? [0xe9ad48, 0xffdf80, 0xefc45b] : [0xffd86e, 0xfff5b8, 0xcc9b3b],
-      shadow: seat === 'black' ? [0x66627f, 0xaaa4c8, 0xb1bfce] : [0xc4cad2, 0xe8edf0, 0x53637a],
-      petal: [0xc78782, 0xfff0d8, 0xb89b75],
-    }[appearance.avatar as AvatarStyle];
+    const avatar = [0x182d3a, 0x304859, 0xe4bd77];
     rig.shell.color.setHex(avatar[0]);
     rig.face.color.setHex(avatar[1]);
     rig.accent.color.setHex(avatar[2]);
-    const isClassic = appearance.avatar === 'classic';
-    for (const mesh of rig.basePieces) mesh.visible = isClassic;
+    for (const mesh of rig.basePieces) mesh.visible = false;
     rig.activeHead.rotation.z = 0;
     for (const arm of rig.activeArms) arm.rotation.z = 0;
-    rig.activeHead = rig.variantHeads[appearance.avatar] ?? rig.head;
-    rig.activeArms = rig.variantArms[appearance.avatar] ?? rig.arms;
-    for (const [style, decoration] of Object.entries(rig.decorations)) {
-      decoration.visible = style === appearance.accessory;
-      const petal = appearance.avatar === 'petal';
-      decoration.scale.setScalar(petal ? 0.48 : 1);
-      const anchor = { flower: 2.65, leaf: 2.9, crown: 2.87, sun: 2.7 }[style as Exclude<AccessoryStyle, 'none'>];
-      decoration.position.y = petal ? anchor - 2.4 * 0.48 : 0;
-      if (style === 'crown') decoration.getObjectByName('petal-crown-band')!.visible = petal;
-    }
-    for (const [style, variant] of Object.entries(rig.variants)) variant!.visible = style === appearance.avatar;
-    rig.accessoryMount.matrix.identity();
+    rig.activeHead = rig.head;
+    rig.activeArms = rig.arms;
     if (rig.petal) rig.petal.root.visible = appearance.avatar === 'petal';
+    if (rig.luna) rig.luna.root.visible = appearance.avatar === 'luna';
+    for (const style of FASHION_AVATARS) {
+      const model = rig.fashion[style];
+      if (model) model.root.visible = appearance.avatar === style;
+    }
     this.host.dataset[`avatar${seat === 'black' ? 'Black' : 'White'}`] = appearance.avatar;
     if (appearance.avatar === 'petal') void this.ensurePetal(seat);
+    if (appearance.avatar === 'luna') void this.ensureLuna(seat);
+    if (isFashionAvatar(appearance.avatar)) void this.ensureFashion(seat, appearance.avatar);
     this.syncAvatarMotion();
     this.updateModelStatus();
     if (this.selected && this.color === (seat === 'black' ? 1 : 2)) {
@@ -1062,19 +809,71 @@ export class RenjuBoard {
     await rig.loadingPetal;
   }
 
+  private async ensureLuna(seat: Seat) {
+    const rig = this.avatars[seat];
+    if (rig.luna || rig.loadingLuna) return;
+    const key = seat === 'black' ? 'lunaBlack' : 'lunaWhite';
+    this.host.dataset[key] = 'loading';
+    this.updateModelStatus();
+    rig.loadingLuna = loadLunaAvatar()
+      .then((luna) => {
+        rig.luna = luna;
+        rig.character.add(luna.root);
+        luna.root.visible = this.appearance[seat].avatar === 'luna';
+        this.host.dataset[key] = 'ready';
+        this.syncAvatarMotion();
+        this.render();
+      })
+      .catch(() => {
+        this.host.dataset[key] = 'error';
+      })
+      .finally(() => {
+        rig.loadingLuna = undefined;
+        this.updateModelStatus();
+      });
+    await rig.loadingLuna;
+  }
+
+  private async ensureFashion(seat: Seat, style: FashionStyle) {
+    const rig = this.avatars[seat];
+    if (rig.fashion[style] || rig.loadingFashion[style]) return;
+    const key = `${style}${seat === 'black' ? 'Black' : 'White'}`;
+    this.host.dataset[key] = 'loading';
+    this.updateModelStatus();
+    rig.loadingFashion[style] = loadFashionAvatar(style)
+      .then((avatar) => {
+        rig.fashion[style] = avatar;
+        rig.character.add(avatar.root);
+        avatar.root.visible = this.appearance[seat].avatar === style;
+        this.host.dataset[key] = 'ready';
+        this.syncAvatarMotion();
+        this.render();
+      })
+      .catch(() => {
+        this.host.dataset[key] = 'error';
+      })
+      .finally(() => {
+        delete rig.loadingFashion[style];
+        this.updateModelStatus();
+      });
+    await rig.loadingFashion[style];
+  }
+
   private updateModelStatus() {
-    const states = (['black', 'white'] as const)
-      .filter(
-        (seat) =>
-          this.appearance[seat].avatar === 'petal' &&
-          this.avatars[seat].group.visible &&
-          this.avatars[seat].character.visible,
-      )
-      .map((seat) => this.host.dataset[seat === 'black' ? 'petalBlack' : 'petalWhite']);
+    const visible = (['black', 'white'] as const).filter(
+      (seat) =>
+        isRiggedAvatar(this.appearance[seat].avatar) &&
+        this.avatars[seat].group.visible &&
+        this.avatars[seat].character.visible,
+    );
+    const states = visible.map(
+      (seat) => this.host.dataset[`${this.appearance[seat].avatar}${seat === 'black' ? 'Black' : 'White'}`],
+    );
+    const name = '아바타를';
     this.modelStatus.hidden = !states.some((state) => state === 'loading' || state === 'error');
     this.modelStatus.textContent = states.includes('error')
-      ? '페탈을 불러오지 못했습니다. 다시 선택해 주세요.'
-      : '페탈을 불러오는 중…';
+      ? `${name} 불러오지 못했습니다. 다시 선택해 주세요.`
+      : `${name} 불러오는 중…`;
   }
 
   private syncAvatarMotion() {
@@ -1087,6 +886,8 @@ export class RenjuBoard {
           ? this.previewMotion
           : 'idle';
       this.avatars[seat].petal?.play(motion);
+      this.avatars[seat].luna?.play(motion);
+      for (const style of FASHION_AVATARS) this.avatars[seat].fashion[style]?.play(motion);
       this.host.dataset[seat === 'black' ? 'avatarBlackMotion' : 'avatarWhiteMotion'] = motion;
     }
   }
@@ -1117,7 +918,8 @@ export class RenjuBoard {
     this.showcaseStoneRim.visible = seat === 'white' && this.appearance[seat].stone === 'classic';
     for (const color of ['black', 'white'] as const) {
       const rig = this.avatars[color];
-      rig.group.visible = (focus === 'avatar' || focus === 'accessory' || focus === 'victory') && color === seat;
+      rig.group.visible = (focus === 'avatar' || focus === 'victory') && color === seat;
+      rig.plinth.visible = focus !== 'avatar' && focus !== 'victory';
       if (color === seat) {
         rig.group.position.set(0, -0.08, 0);
         rig.group.rotation.y = 0;
@@ -1133,8 +935,7 @@ export class RenjuBoard {
     this.controls.maxDistance = focus === 'board' ? 58 : 22;
     const view = {
       stone: { position: [3.6, 5.3, 5.7], target: [0, 0.25, 0] },
-      avatar: { position: [0, 3, 7.8], target: [0, 1.45, 0] },
-      accessory: { position: [0, 2.9, 5.5], target: [0, 2.25, 0] },
+      avatar: { position: [0, 3.4, 7.8], target: [0, 1.85, 0] },
       board: { position: [0, 23, 17], target: [0, 0, 0] },
       victory: { position: [0, 3, 7.8], target: [0, 1.45, 0] },
     }[focus];
@@ -1175,7 +976,7 @@ export class RenjuBoard {
     this.turn = turn;
     for (const color of ['black', 'white'] as const) {
       this.avatars[color].character.visible = occupied[color];
-      this.avatars[color].halo.visible = turn === color || this.celebrating === color;
+      this.avatars[color].halo.visible = !this.hiddenCelebrationSeat && (turn === color || this.celebrating === color);
     }
     this.render();
   }
@@ -1205,9 +1006,23 @@ export class RenjuBoard {
       if (now - lastFrame < 30) return;
       lastFrame = now;
       const elapsed = Math.max(0, now - this.celebrationStarted - (this.winningPoints.length ? 680 : 0));
+      if (elapsed >= 600 && !this.hiddenCelebrationSeat && !this.showcaseFocus) {
+        this.hiddenCelebrationSeat = winner === 'black' ? 'white' : 'black';
+        this.celebrationBackdrop = {
+          board: this.board.visible,
+          plinth: rig.plinth.visible,
+          halo: rig.halo.visible,
+        };
+        loser.group.visible = false;
+        rig.plinth.visible = false;
+        rig.halo.visible = false;
+        this.board.visible = false;
+        this.host.dataset.celebrationBackgroundHidden = 'true';
+      }
       const fall = 1 - (1 - Math.min(1, elapsed / 800)) ** 3;
-      loser.character.rotation.z =
-        this.appearance[winner === 'black' ? 'white' : 'black'].avatar === 'petal' ? 0 : (Math.PI / 2) * fall;
+      loser.character.rotation.z = isRiggedAvatar(this.appearance[winner === 'black' ? 'white' : 'black'].avatar)
+        ? 0
+        : (Math.PI / 2) * fall;
       const progress = Math.min(1, Math.max(0, (elapsed - 600) / 1150));
       const eased = 1 - (1 - progress) ** 3;
       if (!this.showcaseFocus && (progress < 1 || elapsed < 1800)) {
@@ -1221,12 +1036,12 @@ export class RenjuBoard {
       rig.group.rotation.y =
         baseRotation +
         Math.PI * turn +
-        (elapsed > 650 && this.appearance[winner].avatar !== 'petal'
+        (elapsed > 650 && !isRiggedAvatar(this.appearance[winner].avatar)
           ? style === 'spin'
             ? beat * 3
             : Math.sin(beat * 4) * 0.3
           : 0);
-      if (elapsed > 650 && this.appearance[winner].avatar !== 'petal') {
+      if (elapsed > 650 && !isRiggedAvatar(this.appearance[winner].avatar)) {
         rig.group.position.y =
           baseY + Math.abs(Math.sin(beat * (style === 'spin' ? 4 : 7))) * (style === 'bow' ? 0.04 : 0.28);
         rig.activeHead.rotation.z = style === 'bow' ? 0.22 + Math.sin(beat * 3) * 0.06 : Math.sin(beat * 5) * 0.15;
@@ -1246,7 +1061,19 @@ export class RenjuBoard {
       return false;
     }
     cancelAnimationFrame(this.celebrationFrame);
+    const winner = this.celebrating;
     this.celebrating = null;
+    if (this.hiddenCelebrationSeat) {
+      this.avatars[this.hiddenCelebrationSeat].group.visible = !this.showcaseFocus;
+      this.hiddenCelebrationSeat = null;
+      if (this.celebrationBackdrop && winner) {
+        this.board.visible = this.celebrationBackdrop.board;
+        this.avatars[winner].plinth.visible = this.celebrationBackdrop.plinth;
+        this.avatars[winner].halo.visible = this.celebrationBackdrop.halo;
+        this.celebrationBackdrop = undefined;
+      }
+      this.host.dataset.celebrationBackgroundHidden = 'false';
+    }
     this.syncAvatarMotion();
     this.clearWinningLine();
     for (const color of ['black', 'white'] as const) {

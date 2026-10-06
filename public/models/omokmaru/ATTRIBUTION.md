@@ -1,4 +1,6 @@
-# Petal / 페탈
+# Omokmaru 3D avatars / 오목마루 3D 아바타
+
+## Petal / 페탈
 
 Base character: **Rain Rig (CC) Blender Foundation | studio.blender.org**
 
@@ -8,3 +10,23 @@ Base character: **Rain Rig (CC) Blender Foundation | studio.blender.org**
 - Scene authoring metadata was removed for distribution. Body and costume surfaces were simplified for real-time rendering (462,678 to 174,695 total triangles). Facial topology, morph targets, textures, skeleton and animation clips are retained.
 
 The Blender Foundation does not endorse this adaptation. The adapted character is distributed under CC BY 4.0.
+
+## Luna / 루나
+
+Base character: **Victoria Rubin, VRoid Project**
+
+- Original file: https://github.com/madjin/vrm-samples/blob/master/vroid/beta/Victoria_Rubin.vrm
+- Original VRoid Hub model: https://hub.vroid.com/characters/4593660874193246717/models/2541762389476121920
+- License: Creative Commons CC0 1.0 — https://creativecommons.org/publicdomain/zero/1.0/
+- Adaptation for Omokmaru: rose-pink hair recolor, stage orientation and scale, and procedural idle/win/lose poses. The original face, body, clothing, textures and skeleton are retained.
+
+## Reference-inspired avatars / 참고 이미지 기반 아바타
+
+The following base files are VRoid Studio beta sample models from VRoid Project. Their embedded VRM license metadata is CC0 1.0. The reference images guided the color, hair silhouette, and costume direction; the original model geometry remains visible and the adaptations are stylized interpretations.
+
+- **Apron / 밀리:** `Vivi.vrm` → `apron.glb`; gold hair and pale apron dress.
+- **Luna twilight / 루나 노을빛:** `Victoria_Rubin.vrm` → shared `luna.glb`; pink hair and dark dress.
+- **Serin / 세린:** `Darkness_Shibu.vrm` → shared `ribbon.glb`; reduced head proportions, dark hair, a shortened navy dress and skin-toned legs.
+
+Source directory: https://github.com/madjin/vrm-samples/tree/master/vroid/beta
+License information: https://vroid.pixiv.help/hc/en-us/articles/4402614652569-Do-VRoid-Studio-s-sample-models-come-with-conditions-of-use

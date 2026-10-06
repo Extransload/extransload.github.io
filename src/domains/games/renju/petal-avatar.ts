@@ -6,12 +6,16 @@ export type AvatarMotion = 'idle' | 'win' | 'lose';
 let source: Promise<GLTF> | undefined;
 
 // Share immutable geometry/textures, but give each seat its own skeleton and mixer.
-export async function loadPetalAvatar() {
+export function loadAvatarSource() {
   source ??= new GLTFLoader().loadAsync('/models/omokmaru/petal.glb').catch((error) => {
     source = undefined;
     throw error;
   });
-  return new PetalAvatar(await source);
+  return source;
+}
+
+export async function loadPetalAvatar() {
+  return new PetalAvatar(await loadAvatarSource());
 }
 
 export class PetalAvatar {

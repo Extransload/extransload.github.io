@@ -93,7 +93,7 @@
 
 .studio-tabs {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 6px;
   padding: 5px;
   border: 1px solid #dbd2c1;
@@ -460,73 +460,22 @@
   content: '';
 }
 
-.studio-item[data-category='avatar'][data-item-id='coral'] .studio-item-art i::before {
-  top: -10px;
-  left: -4px;
-  width: 41px;
-  height: 23px;
-  clip-path: polygon(50% 4%, 70% 23%, 100% 15%, 82% 56%, 96% 92%, 52% 81%, 10% 100%, 20% 56%, 0 20%, 30% 24%);
-}
-
-.studio-item[data-category='avatar'][data-item-id='coral'] .studio-item-art i {
-  border-radius: 48% 48% 16% 16%;
-}
-
-.studio-item[data-category='avatar'][data-item-id='royal'] .studio-item-art i::before {
-  top: -13px;
-  left: -4px;
-  width: 42px;
-  height: 19px;
-  clip-path: polygon(0 100%, 12% 0, 35% 80%, 65% 80%, 88% 0, 100% 100%);
-}
-
-.studio-item[data-category='avatar'][data-item-id='sunflower'] .studio-item-art i {
-  border-radius: 50%;
-}
-.studio-item[data-category='avatar'][data-item-id='sunflower'] .studio-item-art i::before,
-.studio-item[data-category='avatar'][data-item-id='sunflower'] .studio-item-art i::after {
-  top: 23px;
-  width: 12px;
-  height: 11px;
-  border-radius: 50%;
-  background: #eea347;
-}
-
-.studio-item[data-category='avatar'][data-item-id='sunflower'] .studio-item-art i::before {
-  left: -8px;
-}
-
-.studio-item[data-category='avatar'][data-item-id='sunflower'] .studio-item-art i::after {
-  right: -8px;
-}
-
-.studio-item[data-category='avatar'][data-item-id='shadow'] .studio-item-art i::before {
-  top: -24px;
-  left: 4px;
-  width: 12px;
-  height: 26px;
-  border-radius: 60% 60% 20% 20%;
-}
-
-.studio-item[data-category='avatar'][data-item-id='shadow'] .studio-item-art i::after {
-  top: -24px;
-  right: 4px;
-  width: 12px;
-  height: 26px;
-  border-radius: 60% 60% 20% 20%;
-}
-
 .studio-item[data-category='avatar'] .studio-item-art i + i {
   display: none;
 }
 
-.studio-item[data-item-id='petal'] .studio-item-art i {
+.studio-item[data-item-id='petal'] .studio-item-art i,
+.studio-item[data-item-id='luna'] .studio-item-art i {
   width: 46px;
   height: 48px;
   border: 0;
   border-radius: 40% 40% 10% 10%;
   background: linear-gradient(90deg, #c78782 22%, #fff0d8 23% 77%, #c78782 78%);
   clip-path: polygon(34% 0, 66% 0, 80% 28%, 70% 45%, 100% 100%, 0 100%, 30% 45%, 20% 28%);
+}
+
+.studio-item[data-item-id='luna'] .studio-item-art i {
+  background: linear-gradient(90deg, #567bb2 22%, #e0b779 23% 77%, #567bb2 78%);
 }
 
 .studio-avatar-motions {
@@ -564,18 +513,6 @@
 
 .studio-avatar-credit a {
   color: inherit;
-}
-
-.studio-item[data-category='accessory'] .studio-item-art i {
-  width: 37px;
-  height: 37px;
-  border: 3px solid var(--item-b);
-  border-radius: 12px 12px 18px 18px;
-  transform: rotate(-10deg);
-}
-
-.studio-item[data-category='accessory'] .studio-item-art i + i {
-  display: none;
 }
 
 .studio-item[data-category='victory'] .studio-item-art i {
@@ -774,6 +711,10 @@
 .studio-camera {
   display: flex;
   gap: 6px;
+}
+
+.studio-seats[hidden] {
+  display: none;
 }
 
 .studio-seats button,

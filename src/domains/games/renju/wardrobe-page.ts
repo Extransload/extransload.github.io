@@ -1,7 +1,6 @@
 import { RenjuBoard } from './board-3d';
 import {
   APPEARANCE_OPTIONS,
-  ACCESSORIES,
   AVATARS,
   BOARDS,
   DEFAULT_APPEARANCE,
@@ -23,7 +22,6 @@ const board = new RenjuBoard($('#studio-canvas'));
 const names: Record<Category, [string, string]> = {
   stone: ['STONE COLLECTION', '돌 재질'],
   avatar: ['AVATAR COLLECTION', '아바타'],
-  accessory: ['ACCESSORY COLLECTION', '머리 장식'],
   board: ['BOARD COLLECTION', '바둑판'],
   victory: ['VICTORY COLLECTION', '승리 연출'],
 };
@@ -69,6 +67,7 @@ let category: Category = new URLSearchParams(location.search).get('category') ==
 let seat: Seat = 'black';
 
 function optionName(key: Category, id: string) {
+  if (key === 'avatar' && id === 'rose') return '루나';
   return APPEARANCE_OPTIONS[key].find((option) => option.id === id)?.name ?? id;
 }
 
@@ -95,6 +94,7 @@ function writeSlots() {
 }
 
 function showScene() {
+  $('#studio-seats').hidden = category === 'avatar';
   board.clearCelebration();
   board.setState(sampleMoves, null, false, false);
   board.setSeats(seat, null);
@@ -102,7 +102,6 @@ function showScene() {
   $('#studio-stage-label').textContent = {
     stone: '돌 회전 · 왼쪽 버튼이나 손가락으로 드래그',
     avatar: '아바타 회전 · 왼쪽 버튼이나 손가락으로 드래그',
-    accessory: '장식 회전 · 왼쪽 버튼이나 손가락으로 드래그',
     board: '바둑판 회전 · 왼쪽 버튼이나 손가락으로 드래그',
     victory: '승리 장면 회전 · 왼쪽 버튼이나 손가락으로 드래그',
   }[category];
@@ -113,13 +112,19 @@ function showScene() {
 }
 
 function updateAvatarPreview() {
-  $('#studio-avatar-motions').hidden = category !== 'avatar' || appearance.avatar !== 'petal';
-  $('#studio-avatar-credit').hidden = appearance.avatar !== 'petal';
+  $('#studio-avatar-motions').hidden = category !== 'avatar';
+  $('#studio-luna-variants').hidden = category !== 'avatar' || !['luna', 'rose'].includes(appearance.avatar);
+  for (const button of document.querySelectorAll<HTMLButtonElement>('[data-luna-variant]'))
+    button.setAttribute('aria-pressed', String(button.dataset.lunaVariant === appearance.avatar));
+  $('#studio-petal-credit').hidden = appearance.avatar !== 'petal';
+  $('#studio-luna-credit').hidden = !['luna', 'rose'].includes(appearance.avatar);
+  $('#studio-fashion-credit').hidden = !['apron', 'serin'].includes(appearance.avatar);
   for (const button of document.querySelectorAll<HTMLButtonElement>('[data-avatar-motion]'))
     button.setAttribute('aria-pressed', String(button.dataset.avatarMotion === 'idle'));
 }
 
 function showVictory() {
+  $('#studio-seats').hidden = false;
   board.clearCelebration();
   board.setState(winningMoves[seat], null, false, false);
   board.setSeats(seat, null);
@@ -144,10 +149,11 @@ function applySeatAppearance() {
 
 function renderItems() {
   const options = APPEARANCE_OPTIONS[category];
+  const selectedId = category === 'avatar' && appearance.avatar === 'rose' ? 'luna' : appearance[category];
   $('#studio-category-kicker').textContent = names[category][0];
   $('#studio-category-title').textContent = names[category][1];
   $('#studio-count').textContent =
-    `${String(options.findIndex((item) => item.id === appearance[category]) + 1).padStart(2, '0')} / ${String(options.length).padStart(2, '0')}`;
+    `${String(options.findIndex((item) => item.id === selectedId) + 1).padStart(2, '0')} / ${String(options.length).padStart(2, '0')}`;
   const list = $('#studio-items');
   list.replaceChildren();
   for (const option of options) {
@@ -156,7 +162,7 @@ function renderItems() {
     card.className = 'studio-item';
     card.dataset.category = category;
     card.dataset.itemId = option.id;
-    card.setAttribute('aria-pressed', String(appearance[category] === option.id));
+    card.setAttribute('aria-pressed', String(selectedId === option.id));
     card.style.setProperty('--item-a', option.colors[0]);
     card.style.setProperty('--item-b', option.colors[1]);
     const art = document.createElement('span');
@@ -168,7 +174,7 @@ function renderItems() {
     const detail = document.createElement('small');
     detail.textContent = option.detail;
     card.append(art, title, detail);
-    if (appearance[category] === option.id) {
+    if (selectedId === option.id) {
       const badge = document.createElement('span');
       badge.className = 'studio-item-badge';
       badge.textContent = '사용 중';
@@ -193,7 +199,7 @@ function renderSlots() {
     title.textContent = `${index + 1}번 세트`;
     const detail = document.createElement('small');
     detail.textContent = saved
-      ? `${optionName('stone', saved.stone)} · ${optionName('avatar', saved.avatar)} · ${optionName('accessory', saved.accessory)} · ${optionName('board', saved.board)}`
+      ? `${optionName('stone', saved.stone)} · ${optionName('avatar', saved.avatar)} · ${optionName('board', saved.board)}`
       : '비어 있음';
     copy.append(title, detail);
     const actions = document.createElement('div');
@@ -227,7 +233,7 @@ function setAppearance(next: Appearance) {
   board.setBoardStyle(appearance.board);
   applySeatAppearance();
   $('#studio-current-label').textContent =
-    `${optionName('stone', appearance.stone)} · ${optionName('avatar', appearance.avatar)} · ${optionName('accessory', appearance.accessory)} · ${optionName('board', appearance.board)} · ${optionName('victory', appearance.victory)}`;
+    `${optionName('stone', appearance.stone)} · ${optionName('avatar', appearance.avatar)} · ${optionName('board', appearance.board)} · ${optionName('victory', appearance.victory)}`;
   $('#studio-save-status').textContent = saved ? '자동 저장됨' : '이 탭에서만 적용';
   renderItems();
   updateAvatarPreview();
@@ -257,6 +263,10 @@ for (const button of document.querySelectorAll<HTMLButtonElement>('[data-avatar-
     for (const peer of document.querySelectorAll<HTMLButtonElement>('[data-avatar-motion]'))
       peer.setAttribute('aria-pressed', String(peer === button));
   });
+for (const button of document.querySelectorAll<HTMLButtonElement>('[data-luna-variant]'))
+  button.addEventListener('click', () =>
+    setAppearance({ ...appearance, avatar: button.dataset.lunaVariant as 'luna' | 'rose' }),
+  );
 $('#studio-view').addEventListener('click', () => {
   $('#studio-view').classList.toggle('active', board.toggleTop());
 });
@@ -268,8 +278,7 @@ $('#studio-random').addEventListener('click', () => {
   const random = <T>(list: readonly T[]) => list[crypto.getRandomValues(new Uint32Array(1))[0] % list.length];
   setAppearance({
     stone: random(STONES),
-    avatar: random(AVATARS),
-    accessory: random(ACCESSORIES),
+    avatar: random(AVATARS.filter((avatar) => avatar !== 'rose')),
     board: random(BOARDS),
     victory: random(VICTORIES),
   });

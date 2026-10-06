@@ -13,28 +13,24 @@ export const STONES = [
   'star',
   'dragon',
 ] as const;
-export const AVATARS = ['classic', 'coral', 'royal', 'sunflower', 'shadow', 'petal'] as const;
-export const ACCESSORIES = ['none', 'flower', 'leaf', 'crown', 'sun'] as const;
+export const AVATARS = ['petal', 'luna', 'apron', 'rose', 'serin'] as const;
 export const BOARDS = ['oak', 'walnut', 'linen', 'ink', 'meadow'] as const;
 export const VICTORIES = ['dance', 'spin', 'bow', 'cheer'] as const;
 
 export type StoneStyle = (typeof STONES)[number];
 export type AvatarStyle = (typeof AVATARS)[number];
-export type AccessoryStyle = (typeof ACCESSORIES)[number];
 export type BoardStyle = (typeof BOARDS)[number];
 export type VictoryStyle = (typeof VICTORIES)[number];
 export type PlayerAppearance = {
   stone: StoneStyle;
   avatar: AvatarStyle;
-  accessory: AccessoryStyle;
   victory: VictoryStyle;
 };
 export type Appearance = PlayerAppearance & { board: BoardStyle };
 
 export const DEFAULT_APPEARANCE: Appearance = {
   stone: 'classic',
-  avatar: 'classic',
-  accessory: 'none',
+  avatar: 'petal',
   board: 'oak',
   victory: 'dance',
 };
@@ -44,7 +40,7 @@ export function appearanceForSeat(
   mySeat: 'black' | 'white' | 'spectator' | null,
   selected: Appearance,
 ): PlayerAppearance {
-  return seat === mySeat ? selected : DEFAULT_APPEARANCE;
+  return { ...(seat === mySeat ? selected : DEFAULT_APPEARANCE), avatar: selected.avatar };
 }
 export const APPEARANCE_STORAGE_KEY = 'omokmaru-appearance-v1';
 
@@ -66,23 +62,19 @@ export const APPEARANCE_OPTIONS = {
   ],
   avatar: [
     { id: 'petal', name: '페탈', detail: '꽃 자수 드레스 · 미소와 손짓으로 인사', colors: ['#c78782', '#fff0d8'] },
-    { id: 'classic', name: '마루', detail: '동글동글한 오목마루의 얼굴', colors: ['#182d3a', '#e4bd77'] },
-    { id: 'coral', name: '장미 요정', detail: '꽃잎 치마와 꽃봉오리 머리의 요정', colors: ['#a6536c', '#eaa5a3'] },
-    { id: 'royal', name: '구름 고양이', detail: '구름 꼬리와 쫑긋한 귀를 가진 고양이', colors: ['#343e6a', '#e4c176'] },
-    { id: 'sunflower', name: '노랑 병아리', detail: '작은 날개와 주황 부리의 병아리', colors: ['#e9ad48', '#ffdf80'] },
     {
-      id: 'shadow',
-      name: '달토끼',
-      detail: '긴 귀와 초승달 배를 가진 토끼',
-      colors: ['#66627f', '#aaa4c8'],
+      id: 'luna',
+      name: '루나',
+      detail: '분홍빛 머리와 로즈 드레스의 성인 캐릭터',
+      colors: ['#d990ac', '#f1c7cc'],
     },
-  ],
-  accessory: [
-    { id: 'none', name: '장식 없음', detail: '깔끔한 기본 모습', colors: ['#8d9f9b', '#e8e8d6'] },
-    { id: 'flower', name: '산호 꽃', detail: '귀 옆에 살짝 핀 작은 꽃', colors: ['#c36566', '#ffe1d0'] },
-    { id: 'leaf', name: '민트 잎', detail: '머리 위에 돋아난 두 잎', colors: ['#58a592', '#dff3dc'] },
-    { id: 'crown', name: '별 왕관', detail: '세 개의 반짝이는 봉우리', colors: ['#d9bb72', '#fff2b8'] },
-    { id: 'sun', name: '해님', detail: '환한 꽃잎을 닮은 장식', colors: ['#efc45b', '#fff1b8'] },
+    { id: 'apron', name: '밀리', detail: '금발 올림머리와 밝은색 앞치마 드레스', colors: ['#eebd69', '#d7ba91'] },
+    {
+      id: 'serin',
+      name: '세린',
+      detail: '성숙한 비율의 짙은 갈색 머리와 남색 미니스커트',
+      colors: ['#49342f', '#35495f'],
+    },
   ],
   board: [
     { id: 'oak', name: '참나무', detail: '단정한 클래식 나무판', colors: ['#b98250', '#64472e'] },
@@ -104,9 +96,6 @@ export function normalizeAppearance(value: unknown): Appearance {
   return {
     stone: STONES.includes(input.stone as StoneStyle) ? input.stone! : DEFAULT_APPEARANCE.stone,
     avatar: AVATARS.includes(input.avatar as AvatarStyle) ? input.avatar! : DEFAULT_APPEARANCE.avatar,
-    accessory: ACCESSORIES.includes(input.accessory as AccessoryStyle)
-      ? input.accessory!
-      : DEFAULT_APPEARANCE.accessory,
     board: BOARDS.includes(input.board as BoardStyle) ? input.board! : DEFAULT_APPEARANCE.board,
     victory: VICTORIES.includes(input.victory as VictoryStyle) ? input.victory! : DEFAULT_APPEARANCE.victory,
   };
