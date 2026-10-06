@@ -362,7 +362,8 @@ export class RenjuBoard {
     });
     let lastFrame = performance.now();
     this.renderer.setAnimationLoop((now) => {
-      const delta = Math.min(Math.max(0, (now - lastFrame) / 1000), 0.05);
+      // Clips interpolate keyed poses, so keep elapsed time even when a frame takes longer.
+      const delta = Math.max(0, (now - lastFrame) / 1000);
       lastFrame = now;
       if (this.controls instanceof TrackballControls) this.controls.update();
       let animated = false;

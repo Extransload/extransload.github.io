@@ -730,11 +730,16 @@ test('Playroom animations stay active under reduced motion', async ({ page }) =>
     await test.step(`Petal ${motion} changes the rendered frame`, async () => {
       await page.locator(`[data-avatar-motion="${motion}"]`).click();
       await expect(page.locator('#studio-canvas')).toHaveAttribute('data-avatar-black-motion', motion);
-      const before = await page.locator('#studio-canvas canvas').screenshot();
-      // Software WebGL may present the previous frame while the next one is rendering.
+      const avatarCanvas = page.locator('#studio-canvas canvas');
+      await avatarCanvas.scrollIntoViewIfNeeded();
+      const avatarBounds = await avatarCanvas.boundingBox();
+      expect(avatarBounds).not.toBeNull();
+      const captureAvatar = () => page.screenshot({ clip: avatarBounds!, animations: 'allow' });
+      const before = await captureAvatar();
+      // CI traces show a single software-GPU readback can take over six seconds.
       await expect(async () => {
-        expect((await page.locator('#studio-canvas canvas').screenshot()).equals(before)).toBe(false);
-      }).toPass({ timeout: 5000 });
+        expect((await captureAvatar()).equals(before)).toBe(false);
+      }).toPass({ timeout: 15_000 });
     });
   }
   await page.locator('.studio-tabs [data-category="victory"]').click();
@@ -742,7 +747,7 @@ test('Playroom animations stay active under reduced motion', async ({ page }) =>
   await page.locator('#studio-victory').click();
   await expect(async () => {
     expect((await page.locator('#studio-canvas canvas').screenshot()).equals(customVictory)).toBe(false);
-  }).toPass({ timeout: 5000 });
+  }).toPass({ timeout: 15_000 });
   expect(errors).toEqual([]);
 });
 
