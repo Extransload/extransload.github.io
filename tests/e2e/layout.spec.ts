@@ -651,6 +651,8 @@ test('playroom lists Omokmaru, opens its board, and About remains standalone', a
 
 test('Playroom animations stay active under reduced motion', async ({ page }) => {
   test.setTimeout(120_000);
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/playroom/');
   expect(await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches)).toBe(true);
@@ -736,6 +738,7 @@ test('Playroom animations stay active under reduced motion', async ({ page }) =>
   await page.locator('#studio-victory').click();
   await page.waitForTimeout(950);
   expect((await page.locator('#studio-canvas canvas').screenshot()).equals(customVictory)).toBe(false);
+  expect(errors).toEqual([]);
 });
 
 test('solo match replaces start with resign until the match ends', async ({ page }) => {

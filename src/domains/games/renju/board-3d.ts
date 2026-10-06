@@ -60,6 +60,7 @@ export class RenjuBoard {
   private scene = new THREE.Scene();
   private camera = new THREE.PerspectiveCamera(35, 1, 0.1, 200);
   private renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+  private renderRequested = true;
   private controls!: OrbitControls | TrackballControls;
   private freeAvatarRotation = false;
   private previewMotion: AvatarMotion = 'idle';
@@ -374,6 +375,11 @@ export class RenjuBoard {
         animated = true;
       }
       if (animated) this.render();
+      // Input, board effects and character animation share one GPU submission per frame.
+      if (this.renderRequested) {
+        this.renderRequested = false;
+        this.renderer.render(this.scene, this.camera);
+      }
     });
     window.addEventListener('pagehide', (event) => {
       if (!event.persisted) {
@@ -1257,7 +1263,7 @@ export class RenjuBoard {
     return true;
   }
   private render() {
-    this.renderer.render(this.scene, this.camera);
+    this.renderRequested = true;
   }
   private resize() {
     const { width, height } = this.host.getBoundingClientRect();

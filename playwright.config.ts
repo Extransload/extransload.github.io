@@ -8,6 +8,8 @@ const host = '127.0.0.1';
 export default defineConfig({
   testDir: './tests/e2e',
   testIgnore: ['**/release.spec.ts', '**/comments.spec.ts'],
+  // The CI runner uses CPU-based WebGL; concurrent 3D pages contend for the same cores.
+  workers: process.env.CI ? 1 : undefined,
   use: {
     baseURL: `http://${host}:${port}`,
   },
