@@ -1,5 +1,8 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { TrackballControls } from 'three/addons/controls/TrackballControls.js';
+import { observeViewerAccess } from './avatar-access';
+import { loadPetalAvatar, type PetalAvatar, type AvatarMotion } from './petal-avatar';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { roseStoneGeometry } from './rose-stone';
 import { CHARACTER_STONE_BODIES, createStoneDetails } from './stone-designs';
@@ -30,6 +33,9 @@ const START = -6.3,
 type Seat = 'black' | 'white';
 type ShowcaseFocus = 'stone' | 'avatar' | 'accessory' | 'board' | 'victory';
 type AvatarRig = {
+  petal?: PetalAvatar;
+  loadingPetal?: Promise<void>;
+  accessoryMount: THREE.Group;
   group: THREE.Group;
   character: THREE.Group;
   halo: THREE.Mesh;
@@ -54,7 +60,10 @@ export class RenjuBoard {
   private scene = new THREE.Scene();
   private camera = new THREE.PerspectiveCamera(35, 1, 0.1, 200);
   private renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
-  private controls: OrbitControls;
+  private controls!: OrbitControls | TrackballControls;
+  private freeAvatarRotation = false;
+  private previewMotion: AvatarMotion = 'idle';
+  private modelStatus: HTMLElement;
   private board = new THREE.Group();
   private stones = new THREE.Group();
   private showcaseStone = new THREE.Group();
@@ -179,25 +188,12 @@ export class RenjuBoard {
     this.keyboardStatus.setAttribute('role', 'status');
     this.keyboardStatus.textContent = '방향키로 좌표 이동, Enter 또는 스페이스로 착수합니다.';
     host.append(canvas, this.keyboardStatus);
-    this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-    this.controls.enableDamping = false;
-    this.controls.enablePan = true;
-    this.controls.rotateSpeed = 0.75;
-    this.controls.zoomSpeed = 0.9;
-    this.controls.panSpeed = 0.7;
-    this.controls.minDistance = 11;
-    this.controls.maxDistance = 58;
-    this.controls.minPolarAngle = 0.06;
-    this.controls.maxPolarAngle = Math.PI - 0.06;
-    this.controls.mouseButtons.LEFT = null;
-    this.controls.mouseButtons.MIDDLE = THREE.MOUSE.ROTATE;
-    this.controls.mouseButtons.RIGHT = THREE.MOUSE.PAN;
-    this.controls.touches.ONE = null;
-    this.controls.touches.TWO = THREE.TOUCH.DOLLY_ROTATE;
-    this.controls.zoomToCursor = true;
-    this.controls.screenSpacePanning = false;
-    this.controls.addEventListener('start', () => this.clearSelection());
-    this.controls.addEventListener('change', () => this.render());
+    this.configureControls();
+    this.modelStatus = document.createElement('span');
+    this.modelStatus.className = 'avatar-model-status';
+    this.modelStatus.setAttribute('role', 'status');
+    this.modelStatus.hidden = true;
+    host.append(this.modelStatus);
     this.scene.add(new THREE.AmbientLight(0xf4e9d6, 1.2));
     const key = new THREE.DirectionalLight(0xffe5b4, 4.3);
     key.position.set(-6, 13, 8);
@@ -358,6 +354,77 @@ export class RenjuBoard {
     });
     new ResizeObserver(() => this.resize()).observe(host);
     this.resize();
+    const stopAccess = observeViewerAccess((allowed) => {
+      if (this.freeAvatarRotation === allowed) return;
+      this.freeAvatarRotation = allowed;
+      if (this.showcaseFocus) this.frameShowcaseCamera(this.showcaseFocus);
+    });
+    let lastFrame = performance.now();
+    this.renderer.setAnimationLoop((now) => {
+      const delta = Math.min(Math.max(0, (now - lastFrame) / 1000), 0.05);
+      lastFrame = now;
+      if (this.controls instanceof TrackballControls) this.controls.update();
+      let animated = false;
+      for (const seat of ['black', 'white'] as const) {
+        const rig = this.avatars[seat];
+        if (this.appearance[seat].avatar !== 'petal' || !rig.petal || !rig.group.visible || !rig.character.visible)
+          continue;
+        rig.petal.update(delta);
+        rig.accessoryMount.matrix.copy(rig.petal.accessoryTransform);
+        animated = true;
+      }
+      if (animated) this.render();
+    });
+    window.addEventListener('pagehide', (event) => {
+      if (!event.persisted) {
+        stopAccess();
+        this.renderer.setAnimationLoop(null);
+        this.controls.dispose();
+      }
+    });
+  }
+
+  private configureControls() {
+    const target = this.controls?.target.clone() ?? new THREE.Vector3();
+    this.controls?.dispose();
+    this.camera.up.set(0, 1, 0);
+    const avatarView = ['avatar', 'accessory', 'victory'].includes(this.showcaseFocus ?? '');
+    if (avatarView && this.freeAvatarRotation) {
+      const controls = new TrackballControls(this.camera, this.renderer.domElement);
+      controls.rotateSpeed = 3;
+      controls.zoomSpeed = 1.1;
+      controls.panSpeed = 0.3;
+      controls.staticMoving = true;
+      controls.multiTouchRoll = true;
+      controls.minDistance = 2.6;
+      controls.maxDistance = 22;
+      this.controls = controls;
+    } else {
+      const controls = new OrbitControls(this.camera, this.renderer.domElement);
+      controls.enableDamping = false;
+      controls.enablePan = !avatarView;
+      controls.rotateSpeed = 0.75;
+      controls.zoomSpeed = 0.9;
+      controls.panSpeed = 0.7;
+      controls.minDistance = this.showcaseFocus && this.showcaseFocus !== 'board' ? 2.6 : 11;
+      controls.maxDistance = this.showcaseFocus && this.showcaseFocus !== 'board' ? 22 : 58;
+      controls.minPolarAngle = avatarView ? Math.PI / 3 : 0.06;
+      controls.maxPolarAngle = avatarView ? Math.PI / 2 : Math.PI / 2 - 0.04;
+      controls.minAzimuthAngle = avatarView ? -Math.PI / 3 : -Infinity;
+      controls.maxAzimuthAngle = avatarView ? Math.PI / 3 : Infinity;
+      controls.mouseButtons.LEFT = this.showcaseFocus ? THREE.MOUSE.ROTATE : null;
+      controls.mouseButtons.MIDDLE = THREE.MOUSE.ROTATE;
+      controls.mouseButtons.RIGHT = THREE.MOUSE.PAN;
+      controls.touches.ONE = this.showcaseFocus ? THREE.TOUCH.ROTATE : null;
+      controls.touches.TWO = THREE.TOUCH.DOLLY_ROTATE;
+      controls.zoomToCursor = !avatarView;
+      controls.screenSpacePanning = false;
+      this.controls = controls;
+    }
+    this.controls.target.copy(target);
+    this.controls.addEventListener('start', () => this.clearSelection());
+    this.controls.addEventListener('change', () => this.render());
+    this.host.dataset.freeAvatarRotation = String(avatarView && this.freeAvatarRotation);
   }
 
   private box(w: number, h: number, d: number, material: THREE.Material, y: number, radius = 0) {
@@ -565,6 +632,13 @@ export class RenjuBoard {
         };
       }),
     );
+    const crownBand = new THREE.Mesh(new THREE.TorusGeometry(0.45, 0.055, 8, 32), accent);
+    crownBand.name = 'petal-crown-band';
+    crownBand.position.set(0, 2.37, 0.12);
+    crownBand.rotation.x = Math.PI / 2;
+    crownBand.castShadow = true;
+    crownBand.visible = false;
+    decorations.crown!.add(crownBand);
     const arms: THREE.Mesh[] = [];
     const ears: THREE.Mesh[] = [];
     const basePieces: THREE.Mesh[] = [body, belly, head];
@@ -778,7 +852,12 @@ export class RenjuBoard {
     const character = new THREE.Group();
     group.add(character);
     for (const child of [...group.children]) if (child !== plinth && child !== character) character.add(child);
+    const accessoryMount = new THREE.Group();
+    accessoryMount.matrixAutoUpdate = false;
+    character.add(accessoryMount);
+    for (const decoration of Object.values(decorations)) accessoryMount.add(decoration);
     return {
+      accessoryMount,
       group,
       character,
       halo,
@@ -908,6 +987,7 @@ export class RenjuBoard {
       royal: seat === 'black' ? [0x242e56, 0x394874, 0xe4c176] : [0xe0e5fa, 0xf9faff, 0x8b77b9],
       sunflower: seat === 'black' ? [0xe9ad48, 0xffdf80, 0xefc45b] : [0xffd86e, 0xfff5b8, 0xcc9b3b],
       shadow: seat === 'black' ? [0x66627f, 0xaaa4c8, 0xb1bfce] : [0xc4cad2, 0xe8edf0, 0x53637a],
+      petal: [0xc78782, 0xfff0d8, 0xb89b75],
     }[appearance.avatar as AvatarStyle];
     rig.shell.color.setHex(avatar[0]);
     rig.face.color.setHex(avatar[1]);
@@ -918,9 +998,21 @@ export class RenjuBoard {
     for (const arm of rig.activeArms) arm.rotation.z = 0;
     rig.activeHead = rig.variantHeads[appearance.avatar] ?? rig.head;
     rig.activeArms = rig.variantArms[appearance.avatar] ?? rig.arms;
-    for (const [style, decoration] of Object.entries(rig.decorations))
-      decoration!.visible = style === appearance.accessory;
+    for (const [style, decoration] of Object.entries(rig.decorations)) {
+      decoration.visible = style === appearance.accessory;
+      const petal = appearance.avatar === 'petal';
+      decoration.scale.setScalar(petal ? 0.48 : 1);
+      const anchor = { flower: 2.65, leaf: 2.9, crown: 2.87, sun: 2.7 }[style as Exclude<AccessoryStyle, 'none'>];
+      decoration.position.y = petal ? anchor - 2.4 * 0.48 : 0;
+      if (style === 'crown') decoration.getObjectByName('petal-crown-band')!.visible = petal;
+    }
     for (const [style, variant] of Object.entries(rig.variants)) variant!.visible = style === appearance.avatar;
+    rig.accessoryMount.matrix.identity();
+    if (rig.petal) rig.petal.root.visible = appearance.avatar === 'petal';
+    this.host.dataset[`avatar${seat === 'black' ? 'Black' : 'White'}`] = appearance.avatar;
+    if (appearance.avatar === 'petal') void this.ensurePetal(seat);
+    this.syncAvatarMotion();
+    this.updateModelStatus();
     if (this.selected && this.color === (seat === 'black' ? 1 : 2)) {
       const preview = this.preview.children[0] as THREE.Mesh | undefined;
       if (preview) {
@@ -938,6 +1030,66 @@ export class RenjuBoard {
     }
     this.render();
   }
+  private async ensurePetal(seat: Seat) {
+    const rig = this.avatars[seat];
+    if (rig.petal || rig.loadingPetal) return;
+    const key = seat === 'black' ? 'petalBlack' : 'petalWhite';
+    this.host.dataset[key] = 'loading';
+    this.updateModelStatus();
+    rig.loadingPetal = loadPetalAvatar()
+      .then((petal) => {
+        rig.petal = petal;
+        rig.character.add(petal.root);
+        petal.root.visible = this.appearance[seat].avatar === 'petal';
+        this.host.dataset[key] = 'ready';
+        this.syncAvatarMotion();
+        this.render();
+      })
+      .catch(() => {
+        this.host.dataset[key] = 'error';
+      })
+      .finally(() => {
+        rig.loadingPetal = undefined;
+        this.updateModelStatus();
+      });
+    await rig.loadingPetal;
+  }
+
+  private updateModelStatus() {
+    const states = (['black', 'white'] as const)
+      .filter(
+        (seat) =>
+          this.appearance[seat].avatar === 'petal' &&
+          this.avatars[seat].group.visible &&
+          this.avatars[seat].character.visible,
+      )
+      .map((seat) => this.host.dataset[seat === 'black' ? 'petalBlack' : 'petalWhite']);
+    this.modelStatus.hidden = !states.some((state) => state === 'loading' || state === 'error');
+    this.modelStatus.textContent = states.includes('error')
+      ? '페탈을 불러오지 못했습니다. 다시 선택해 주세요.'
+      : '페탈을 불러오는 중…';
+  }
+
+  private syncAvatarMotion() {
+    for (const seat of ['black', 'white'] as const) {
+      const motion = this.celebrating
+        ? this.celebrating === seat
+          ? 'win'
+          : 'lose'
+        : this.showcaseFocus
+          ? this.previewMotion
+          : 'idle';
+      this.avatars[seat].petal?.play(motion);
+      this.host.dataset[seat === 'black' ? 'avatarBlackMotion' : 'avatarWhiteMotion'] = motion;
+    }
+  }
+
+  previewAvatarMotion(motion: AvatarMotion) {
+    this.clearCelebration();
+    this.previewMotion = motion;
+    this.syncAvatarMotion();
+  }
+
   focusShowcase(focus: ShowcaseFocus, seat: Seat) {
     this.clearCelebration();
     this.showcaseFocus = focus;
@@ -956,8 +1108,6 @@ export class RenjuBoard {
     this.placeShowcaseStone(this.appearance[seat].stone);
     this.showcaseStoneRim.position.y = this.showcaseStoneMesh.position.y - 0.2;
     this.showcaseStoneRim.visible = seat === 'white' && this.appearance[seat].stone === 'classic';
-    this.controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
-    this.controls.touches.ONE = THREE.TOUCH.ROTATE;
     for (const color of ['black', 'white'] as const) {
       const rig = this.avatars[color];
       rig.group.visible = (focus === 'avatar' || focus === 'accessory' || focus === 'victory') && color === seat;
@@ -966,6 +1116,12 @@ export class RenjuBoard {
         rig.group.rotation.y = 0;
       }
     }
+    this.frameShowcaseCamera(focus);
+    this.updateModelStatus();
+  }
+
+  private frameShowcaseCamera(focus: ShowcaseFocus) {
+    this.configureControls();
     this.controls.minDistance = focus === 'board' ? 11 : 2.6;
     this.controls.maxDistance = focus === 'board' ? 58 : 22;
     const view = {
@@ -1020,6 +1176,7 @@ export class RenjuBoard {
     if (this.celebrating === winner) return;
     this.clearCelebration();
     this.celebrating = winner;
+    this.syncAvatarMotion();
     if (five) this.drawWinningLine();
     const loser = this.avatars[winner === 'black' ? 'white' : 'black'];
     this.celebrationStarted = performance.now();
@@ -1042,20 +1199,27 @@ export class RenjuBoard {
       lastFrame = now;
       const elapsed = Math.max(0, now - this.celebrationStarted - (this.winningPoints.length ? 680 : 0));
       const fall = 1 - (1 - Math.min(1, elapsed / 800)) ** 3;
-      loser.character.rotation.z = (Math.PI / 2) * fall;
+      loser.character.rotation.z =
+        this.appearance[winner === 'black' ? 'white' : 'black'].avatar === 'petal' ? 0 : (Math.PI / 2) * fall;
       const progress = Math.min(1, Math.max(0, (elapsed - 600) / 1150));
       const eased = 1 - (1 - progress) ** 3;
-      if (this.showcaseFocus !== 'victory' && (progress < 1 || elapsed < 1800)) {
+      if (!this.showcaseFocus && (progress < 1 || elapsed < 1800)) {
         this.camera.position.copy(cameraStart).lerp(cameraEnd, eased);
         this.controls.target.copy(targetStart).lerp(center, eased);
         this.controls.update();
       }
-      const turn = this.showcaseFocus === 'victory' ? 0 : 1 - (1 - Math.min(1, elapsed / 650)) ** 3;
+      const turn = this.showcaseFocus ? 0 : 1 - (1 - Math.min(1, elapsed / 650)) ** 3;
       const beat = Math.max(0, (elapsed - 650) / 1000);
       const style = this.appearance[winner].victory;
       rig.group.rotation.y =
-        baseRotation + Math.PI * turn + (elapsed > 650 ? (style === 'spin' ? beat * 3 : Math.sin(beat * 4) * 0.3) : 0);
-      if (elapsed > 650) {
+        baseRotation +
+        Math.PI * turn +
+        (elapsed > 650 && this.appearance[winner].avatar !== 'petal'
+          ? style === 'spin'
+            ? beat * 3
+            : Math.sin(beat * 4) * 0.3
+          : 0);
+      if (elapsed > 650 && this.appearance[winner].avatar !== 'petal') {
         rig.group.position.y =
           baseY + Math.abs(Math.sin(beat * (style === 'spin' ? 4 : 7))) * (style === 'bow' ? 0.04 : 0.28);
         rig.activeHead.rotation.z = style === 'bow' ? 0.22 + Math.sin(beat * 3) * 0.06 : Math.sin(beat * 5) * 0.15;
@@ -1069,16 +1233,21 @@ export class RenjuBoard {
     this.celebrationFrame = requestAnimationFrame(frame);
   }
   clearCelebration() {
-    if (this.celebrating === null && !this.winningStroke) return false;
+    this.previewMotion = 'idle';
+    if (this.celebrating === null && !this.winningStroke) {
+      this.syncAvatarMotion();
+      return false;
+    }
     cancelAnimationFrame(this.celebrationFrame);
     this.celebrating = null;
+    this.syncAvatarMotion();
     this.clearWinningLine();
     for (const color of ['black', 'white'] as const) {
       const rig = this.avatars[color];
       rig.character.rotation.z = 0;
       rig.group.position.y = -0.08;
       rig.group.rotation.x = 0;
-      rig.group.rotation.y = Math.atan2(-rig.group.position.x, -rig.group.position.z);
+      rig.group.rotation.y = this.showcaseFocus ? 0 : Math.atan2(-rig.group.position.x, -rig.group.position.z);
       rig.activeHead.rotation.z = 0;
       for (const arm of rig.activeArms) arm.rotation.z = 0;
       rig.halo.scale.setScalar(1);
@@ -1096,6 +1265,7 @@ export class RenjuBoard {
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(width, height, false);
+    if (this.controls instanceof TrackballControls) this.controls.handleResize();
     this.render();
   }
   private point(e: PointerEvent): Point | null {

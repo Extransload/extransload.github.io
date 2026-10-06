@@ -2,6 +2,7 @@ import { error, json } from './security';
 import type { ScheduledController, ExecutionContext } from '@cloudflare/workers-types/index';
 import type { Env } from './types';
 import { beginGithub, githubCallback, logout, requireSession, sessionResponse } from './auth';
+import { avatarViewerAccess } from './avatar-viewer-access';
 import { createPost, discardPost, getPost, importPosts, listPosts, publishPost, updatePost } from './posts';
 import { analyticsReport } from './analytics';
 import { commentsApi, adminCommentReply, adminCommentsJson } from './comments';
@@ -26,6 +27,7 @@ function sessionCors(request: Request, response: Response) {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
+    if (url.pathname === '/api/avatar-viewer/access') return avatarViewerAccess(request, env);
     if (url.pathname === '/admin/comments' && request.method === 'GET')
       return Response.redirect(new URL('/admin/comments/', request.url), 302);
     if (['/admin/posts', '/admin/editor'].includes(url.pathname) && request.method === 'GET')

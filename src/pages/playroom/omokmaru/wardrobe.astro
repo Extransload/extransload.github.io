@@ -44,8 +44,14 @@ import SeoHead from '../../../shared/components/SeoHead.astro';
           <div class="studio-camera" role="group" aria-label="미리보기 시점"><button id="studio-view" type="button" title="위에서 보기" aria-label="위에서 보기">▦</button><button id="studio-zoom-in" type="button" title="확대" aria-label="확대">＋</button><button id="studio-zoom-out" type="button" title="축소" aria-label="축소">−</button><button id="studio-reset-view" type="button" title="시점 초기화" aria-label="시점 초기화">↺</button></div>
         </div>
         <div id="studio-preview-actions" class="studio-preview-actions" hidden><button id="studio-victory" class="studio-play-button" type="button">↻ 승리 연출 다시 보기</button></div>
+        <div id="studio-avatar-motions" class="studio-avatar-motions" role="group" aria-label="아바타 동작" hidden>
+          <button type="button" data-avatar-motion="idle" aria-pressed="true">대기</button>
+          <button type="button" data-avatar-motion="win" aria-pressed="false">승리</button>
+          <button type="button" data-avatar-motion="lose" aria-pressed="false">패배</button>
+        </div>
         <div class="studio-current"><span>현재 조합</span><strong id="studio-current-label"></strong></div>
         <div class="studio-links"><a href="/playroom/omokmaru/solo/">AI 대국에서 사용 ↗</a><a href="/playroom/omokmaru/">온라인 대국에서 사용 ↗</a></div>
+        <p id="studio-avatar-credit" class="studio-avatar-credit" hidden>페탈 원작: <a href="https://studio.blender.org/characters/rain/v3/" target="_blank" rel="noreferrer">Rain Rig · Blender Foundation</a> · <a href="/models/omokmaru/ATTRIBUTION.md">CC BY 4.0 · 의상·리그·모션 수정</a></p>
       </section>
     </main>
     <script>import '../../../domains/games/renju/wardrobe-page';</script>

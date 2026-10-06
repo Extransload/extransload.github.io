@@ -18,5 +18,6 @@ export interface Env {
   ADMIN_URL?: string;
   BLOG_URL?: string;
   COMMENTS_ORIGINS?: string;
+  AVATAR_VIEWER_ORIGINS?: string;
   COMMENTS_SECRET?: string;
 }

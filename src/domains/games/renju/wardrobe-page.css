@@ -520,6 +520,52 @@
   display: none;
 }
 
+.studio-item[data-item-id='petal'] .studio-item-art i {
+  width: 46px;
+  height: 48px;
+  border: 0;
+  border-radius: 40% 40% 10% 10%;
+  background: linear-gradient(90deg, #c78782 22%, #fff0d8 23% 77%, #c78782 78%);
+  clip-path: polygon(34% 0, 66% 0, 80% 28%, 70% 45%, 100% 100%, 0 100%, 30% 45%, 20% 28%);
+}
+
+.studio-avatar-motions {
+  display: flex;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.studio-avatar-motions[hidden],
+.studio-avatar-credit[hidden] {
+  display: none;
+}
+
+.studio-avatar-motions button {
+  padding: 10px 18px;
+  border: 1px solid #d6d5c8;
+  border-radius: 20px;
+  background: #f9f7f1;
+  color: #40594f;
+  font-size: 12px;
+}
+
+.studio-avatar-motions button[aria-pressed='true'] {
+  border-color: #315e4d;
+  background: #315e4d;
+  color: #fffdf8;
+}
+
+.studio-avatar-credit {
+  margin: 18px 0 0;
+  color: #77827c;
+  font-size: 10px;
+  line-height: 1.7;
+}
+
+.studio-avatar-credit a {
+  color: inherit;
+}
+
 .studio-item[data-category='accessory'] .studio-item-art i {
   width: 37px;
   height: 37px;

@@ -13,7 +13,7 @@ export const STONES = [
   'star',
   'dragon',
 ] as const;
-export const AVATARS = ['classic', 'coral', 'royal', 'sunflower', 'shadow'] as const;
+export const AVATARS = ['classic', 'coral', 'royal', 'sunflower', 'shadow', 'petal'] as const;
 export const ACCESSORIES = ['none', 'flower', 'leaf', 'crown', 'sun'] as const;
 export const BOARDS = ['oak', 'walnut', 'linen', 'ink', 'meadow'] as const;
 export const VICTORIES = ['dance', 'spin', 'bow', 'cheer'] as const;
@@ -65,6 +65,7 @@ export const APPEARANCE_OPTIONS = {
     { id: 'dragon', name: '용의 알', detail: '뿔과 빛나는 보석이 있는 알', colors: ['#2b6d69', '#bbe3d3'] },
   ],
   avatar: [
+    { id: 'petal', name: '페탈', detail: '꽃 자수 드레스 · 미소와 손짓으로 인사', colors: ['#c78782', '#fff0d8'] },
     { id: 'classic', name: '마루', detail: '동글동글한 오목마루의 얼굴', colors: ['#182d3a', '#e4bd77'] },
     { id: 'coral', name: '장미 요정', detail: '꽃잎 치마와 꽃봉오리 머리의 요정', colors: ['#a6536c', '#eaa5a3'] },
     { id: 'royal', name: '구름 고양이', detail: '구름 꼬리와 쫑긋한 귀를 가진 고양이', colors: ['#343e6a', '#e4c176'] },

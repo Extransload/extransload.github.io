@@ -38,6 +38,7 @@ describe('Omokmaru appearance values', () => {
   });
 
   it('accepts the new original character while retaining saved legacy choices', () => {
+    expect(normalizeAppearance({ avatar: 'petal' }).avatar).toBe('petal');
     expect(normalizeAppearance({ avatar: 'shadow' }).avatar).toBe('shadow');
     expect(normalizeAppearance({ avatar: 'coral' }).avatar).toBe('coral');
     expect(normalizeAppearance({ avatar: 'mint', stone: 'heart' })).toEqual(DEFAULT_APPEARANCE);

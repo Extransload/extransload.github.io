@@ -1685,3 +1685,20 @@ button:disabled {
     overflow-y: auto;
   }
 }
+.avatar-model-status {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  z-index: 2;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #fffdf8e8;
+  color: #40594f;
+  font-size: 12px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.avatar-model-status[hidden] {
+  display: none;
+}

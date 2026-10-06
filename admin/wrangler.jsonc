@@ -7,6 +7,7 @@
   "vars": {
     "ADMIN_URL": "https://extransload-admin.tmdrbsla123.workers.dev/admin/",
     "BLOG_URL": "https://extransload.github.io/",
+    "AVATAR_VIEWER_ORIGINS": "https://extransload.github.io,http://127.0.0.1:48765,http://localhost:48765,http://127.0.0.1:4321,http://localhost:4321,http://127.0.0.1:4322,http://localhost:4322",
     "GA4_HOSTNAME": "extransload.github.io",
     "GA4_PROPERTY_ID": "552453352",
     "GITHUB_ALLOWED_USER_ID": "76903093",

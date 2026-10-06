@@ -650,7 +650,7 @@ test('playroom lists Omokmaru, opens its board, and About remains standalone', a
 });
 
 test('Playroom animations stay active under reduced motion', async ({ page }) => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/playroom/');
   expect(await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches)).toBe(true);
@@ -719,6 +719,17 @@ test('Playroom animations stay active under reduced motion', async ({ page }) =>
     await page.mouse.up();
     expect(await page.evaluate(() => window.scrollY)).toBe(scrollY);
     expect((await canvas.screenshot()).equals(beforeOrbit)).toBe(false);
+  }
+  await page.locator('.studio-tabs [data-category="avatar"]').click();
+  await page.locator('[data-item-id="petal"]').click();
+  await expect(page.locator('#studio-canvas')).toHaveAttribute('data-petal-black', 'ready', { timeout: 30_000 });
+  await expect(page.locator('#studio-avatar-motions')).toBeVisible();
+  for (const motion of ['idle', 'win', 'lose']) {
+    await page.locator(`[data-avatar-motion="${motion}"]`).click();
+    await expect(page.locator('#studio-canvas')).toHaveAttribute('data-avatar-black-motion', motion);
+    const before = await page.locator('#studio-canvas canvas').screenshot();
+    await page.waitForTimeout(450);
+    expect((await page.locator('#studio-canvas canvas').screenshot()).equals(before)).toBe(false);
   }
   await page.locator('.studio-tabs [data-category="victory"]').click();
   const customVictory = await page.locator('#studio-canvas canvas').screenshot();
@@ -864,7 +875,7 @@ test('Omokmaru studio previews, saves, and reuses a free look', async ({ page })
   expect((await page.locator('#studio-canvas canvas').screenshot()).equals(before)).toBe(false);
   await page.locator('[data-category="avatar"]').click();
   await expect(page.locator('#studio-canvas')).toHaveAttribute('data-focus', 'avatar');
-  await expect(page.locator('#studio-items .studio-item')).toHaveCount(5);
+  await expect(page.locator('#studio-items .studio-item')).toHaveCount(6);
   const originalAvatar = await page.locator('#studio-canvas canvas').screenshot();
   await page.locator('[data-item-id="coral"]').click();
   expect((await page.locator('#studio-canvas canvas').screenshot()).equals(originalAvatar)).toBe(false);
@@ -952,8 +963,8 @@ test('Omokmaru studio puts the 3D preview before options on a phone', async ({ b
   expect(bounds).not.toBeNull();
   const captureMotion = () => page.screenshot({ clip: bounds!, animations: 'allow' });
   const startFrame = await captureMotion();
-  await page.waitForTimeout(500);
-  expect((await captureMotion()).equals(startFrame)).toBe(false);
+  // The result animation has an intentional lead-in before the character starts moving.
+  await expect(async () => expect((await captureMotion()).equals(startFrame)).toBe(false)).toPass({ timeout: 5000 });
 });
 
 test('keyboard can inspect coordinates and place a solo move', async ({ page }) => {

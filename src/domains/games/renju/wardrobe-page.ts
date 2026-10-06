@@ -14,6 +14,7 @@ import {
   type Appearance,
 } from './appearance';
 import type { Move } from './rules';
+import type { AvatarMotion } from './petal-avatar';
 
 type Category = keyof Appearance;
 type Seat = 'black' | 'white';
@@ -64,7 +65,7 @@ const winningMoves: Record<Seat, Move[]> = {
 };
 
 let appearance = loadAppearance();
-let category: Category = 'stone';
+let category: Category = new URLSearchParams(location.search).get('category') === 'avatar' ? 'avatar' : 'stone';
 let seat: Seat = 'black';
 
 function optionName(key: Category, id: string) {
@@ -108,6 +109,14 @@ function showScene() {
   $('#studio-preview-actions').hidden = category !== 'victory';
   $('#studio-view').hidden = category !== 'board';
   $('#studio-view').classList.remove('active');
+  updateAvatarPreview();
+}
+
+function updateAvatarPreview() {
+  $('#studio-avatar-motions').hidden = category !== 'avatar' || appearance.avatar !== 'petal';
+  $('#studio-avatar-credit').hidden = appearance.avatar !== 'petal';
+  for (const button of document.querySelectorAll<HTMLButtonElement>('[data-avatar-motion]'))
+    button.setAttribute('aria-pressed', String(button.dataset.avatarMotion === 'idle'));
 }
 
 function showVictory() {
@@ -120,6 +129,7 @@ function showVictory() {
   $('#studio-view').hidden = true;
   board.celebrate(seat);
   $('#studio-victory').textContent = '↻ 승리 연출 다시 보기';
+  updateAvatarPreview();
 }
 
 function showCategory() {
@@ -220,7 +230,9 @@ function setAppearance(next: Appearance) {
     `${optionName('stone', appearance.stone)} · ${optionName('avatar', appearance.avatar)} · ${optionName('accessory', appearance.accessory)} · ${optionName('board', appearance.board)} · ${optionName('victory', appearance.victory)}`;
   $('#studio-save-status').textContent = saved ? '자동 저장됨' : '이 탭에서만 적용';
   renderItems();
+  updateAvatarPreview();
   if (category === 'victory') showVictory();
+  else board.previewAvatarMotion('idle');
 }
 
 for (const tab of document.querySelectorAll<HTMLButtonElement>('.studio-tabs [data-category]'))
@@ -239,6 +251,12 @@ for (const button of document.querySelectorAll<HTMLButtonElement>('[data-seat]')
   });
 
 $('#studio-victory').addEventListener('click', showVictory);
+for (const button of document.querySelectorAll<HTMLButtonElement>('[data-avatar-motion]'))
+  button.addEventListener('click', () => {
+    board.previewAvatarMotion(button.dataset.avatarMotion as AvatarMotion);
+    for (const peer of document.querySelectorAll<HTMLButtonElement>('[data-avatar-motion]'))
+      peer.setAttribute('aria-pressed', String(peer === button));
+  });
 $('#studio-view').addEventListener('click', () => {
   $('#studio-view').classList.toggle('active', board.toggleTop());
 });
