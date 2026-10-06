@@ -10,8 +10,10 @@ export default defineConfig({
   testIgnore: ['**/release.spec.ts', '**/comments.spec.ts'],
   // The CI runner uses CPU-based WebGL; concurrent 3D pages contend for the same cores.
   workers: process.env.CI ? 1 : undefined,
+  reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
   use: {
     baseURL: `http://${host}:${port}`,
+    trace: 'retain-on-failure',
   },
   webServer: {
     command: `npm run build && npm run preview -- --host ${host} --port ${port}`,

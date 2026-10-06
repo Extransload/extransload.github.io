@@ -727,17 +727,22 @@ test('Playroom animations stay active under reduced motion', async ({ page }) =>
   await expect(page.locator('#studio-canvas')).toHaveAttribute('data-petal-black', 'ready', { timeout: 30_000 });
   await expect(page.locator('#studio-avatar-motions')).toBeVisible();
   for (const motion of ['idle', 'win', 'lose']) {
-    await page.locator(`[data-avatar-motion="${motion}"]`).click();
-    await expect(page.locator('#studio-canvas')).toHaveAttribute('data-avatar-black-motion', motion);
-    const before = await page.locator('#studio-canvas canvas').screenshot();
-    await page.waitForTimeout(450);
-    expect((await page.locator('#studio-canvas canvas').screenshot()).equals(before)).toBe(false);
+    await test.step(`Petal ${motion} changes the rendered frame`, async () => {
+      await page.locator(`[data-avatar-motion="${motion}"]`).click();
+      await expect(page.locator('#studio-canvas')).toHaveAttribute('data-avatar-black-motion', motion);
+      const before = await page.locator('#studio-canvas canvas').screenshot();
+      // Software WebGL may present the previous frame while the next one is rendering.
+      await expect(async () => {
+        expect((await page.locator('#studio-canvas canvas').screenshot()).equals(before)).toBe(false);
+      }).toPass({ timeout: 5000 });
+    });
   }
   await page.locator('.studio-tabs [data-category="victory"]').click();
   const customVictory = await page.locator('#studio-canvas canvas').screenshot();
   await page.locator('#studio-victory').click();
-  await page.waitForTimeout(950);
-  expect((await page.locator('#studio-canvas canvas').screenshot()).equals(customVictory)).toBe(false);
+  await expect(async () => {
+    expect((await page.locator('#studio-canvas canvas').screenshot()).equals(customVictory)).toBe(false);
+  }).toPass({ timeout: 5000 });
   expect(errors).toEqual([]);
 });
 
