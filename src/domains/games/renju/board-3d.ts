@@ -8,7 +8,13 @@ import { loadPetalAvatar, type PetalAvatar, type AvatarMotion } from './petal-av
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { roseStoneGeometry } from './rose-stone';
 import { CHARACTER_STONE_BODIES, createStoneDetails } from './stone-designs';
-import { DEFAULT_APPEARANCE, type BoardStyle, type PlayerAppearance, type StoneStyle } from './appearance';
+import {
+  DEFAULT_APPEARANCE,
+  appearanceForSeat,
+  type BoardStyle,
+  type PlayerAppearance,
+  type StoneStyle,
+} from './appearance';
 import {
   analyzeMove,
   boardFromMoves,
@@ -26,7 +32,7 @@ const START = -6.3,
   STEP = 0.9,
   SURFACE = 0.37;
 type Seat = 'black' | 'white';
-type ShowcaseFocus = 'stone' | 'avatar' | 'board' | 'victory';
+type ShowcaseFocus = 'stone' | 'avatar' | 'board';
 const isFashionAvatar = (style: PlayerAppearance['avatar']): style is FashionStyle =>
   (FASHION_AVATARS as readonly string[]).includes(style);
 const isRiggedAvatar = (style: PlayerAppearance['avatar']) =>
@@ -117,8 +123,8 @@ export class RenjuBoard {
   };
   private stoneDetailsTemplates: Record<Seat, Partial<Record<StoneStyle, THREE.Group>>> = { black: {}, white: {} };
   private appearance: Record<Seat, PlayerAppearance> = {
-    black: { ...DEFAULT_APPEARANCE },
-    white: { ...DEFAULT_APPEARANCE },
+    black: appearanceForSeat('black', 'black', DEFAULT_APPEARANCE),
+    white: appearanceForSeat('white', 'white', DEFAULT_APPEARANCE),
   };
   private boardMaterials?: {
     surface: THREE.MeshStandardMaterial;
@@ -404,7 +410,7 @@ export class RenjuBoard {
     const target = this.controls?.target.clone() ?? new THREE.Vector3();
     this.controls?.dispose();
     this.camera.up.set(0, 1, 0);
-    const avatarView = this.showcaseFocus === 'avatar' || this.showcaseFocus === 'victory';
+    const avatarView = this.showcaseFocus === 'avatar';
     if (avatarView && this.freeAvatarRotation) {
       const controls = new TrackballControls(this.camera, this.renderer.domElement);
       controls.rotateSpeed = 3;
@@ -885,10 +891,12 @@ export class RenjuBoard {
         : this.showcaseFocus
           ? this.previewMotion
           : 'idle';
-      this.avatars[seat].petal?.play(motion);
-      this.avatars[seat].luna?.play(motion);
-      for (const style of FASHION_AVATARS) this.avatars[seat].fashion[style]?.play(motion);
+      const dance = this.appearance[seat].dance;
+      this.avatars[seat].petal?.play(motion, dance);
+      this.avatars[seat].luna?.play(motion, dance);
+      for (const style of FASHION_AVATARS) this.avatars[seat].fashion[style]?.play(motion, dance);
       this.host.dataset[seat === 'black' ? 'avatarBlackMotion' : 'avatarWhiteMotion'] = motion;
+      this.host.dataset[seat === 'black' ? 'avatarBlackDance' : 'avatarWhiteDance'] = dance;
     }
   }
 
@@ -918,8 +926,8 @@ export class RenjuBoard {
     this.showcaseStoneRim.visible = seat === 'white' && this.appearance[seat].stone === 'classic';
     for (const color of ['black', 'white'] as const) {
       const rig = this.avatars[color];
-      rig.group.visible = (focus === 'avatar' || focus === 'victory') && color === seat;
-      rig.plinth.visible = focus !== 'avatar' && focus !== 'victory';
+      rig.group.visible = focus === 'avatar' && color === seat;
+      rig.plinth.visible = focus !== 'avatar';
       if (color === seat) {
         rig.group.position.set(0, -0.08, 0);
         rig.group.rotation.y = 0;
@@ -937,7 +945,6 @@ export class RenjuBoard {
       stone: { position: [3.6, 5.3, 5.7], target: [0, 0.25, 0] },
       avatar: { position: [0, 3.4, 7.8], target: [0, 1.85, 0] },
       board: { position: [0, 23, 17], target: [0, 0, 0] },
-      victory: { position: [0, 3, 7.8], target: [0, 1.45, 0] },
     }[focus];
     this.camera.position.set(...(view.position as [number, number, number]));
     this.controls.target.set(...(view.target as [number, number, number]));
@@ -997,7 +1004,6 @@ export class RenjuBoard {
       .add(new THREE.Vector3(Math.sin(outwardRotation) * distance, 2.9, Math.cos(outwardRotation) * distance));
     const cameraStart = this.camera.position.clone();
     const targetStart = this.controls.target.clone();
-    const baseY = rig.group.position.y;
     const baseRotation = rig.group.rotation.y;
     let lastFrame = 0;
     const frame = (now: number) => {
@@ -1031,25 +1037,7 @@ export class RenjuBoard {
         this.controls.update();
       }
       const turn = this.showcaseFocus ? 0 : 1 - (1 - Math.min(1, elapsed / 650)) ** 3;
-      const beat = Math.max(0, (elapsed - 650) / 1000);
-      const style = this.appearance[winner].victory;
-      rig.group.rotation.y =
-        baseRotation +
-        Math.PI * turn +
-        (elapsed > 650 && !isRiggedAvatar(this.appearance[winner].avatar)
-          ? style === 'spin'
-            ? beat * 3
-            : Math.sin(beat * 4) * 0.3
-          : 0);
-      if (elapsed > 650 && !isRiggedAvatar(this.appearance[winner].avatar)) {
-        rig.group.position.y =
-          baseY + Math.abs(Math.sin(beat * (style === 'spin' ? 4 : 7))) * (style === 'bow' ? 0.04 : 0.28);
-        rig.activeHead.rotation.z = style === 'bow' ? 0.22 + Math.sin(beat * 3) * 0.06 : Math.sin(beat * 5) * 0.15;
-        rig.group.rotation.x = style === 'bow' ? -0.16 - Math.sin(beat * 3) * 0.04 : 0;
-        rig.activeArms[0].rotation.z = style === 'cheer' ? -1.65 : -0.55 - Math.sin(beat * 7) * 0.45;
-        rig.activeArms[1].rotation.z = style === 'cheer' ? 1.65 : 0.55 + Math.sin(beat * 7 + Math.PI) * 0.45;
-        rig.halo.scale.setScalar(1 + Math.sin(beat * 6) * 0.08);
-      }
+      rig.group.rotation.y = baseRotation + Math.PI * turn;
       this.render();
     };
     this.celebrationFrame = requestAnimationFrame(frame);

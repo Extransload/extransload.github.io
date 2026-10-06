@@ -777,9 +777,10 @@ test('Playroom animations stay active under reduced motion', async ({ page }) =>
       expect((await canvas.screenshot({ animations: 'allow' })).equals(before)).toBe(false);
     }).toPass({ timeout: 15_000 });
   });
-  await page.locator('.studio-tabs [data-category="victory"]').click();
+  await expect(page.locator('.studio-tabs [data-category="victory"]')).toHaveCount(0);
   const customVictory = await page.locator('#studio-canvas canvas').screenshot();
-  await page.locator('#studio-victory').click();
+  await page.locator('[data-avatar-dance="encore"]').click();
+  await expect(page.locator('[data-avatar-dance="encore"]')).toHaveAttribute('aria-pressed', 'true');
   await expect(async () => {
     expect((await page.locator('#studio-canvas canvas').screenshot()).equals(customVictory)).toBe(false);
   }).toPass({ timeout: 15_000 });
@@ -924,7 +925,7 @@ test('Omokmaru studio previews, saves, and reuses a free look', async ({ page })
   await page.locator('[data-category="avatar"]').click();
   await expect(page.locator('#studio-canvas')).toHaveAttribute('data-focus', 'avatar');
   await expect(page.locator('#studio-seats')).toBeHidden();
-  await expect(page.locator('#studio-items .studio-item')).toHaveCount(5);
+  await expect(page.locator('#studio-items .studio-item')).toHaveCount(4);
   await expect(page.locator('.studio-tabs [data-category="accessory"]')).toHaveCount(0);
   const originalAvatar = await page.locator('#studio-canvas canvas').screenshot();
   await page.locator('[data-item-id="luna"]').click();
@@ -942,28 +943,35 @@ test('Omokmaru studio previews, saves, and reuses a free look', async ({ page })
   await page.goto('/playroom/omokmaru/wardrobe/?category=avatar');
   await expect(page.locator('[data-luna-variant="rose"]')).toHaveAttribute('aria-pressed', 'true');
   await page.locator('[data-luna-variant="luna"]').click();
+  await expect(page.locator('#studio-avatar-dances')).toBeVisible();
+  await expect(page.locator('[data-avatar-dance="signature"]')).toHaveText('팝 웨이브');
+  await expect(page.locator('[data-avatar-dance="encore"]')).toHaveText('핑크 피날레');
+  await page.locator('[data-avatar-dance="encore"]').click();
+  await expect(page.locator('#studio-canvas')).toHaveAttribute('data-avatar-black-motion', 'win');
+  await expect(page.locator('#studio-canvas')).toHaveAttribute('data-avatar-black-dance', 'encore');
+  await page.locator('[data-item-id="serin"]').click();
+  await expect(page.locator('[data-avatar-dance="signature"]')).toHaveText('나이트 그루브');
+  await expect(page.locator('[data-avatar-dance="signature"]')).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('[data-item-id="luna"]').click();
+  await expect(page.locator('[data-avatar-dance="encore"]')).toHaveAttribute('aria-pressed', 'true');
   await page.locator('[data-category="board"]').click();
   await expect(page.locator('#studio-canvas')).toHaveAttribute('data-focus', 'board');
   await expect(page.locator('#studio-seats')).toBeVisible();
   await page.locator('[data-item-id="walnut"]').click();
-  await page.locator('[data-category="victory"]').click();
-  await expect(page.locator('#studio-canvas')).toHaveAttribute('data-focus', 'victory');
-  await expect(page.locator('#studio-victory')).toBeVisible();
-  await page.locator('[data-item-id="spin"]').click();
-  await expect(page.locator('#studio-current-label')).toHaveText('팔각 비취 · 루나 · 호두나무 · 빙글 회전');
-  await page.locator('#studio-victory').click();
-  await expect(page.locator('#studio-victory')).toHaveText(/다시 보기/);
+  await expect(page.locator('[data-category="victory"]')).toHaveCount(0);
+  await expect(page.locator('#studio-current-label')).toHaveText('팔각 비취 · 루나 · 호두나무 · 핑크 피날레');
   await page.locator('[data-category="stone"]').click();
   await expect(page.locator('#studio-canvas')).toHaveAttribute('data-rendered-moves', '8');
   await page.getByRole('button', { name: '1번 세트에 현재 조합 저장' }).click();
   await page.locator('#studio-default').click();
   await expect(page.locator('#studio-current-label')).toContainText('클래식');
   await page.locator('.studio-slot').first().getByRole('button', { name: '적용' }).click();
-  await expect(page.locator('#studio-current-label')).toHaveText('팔각 비취 · 루나 · 호두나무 · 빙글 회전');
+  await expect(page.locator('#studio-current-label')).toHaveText('팔각 비취 · 루나 · 호두나무 · 핑크 피날레');
   await page.reload();
-  await expect(page.locator('#studio-current-label')).toHaveText('팔각 비취 · 루나 · 호두나무 · 빙글 회전');
+  await expect(page.locator('#studio-current-label')).toHaveText('팔각 비취 · 루나 · 호두나무 · 핑크 피날레');
   await page.goto('/playroom/omokmaru/solo/');
   await expect(page.locator('.wardrobe-link')).toBeVisible();
+  await expect(page.locator('#canvas')).toHaveAttribute('data-avatar-black-dance', 'encore');
   await page.locator('#start').click();
   await expect(page.locator('#canvas')).toHaveAttribute('data-rendered-moves', '2');
   await page.goto('/playroom/omokmaru/');
@@ -973,7 +981,7 @@ test('Omokmaru studio previews, saves, and reuses a free look', async ({ page })
     stone: 'jade',
     avatar: 'luna',
     board: 'walnut',
-    victory: 'spin',
+    dances: { petal: 'signature', luna: 'encore', apron: 'signature', rose: 'signature', serin: 'signature' },
   });
 });
 
@@ -1009,9 +1017,10 @@ test('Omokmaru studio puts the 3D preview before options on a phone', async ({ b
   expect(preview!.y).toBeLessThan(options!.y);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   await page.locator('[data-seat="white"]').click();
-  await page.locator('[data-category="victory"]').click();
-  await page.locator('#studio-victory').click();
-  await expect(page.locator('#studio-canvas')).toHaveAttribute('data-rendered-moves', '10');
+  await page.locator('[data-category="avatar"]').click();
+  await page.locator('[data-avatar-dance="encore"]').click();
+  await expect(page.locator('#studio-canvas')).toHaveAttribute('data-petal-white', 'ready', { timeout: 30_000 });
+  await expect(page.locator('#studio-canvas')).toHaveAttribute('data-avatar-black-motion', 'win');
   await page.evaluate(() => window.scrollTo(0, 0));
   const bounds = await page.locator('#studio-canvas canvas').boundingBox();
   expect(bounds).not.toBeNull();

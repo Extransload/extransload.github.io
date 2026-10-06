@@ -9,13 +9,15 @@ import {
   normalizeAppearance,
   saveAppearance,
   STONES,
-  VICTORIES,
+  DANCES,
+  DANCE_NAMES,
   type Appearance,
+  type DanceStyle,
 } from './appearance';
 import type { Move } from './rules';
 import type { AvatarMotion } from './petal-avatar';
 
-type Category = keyof Appearance;
+type Category = 'stone' | 'avatar' | 'board';
 type Seat = 'black' | 'white';
 const $ = <T extends HTMLElement>(selector: string) => document.querySelector<T>(selector)!;
 const board = new RenjuBoard($('#studio-canvas'));
@@ -23,7 +25,6 @@ const names: Record<Category, [string, string]> = {
   stone: ['STONE COLLECTION', '돌 재질'],
   avatar: ['AVATAR COLLECTION', '아바타'],
   board: ['BOARD COLLECTION', '바둑판'],
-  victory: ['VICTORY COLLECTION', '승리 연출'],
 };
 const slotKey = 'omokmaru-looks-v1';
 const sampleMoves: Move[] = [
@@ -36,31 +37,6 @@ const sampleMoves: Move[] = [
   { x: 6, y: 8, color: 1 },
   { x: 9, y: 7, color: 2 },
 ];
-const winningMoves: Record<Seat, Move[]> = {
-  black: [
-    { x: 7, y: 7, color: 1 },
-    { x: 7, y: 8, color: 2 },
-    { x: 8, y: 7, color: 1 },
-    { x: 8, y: 8, color: 2 },
-    { x: 9, y: 7, color: 1 },
-    { x: 9, y: 8, color: 2 },
-    { x: 10, y: 7, color: 1 },
-    { x: 10, y: 8, color: 2 },
-    { x: 11, y: 7, color: 1 },
-  ],
-  white: [
-    { x: 7, y: 7, color: 1 },
-    { x: 7, y: 8, color: 2 },
-    { x: 10, y: 10, color: 1 },
-    { x: 8, y: 8, color: 2 },
-    { x: 11, y: 10, color: 1 },
-    { x: 9, y: 8, color: 2 },
-    { x: 12, y: 10, color: 1 },
-    { x: 10, y: 8, color: 2 },
-    { x: 13, y: 10, color: 1 },
-    { x: 11, y: 8, color: 2 },
-  ],
-};
 
 let appearance = loadAppearance();
 let category: Category = new URLSearchParams(location.search).get('category') === 'avatar' ? 'avatar' : 'stone';
@@ -103,9 +79,7 @@ function showScene() {
     stone: '돌 회전 · 왼쪽 버튼이나 손가락으로 드래그',
     avatar: '아바타 회전 · 왼쪽 버튼이나 손가락으로 드래그',
     board: '바둑판 회전 · 왼쪽 버튼이나 손가락으로 드래그',
-    victory: '승리 장면 회전 · 왼쪽 버튼이나 손가락으로 드래그',
   }[category];
-  $('#studio-preview-actions').hidden = category !== 'victory';
   $('#studio-view').hidden = category !== 'board';
   $('#studio-view').classList.remove('active');
   updateAvatarPreview();
@@ -113,6 +87,11 @@ function showScene() {
 
 function updateAvatarPreview() {
   $('#studio-avatar-motions').hidden = category !== 'avatar';
+  $('#studio-avatar-dances').hidden = category !== 'avatar';
+  for (const button of document.querySelectorAll<HTMLButtonElement>('[data-avatar-dance]')) {
+    button.textContent = DANCE_NAMES[appearance.avatar][button.dataset.avatarDance as DanceStyle];
+    button.setAttribute('aria-pressed', String(button.dataset.avatarDance === appearance.dances[appearance.avatar]));
+  }
   $('#studio-luna-variants').hidden = category !== 'avatar' || !['luna', 'rose'].includes(appearance.avatar);
   for (const button of document.querySelectorAll<HTMLButtonElement>('[data-luna-variant]'))
     button.setAttribute('aria-pressed', String(button.dataset.lunaVariant === appearance.avatar));
@@ -121,25 +100,6 @@ function updateAvatarPreview() {
   $('#studio-fashion-credit').hidden = !['apron', 'serin'].includes(appearance.avatar);
   for (const button of document.querySelectorAll<HTMLButtonElement>('[data-avatar-motion]'))
     button.setAttribute('aria-pressed', String(button.dataset.avatarMotion === 'idle'));
-}
-
-function showVictory() {
-  $('#studio-seats').hidden = false;
-  board.clearCelebration();
-  board.setState(winningMoves[seat], null, false, false);
-  board.setSeats(seat, null);
-  board.focusShowcase('victory', seat);
-  $('#studio-stage-label').textContent = '승리 장면 회전 · 왼쪽 버튼이나 손가락으로 드래그';
-  $('#studio-preview-actions').hidden = false;
-  $('#studio-view').hidden = true;
-  board.celebrate(seat);
-  $('#studio-victory').textContent = '↻ 승리 연출 다시 보기';
-  updateAvatarPreview();
-}
-
-function showCategory() {
-  if (category === 'victory') showVictory();
-  else showScene();
 }
 
 function applySeatAppearance() {
@@ -233,19 +193,18 @@ function setAppearance(next: Appearance) {
   board.setBoardStyle(appearance.board);
   applySeatAppearance();
   $('#studio-current-label').textContent =
-    `${optionName('stone', appearance.stone)} · ${optionName('avatar', appearance.avatar)} · ${optionName('board', appearance.board)} · ${optionName('victory', appearance.victory)}`;
+    `${optionName('stone', appearance.stone)} · ${optionName('avatar', appearance.avatar)} · ${optionName('board', appearance.board)} · ${DANCE_NAMES[appearance.avatar][appearance.dances[appearance.avatar]]}`;
   $('#studio-save-status').textContent = saved ? '자동 저장됨' : '이 탭에서만 적용';
   renderItems();
   updateAvatarPreview();
-  if (category === 'victory') showVictory();
-  else board.previewAvatarMotion('idle');
+  board.previewAvatarMotion('idle');
 }
 
 for (const tab of document.querySelectorAll<HTMLButtonElement>('.studio-tabs [data-category]'))
   tab.addEventListener('click', () => {
     category = tab.dataset.category as Category;
     renderItems();
-    showCategory();
+    showScene();
   });
 for (const button of document.querySelectorAll<HTMLButtonElement>('[data-seat]'))
   button.addEventListener('click', () => {
@@ -253,15 +212,24 @@ for (const button of document.querySelectorAll<HTMLButtonElement>('[data-seat]')
     for (const peer of document.querySelectorAll<HTMLButtonElement>('[data-seat]'))
       peer.setAttribute('aria-pressed', String(peer === button));
     applySeatAppearance();
-    showCategory();
+    showScene();
   });
 
-$('#studio-victory').addEventListener('click', showVictory);
 for (const button of document.querySelectorAll<HTMLButtonElement>('[data-avatar-motion]'))
   button.addEventListener('click', () => {
     board.previewAvatarMotion(button.dataset.avatarMotion as AvatarMotion);
     for (const peer of document.querySelectorAll<HTMLButtonElement>('[data-avatar-motion]'))
       peer.setAttribute('aria-pressed', String(peer === button));
+  });
+for (const button of document.querySelectorAll<HTMLButtonElement>('[data-avatar-dance]'))
+  button.addEventListener('click', () => {
+    setAppearance({
+      ...appearance,
+      dances: { ...appearance.dances, [appearance.avatar]: button.dataset.avatarDance as DanceStyle },
+    });
+    board.previewAvatarMotion('win');
+    for (const peer of document.querySelectorAll<HTMLButtonElement>('[data-avatar-motion]'))
+      peer.setAttribute('aria-pressed', String(peer.dataset.avatarMotion === 'win'));
   });
 for (const button of document.querySelectorAll<HTMLButtonElement>('[data-luna-variant]'))
   button.addEventListener('click', () =>
@@ -272,7 +240,7 @@ $('#studio-view').addEventListener('click', () => {
 });
 $('#studio-zoom-in').addEventListener('click', () => board.zoom(0.78));
 $('#studio-zoom-out').addEventListener('click', () => board.zoom(1.28));
-$('#studio-reset-view').addEventListener('click', showCategory);
+$('#studio-reset-view').addEventListener('click', showScene);
 $('#studio-default').addEventListener('click', () => setAppearance({ ...DEFAULT_APPEARANCE }));
 $('#studio-random').addEventListener('click', () => {
   const random = <T>(list: readonly T[]) => list[crypto.getRandomValues(new Uint32Array(1))[0] % list.length];
@@ -280,7 +248,7 @@ $('#studio-random').addEventListener('click', () => {
     stone: random(STONES),
     avatar: random(AVATARS.filter((avatar) => avatar !== 'rose')),
     board: random(BOARDS),
-    victory: random(VICTORIES),
+    dances: Object.fromEntries(AVATARS.map((avatar) => [avatar, random(DANCES)])) as Appearance['dances'],
   });
 });
 

@@ -3,6 +3,7 @@ import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import { clone } from 'three/addons/utils/SkeletonUtils.js';
 import { updateVroidGesture } from './avatar-gestures';
 import type { AvatarMotion } from './petal-avatar';
+import type { DanceStyle } from './appearance';
 
 export const FASHION_AVATARS = ['apron', 'rose', 'serin'] as const;
 export type FashionStyle = (typeof FASHION_AVATARS)[number];
@@ -38,11 +39,16 @@ export class FashionAvatar {
   private readonly head: THREE.Object3D;
   private readonly leftArm: THREE.Object3D;
   private readonly rightArm: THREE.Object3D;
+  private readonly leftForearm: THREE.Object3D;
+  private readonly rightForearm: THREE.Object3D;
   private readonly leftLeg: THREE.Object3D;
   private readonly rightLeg: THREE.Object3D;
+  private readonly leftShin: THREE.Object3D;
+  private readonly rightShin: THREE.Object3D;
   private readonly restHipY: number;
   private elapsed = 0;
   motion: AvatarMotion = 'idle';
+  dance: DanceStyle = 'signature';
 
   constructor(
     readonly style: FashionStyle,
@@ -62,8 +68,12 @@ export class FashionAvatar {
     this.head = bone('J_Bip_C_Head');
     this.leftArm = bone('J_Bip_L_UpperArm');
     this.rightArm = bone('J_Bip_R_UpperArm');
+    this.leftForearm = bone('J_Bip_L_LowerArm');
+    this.rightForearm = bone('J_Bip_R_LowerArm');
     this.leftLeg = bone('J_Bip_L_UpperLeg');
     this.rightLeg = bone('J_Bip_R_UpperLeg');
+    this.leftShin = bone('J_Bip_L_LowerLeg');
+    this.rightShin = bone('J_Bip_R_LowerLeg');
     this.restHipY = this.hips.position.y;
     if (style === 'serin') this.head.scale.set(0.84, 0.89, 0.9);
 
@@ -96,7 +106,10 @@ export class FashionAvatar {
         copy.onBeforeCompile = (shader: THREE.WebGLProgramParametersWithUniforms) => {
           shader.vertexShader = shader.vertexShader
             .replace('void main() {', 'varying float serinY;\nvarying vec3 serinNormal;\nvoid main() {')
-            .replace('#include <defaultnormal_vertex>', '#include <defaultnormal_vertex>\n serinNormal = normalize(transformedNormal);')
+            .replace(
+              '#include <defaultnormal_vertex>',
+              '#include <defaultnormal_vertex>\n serinNormal = normalize(transformedNormal);',
+            )
             .replace('#include <begin_vertex>', '#include <begin_vertex>\n serinY = position.y;');
           shader.fragmentShader = shader.fragmentShader
             .replace('void main() {', 'varying float serinY;\nvarying vec3 serinNormal;\nvoid main() {')
@@ -142,21 +155,26 @@ export class FashionAvatar {
     this.update(0);
   }
 
-  play(motion: AvatarMotion) {
-    if (this.motion !== motion) this.elapsed = 0;
+  play(motion: AvatarMotion, dance: DanceStyle = this.dance) {
+    if (this.motion !== motion || this.dance !== dance) this.elapsed = 0;
     this.motion = motion;
+    this.dance = dance;
   }
 
   update(delta: number) {
     this.elapsed += delta;
-    updateVroidGesture(this.style, this.motion, this.elapsed, delta, this.restHipY, {
+    updateVroidGesture(this.style, this.motion, this.dance, this.elapsed, delta, this.restHipY, {
       hips: this.hips,
       spine: this.spine,
       head: this.head,
       leftArm: this.leftArm,
       rightArm: this.rightArm,
+      leftForearm: this.leftForearm,
+      rightForearm: this.rightForearm,
       leftLeg: this.leftLeg,
       rightLeg: this.rightLeg,
+      leftShin: this.leftShin,
+      rightShin: this.rightShin,
     });
   }
 }

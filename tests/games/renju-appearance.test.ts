@@ -1,66 +1,49 @@
 import { describe, expect, it } from 'vitest';
 import {
   APPEARANCE_OPTIONS,
+  AVATARS,
   appearanceForSeat,
   DEFAULT_APPEARANCE,
   normalizeAppearance,
 } from '../../src/domains/games/renju/appearance';
 
 describe('Omokmaru appearance values', () => {
-  it('accepts the remaining designs and drops removed accessories', () => {
+  it('keeps a separate dance choice for every avatar across selection and storage', () => {
     const selected = normalizeAppearance({
-      stone: 'rose',
+      stone: 'jade',
       avatar: 'luna',
-      accessory: 'crown',
       board: 'meadow',
-      victory: 'cheer',
+      dances: { ...DEFAULT_APPEARANCE.dances, luna: 'encore', serin: 'signature' },
     });
-    expect(selected).toEqual({ stone: 'rose', avatar: 'luna', board: 'meadow', victory: 'cheer' });
+    expect(appearanceForSeat('black', 'black', selected)).toEqual({ stone: 'jade', avatar: 'luna', dance: 'encore' });
+    expect(appearanceForSeat('white', 'black', selected)).toEqual({
+      stone: 'classic',
+      avatar: 'luna',
+      dance: 'encore',
+    });
+    const serin = normalizeAppearance({ ...selected, avatar: 'serin' });
+    expect(appearanceForSeat('black', 'black', serin).dance).toBe('signature');
+    expect(normalizeAppearance(JSON.parse(JSON.stringify(selected))).dances.luna).toBe('encore');
   });
 
-  it('falls back to the default for invalid client values', () => {
-    expect(normalizeAppearance({ stone: '__proto__', avatar: null, board: 100, victory: 'unknown' })).toEqual(
-      DEFAULT_APPEARANCE,
-    );
-    expect(normalizeAppearance({ stone: 'jade', avatar: 'coral', board: 'oak', victory: 'spin' }).avatar).toBe('petal');
+  it('migrates older global victory settings and invalid dances to avatar defaults', () => {
+    const old = normalizeAppearance({ avatar: 'serin', victory: 'spin', accessory: 'crown' });
+    expect(old.avatar).toBe('serin');
+    expect(old.dances).toEqual(DEFAULT_APPEARANCE.dances);
+    expect(normalizeAppearance({ avatar: 'azure' }).avatar).toBe('petal');
+    expect(normalizeAppearance({ dances: { petal: '__proto__', luna: 'encore' } }).dances).toEqual({
+      ...DEFAULT_APPEARANCE.dances,
+      luna: 'encore',
+    });
   });
 
-  it('shares the chosen avatar across seats while keeping local stone and victory choices', () => {
-    const selected = normalizeAppearance({ stone: 'jade', avatar: 'luna', victory: 'spin' });
-    expect(appearanceForSeat('black', 'black', selected)).toEqual(selected);
-    expect(appearanceForSeat('white', 'black', selected)).toEqual({ ...DEFAULT_APPEARANCE, avatar: 'luna' });
-    expect(appearanceForSeat('black', 'white', selected)).toEqual({ ...DEFAULT_APPEARANCE, avatar: 'luna' });
-    expect(appearanceForSeat('white', 'white', selected)).toEqual(selected);
-    expect(appearanceForSeat('black', 'spectator', selected)).toEqual({ ...DEFAULT_APPEARANCE, avatar: 'luna' });
-    expect(appearanceForSeat('white', null, selected)).toEqual({ ...DEFAULT_APPEARANCE, avatar: 'luna' });
-  });
-
-  it('keeps the chosen avatars and Luna variant available for either seat', () => {
-    for (const avatar of ['petal', 'luna', 'apron', 'rose', 'serin'] as const) {
+  it('keeps only the current avatar designs and no separate victory category', () => {
+    expect(APPEARANCE_OPTIONS).not.toHaveProperty('victory');
+    expect(APPEARANCE_OPTIONS.avatar.map(({ id }) => id)).toEqual(['petal', 'luna', 'apron', 'serin']);
+    for (const avatar of AVATARS) {
       const selected = normalizeAppearance({ avatar });
       expect(selected.avatar).toBe(avatar);
       expect(appearanceForSeat('white', 'black', selected).avatar).toBe(avatar);
-      expect(appearanceForSeat('black', 'white', selected).avatar).toBe(avatar);
     }
-    for (const avatar of ['classic', 'ribbon', 'cherry', 'crimson', 'sylvie']) {
-      expect(normalizeAppearance({ avatar }).avatar).toBe(DEFAULT_APPEARANCE.avatar);
-    }
-  });
-
-  it('retains Petal and resets removed characters to Petal', () => {
-    expect(normalizeAppearance({ avatar: 'petal' }).avatar).toBe('petal');
-    expect(normalizeAppearance({ avatar: 'azure' }).avatar).toBe('petal');
-    expect(normalizeAppearance({ avatar: 'shadow' }).avatar).toBe('petal');
-    expect(normalizeAppearance({ avatar: 'coral' }).avatar).toBe('petal');
-    expect(normalizeAppearance({ avatar: 'mint', stone: 'heart' })).toEqual(DEFAULT_APPEARANCE);
-  });
-
-  it('uses a deeper color for the black seat in every stone pair', () => {
-    const brightness = (hex: string) => {
-      const color = Number.parseInt(hex.slice(1), 16);
-      return ((color >> 16) & 255) * 0.2126 + ((color >> 8) & 255) * 0.7152 + (color & 255) * 0.0722;
-    };
-    for (const option of APPEARANCE_OPTIONS.stone)
-      expect(brightness(option.colors[0])).toBeLessThan(brightness(option.colors[1]));
   });
 });

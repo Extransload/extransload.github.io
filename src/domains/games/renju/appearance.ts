@@ -15,24 +15,42 @@ export const STONES = [
 ] as const;
 export const AVATARS = ['petal', 'luna', 'apron', 'rose', 'serin'] as const;
 export const BOARDS = ['oak', 'walnut', 'linen', 'ink', 'meadow'] as const;
-export const VICTORIES = ['dance', 'spin', 'bow', 'cheer'] as const;
+export const DANCES = ['signature', 'encore'] as const;
 
 export type StoneStyle = (typeof STONES)[number];
 export type AvatarStyle = (typeof AVATARS)[number];
 export type BoardStyle = (typeof BOARDS)[number];
-export type VictoryStyle = (typeof VICTORIES)[number];
+export type DanceStyle = (typeof DANCES)[number];
 export type PlayerAppearance = {
   stone: StoneStyle;
   avatar: AvatarStyle;
-  victory: VictoryStyle;
+  dance: DanceStyle;
 };
-export type Appearance = PlayerAppearance & { board: BoardStyle };
+export type Appearance = Omit<PlayerAppearance, 'dance'> & {
+  board: BoardStyle;
+  dances: Record<AvatarStyle, DanceStyle>;
+};
+
+export const DEFAULT_DANCES: Record<AvatarStyle, DanceStyle> = {
+  petal: 'signature',
+  luna: 'signature',
+  rose: 'signature',
+  apron: 'signature',
+  serin: 'signature',
+};
+export const DANCE_NAMES: Record<AvatarStyle, Record<DanceStyle, string>> = {
+  petal: { signature: '꽃길 스텝', encore: '꽃잎 퍼레이드' },
+  luna: { signature: '팝 웨이브', encore: '핑크 피날레' },
+  rose: { signature: '노을 왈츠', encore: '저녁 별 스윙' },
+  apron: { signature: '리본 스킵', encore: '앞치마 폴카' },
+  serin: { signature: '나이트 그루브', encore: '문라이트 턴' },
+};
 
 export const DEFAULT_APPEARANCE: Appearance = {
   stone: 'classic',
   avatar: 'petal',
   board: 'oak',
-  victory: 'dance',
+  dances: { ...DEFAULT_DANCES },
 };
 
 export function appearanceForSeat(
@@ -40,7 +58,11 @@ export function appearanceForSeat(
   mySeat: 'black' | 'white' | 'spectator' | null,
   selected: Appearance,
 ): PlayerAppearance {
-  return { ...(seat === mySeat ? selected : DEFAULT_APPEARANCE), avatar: selected.avatar };
+  return {
+    stone: seat === mySeat ? selected.stone : DEFAULT_APPEARANCE.stone,
+    avatar: selected.avatar,
+    dance: selected.dances[selected.avatar],
+  };
 }
 export const APPEARANCE_STORAGE_KEY = 'omokmaru-appearance-v1';
 
@@ -83,21 +105,21 @@ export const APPEARANCE_OPTIONS = {
     { id: 'ink', name: '먹빛', detail: '네 귀퉁이에 금속판을 단 판', colors: ['#7b8c96', '#3b4f5b'] },
     { id: 'meadow', name: '초원', detail: '네 귀퉁이에 잎이 놓인 판', colors: ['#87916d', '#4b5e38'] },
   ],
-  victory: [
-    { id: 'dance', name: '신나는 춤', detail: '통통 뛰며 두 팔을 흔듭니다', colors: ['#d6aa63', '#f8e8be'] },
-    { id: 'spin', name: '빙글 회전', detail: '한 바퀴 돌며 승리를 즐깁니다', colors: ['#829faf', '#dbeaf0'] },
-    { id: 'bow', name: '예의 바른 인사', detail: '상대에게 고개를 숙여 인사합니다', colors: ['#8eaa90', '#e1eedf'] },
-    { id: 'cheer', name: '만세!', detail: '두 팔을 번쩍 들고 환호합니다', colors: ['#c98c7a', '#f6d4be'] },
-  ],
 } as const;
 
 export function normalizeAppearance(value: unknown): Appearance {
   const input = value && typeof value === 'object' ? (value as Partial<Appearance>) : {};
+  const storedDances = input.dances && typeof input.dances === 'object' ? input.dances : DEFAULT_DANCES;
   return {
     stone: STONES.includes(input.stone as StoneStyle) ? input.stone! : DEFAULT_APPEARANCE.stone,
     avatar: AVATARS.includes(input.avatar as AvatarStyle) ? input.avatar! : DEFAULT_APPEARANCE.avatar,
     board: BOARDS.includes(input.board as BoardStyle) ? input.board! : DEFAULT_APPEARANCE.board,
-    victory: VICTORIES.includes(input.victory as VictoryStyle) ? input.victory! : DEFAULT_APPEARANCE.victory,
+    dances: Object.fromEntries(
+      AVATARS.map((avatar) => [
+        avatar,
+        DANCES.includes(storedDances[avatar] as DanceStyle) ? storedDances[avatar] : DEFAULT_DANCES[avatar],
+      ]),
+    ) as Record<AvatarStyle, DanceStyle>,
   };
 }
 

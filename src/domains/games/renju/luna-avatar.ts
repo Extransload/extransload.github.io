@@ -3,6 +3,7 @@ import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import { clone } from 'three/addons/utils/SkeletonUtils.js';
 import { updateVroidGesture } from './avatar-gestures';
 import type { AvatarMotion } from './petal-avatar';
+import type { DanceStyle } from './appearance';
 
 let source: Promise<GLTF> | undefined;
 
@@ -25,11 +26,16 @@ export class LunaAvatar {
   private readonly head: THREE.Object3D;
   private readonly leftArm: THREE.Object3D;
   private readonly rightArm: THREE.Object3D;
+  private readonly leftForearm: THREE.Object3D;
+  private readonly rightForearm: THREE.Object3D;
   private readonly leftLeg: THREE.Object3D;
   private readonly rightLeg: THREE.Object3D;
+  private readonly leftShin: THREE.Object3D;
+  private readonly rightShin: THREE.Object3D;
   private readonly restHipY: number;
   private elapsed = 0;
   motion: AvatarMotion = 'idle';
+  dance: DanceStyle = 'signature';
 
   constructor(gltf: GLTF) {
     const model = clone(gltf.scene);
@@ -42,8 +48,12 @@ export class LunaAvatar {
     this.head = this.bone(model, 'J_Bip_C_Head');
     this.leftArm = this.bone(model, 'J_Bip_L_UpperArm');
     this.rightArm = this.bone(model, 'J_Bip_R_UpperArm');
+    this.leftForearm = this.bone(model, 'J_Bip_L_LowerArm');
+    this.rightForearm = this.bone(model, 'J_Bip_R_LowerArm');
     this.leftLeg = this.bone(model, 'J_Bip_L_UpperLeg');
     this.rightLeg = this.bone(model, 'J_Bip_R_UpperLeg');
+    this.leftShin = this.bone(model, 'J_Bip_L_LowerLeg');
+    this.rightShin = this.bone(model, 'J_Bip_R_LowerLeg');
     this.restHipY = this.hips.position.y;
 
     model.traverse((object) => {
@@ -78,21 +88,26 @@ export class LunaAvatar {
     return bone;
   }
 
-  play(motion: AvatarMotion) {
-    if (this.motion !== motion) this.elapsed = 0;
+  play(motion: AvatarMotion, dance: DanceStyle = this.dance) {
+    if (this.motion !== motion || this.dance !== dance) this.elapsed = 0;
     this.motion = motion;
+    this.dance = dance;
   }
 
   update(delta: number) {
     this.elapsed += delta;
-    updateVroidGesture('luna', this.motion, this.elapsed, delta, this.restHipY, {
+    updateVroidGesture('luna', this.motion, this.dance, this.elapsed, delta, this.restHipY, {
       hips: this.hips,
       spine: this.spine,
       head: this.head,
       leftArm: this.leftArm,
       rightArm: this.rightArm,
+      leftForearm: this.leftForearm,
+      rightForearm: this.rightForearm,
       leftLeg: this.leftLeg,
       rightLeg: this.rightLeg,
+      leftShin: this.leftShin,
+      rightShin: this.rightShin,
     });
   }
 }

@@ -478,18 +478,36 @@
   background: linear-gradient(90deg, #567bb2 22%, #e0b779 23% 77%, #567bb2 78%);
 }
 
-.studio-avatar-motions {
+.studio-avatar-motions,
+.studio-avatar-dances {
   display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 6px;
   margin-top: 14px;
 }
 
 .studio-avatar-motions[hidden],
+.studio-avatar-dances[hidden],
 .studio-avatar-credit[hidden] {
   display: none;
 }
 
-.studio-avatar-motions button {
+.studio-avatar-dances-label {
+  margin-right: 8px;
+  color: #40594f;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.studio-avatar-dances small {
+  flex-basis: 100%;
+  color: #77827c;
+  font-size: 11px;
+}
+
+.studio-avatar-motions button,
+.studio-avatar-dances button {
   padding: 10px 18px;
   border: 1px solid #d6d5c8;
   border-radius: 20px;
@@ -498,7 +516,8 @@
   font-size: 12px;
 }
 
-.studio-avatar-motions button[aria-pressed='true'] {
+.studio-avatar-motions button[aria-pressed='true'],
+.studio-avatar-dances button[aria-pressed='true'] {
   border-color: #315e4d;
   background: #315e4d;
   color: #fffdf8;
@@ -513,18 +532,6 @@
 
 .studio-avatar-credit a {
   color: inherit;
-}
-
-.studio-item[data-category='victory'] .studio-item-art i {
-  width: 42px;
-  height: 42px;
-  border-color: var(--item-b);
-  border-radius: 14px;
-  transform: rotate(-12deg);
-}
-
-.studio-item[data-category='victory'] .studio-item-art i + i {
-  display: none;
 }
 
 .studio-item strong {
@@ -646,7 +653,6 @@
 
 .studio-preview-top,
 .studio-preview-controls,
-.studio-preview-actions,
 .studio-current,
 .studio-links {
   display: flex;
@@ -655,7 +661,6 @@
   gap: 12px;
 }
 
-.studio-preview-actions[hidden],
 .studio-camera button[hidden] {
   display: none;
 }
@@ -718,8 +723,7 @@
 }
 
 .studio-seats button,
-.studio-camera button,
-.studio-preview-actions button {
+.studio-camera button {
   border: 1px solid #d6d5c8;
   border-radius: 9px;
   background: #f9f7f1;
@@ -756,21 +760,6 @@
   width: 34px;
   height: 34px;
   font-size: 16px;
-}
-
-.studio-preview-actions {
-  justify-content: flex-start;
-  margin-top: 14px;
-}
-
-.studio-preview-actions button {
-  padding: 11px 15px;
-}
-
-.studio-preview-actions .studio-play-button {
-  border-color: #315e4d;
-  background: #315e4d;
-  color: #fffdf8;
 }
 
 .studio-current {
