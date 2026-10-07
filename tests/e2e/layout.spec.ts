@@ -649,141 +649,140 @@ test('playroom lists Omokmaru, opens its board, and About remains standalone', a
   await expect(page.locator('.site-header')).toHaveCount(0);
 });
 
-test('Playroom animations stay active under reduced motion', async ({ page }) => {
-  test.setTimeout(120_000);
-  const errors: string[] = [];
-  page.on('pageerror', (error) => errors.push(error.message));
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.goto('/playroom/');
-  expect(await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches)).toBe(true);
-  for (const selector of ['.door-leaf', '.door-light', '.game-card', '.game-card-board', '.game-card-cta span']) {
-    expect(
-      await page
-        .locator(selector)
-        .first()
-        .evaluate((element) => getComputedStyle(element).transitionDuration),
-    ).not.toBe('0s');
-  }
-  await page.goto('/playroom/omokmaru/solo/');
-  await expect(page.locator('#stage-overlay .overlay-card')).toHaveCSS('animation-name', 'overlay-enter');
-  await page.locator('#side-white').click();
-  await page.locator('#difficulty').selectOption('1');
-  await page.locator('#start').click();
-  await expect(page.locator('#status')).toHaveText('내 차례');
-  await expect(page.locator('.player.active .piece')).toHaveCSS('animation-name', 'turn-piece-pulse');
-  await expect(page.locator('#sound')).toHaveAttribute('aria-expanded', 'false');
-  await page.locator('#sound').click();
-  await expect(page.locator('#sound-panel')).toBeVisible();
-  await expect(page.locator('#sound-volume')).toHaveValue('75');
-  await page.locator('#sound-toggle').click();
-  await expect(page.locator('#sound-toggle')).toHaveAttribute('aria-pressed', 'false');
-  await page.locator('#sound-toggle').click();
-  const canvas = page.locator('.canvas canvas');
-  const bounds = await canvas.boundingBox();
-  expect(bounds).not.toBeNull();
-  const captureBoard = () => page.screenshot({ clip: bounds!, animations: 'allow' });
-  page.once('dialog', (dialog) => void dialog.accept());
-  await page.locator('#resign-solo').click();
-  const firstVictory = await captureBoard();
-  await expect(async () => {
-    expect((await captureBoard()).equals(firstVictory)).toBe(false);
-  }).toPass({ timeout: 15_000 });
+test.describe('Playroom animations stay active under reduced motion', () => {
+  // Each scene owns its browser context and budget; software WebGL readbacks are slow in CI.
+  test.use({ contextOptions: { reducedMotion: 'reduce' } });
+  test.setTimeout(60_000);
 
-  await page.goto('/playroom/omokmaru/');
-  await page.evaluate(() => {
-    const clock = document.querySelector<HTMLElement>('#clock-black')!;
-    clock.classList.add('urgent');
-    const ready = document.querySelector<HTMLElement>('#black-ready')!.cloneNode(true) as HTMLElement;
-    ready.id = 'ready-motion-probe';
-    ready.hidden = false;
-    ready.classList.add('is-ready');
-    document.querySelector('#lobby')!.append(ready);
+  test.afterEach(async ({ page }) => {
+    expect(await page.pageErrors()).toEqual([]);
   });
-  await expect(page.locator('#clock-black')).toHaveCSS('animation-name', 'clock-pulse');
-  await expect(page.locator('#ready-motion-probe')).toHaveCSS('animation-name', 'ready-pop');
 
-  await page.goto('/playroom/omokmaru/wardrobe/');
+  const expectCanvasMotion = async (page: Page, selector: string) => {
+    const canvas = page.locator(selector);
+    await canvas.scrollIntoViewIfNeeded();
+    const bounds = await canvas.boundingBox();
+    expect(bounds).not.toBeNull();
+    // A page clip avoids repeating locator screenshot layout/scroll checks for every readback.
+    const capture = () => page.screenshot({ clip: bounds!, animations: 'allow' });
+    const before = await capture();
+    await expect(async () => {
+      expect((await capture()).equals(before)).toBe(false);
+    }).toPass({ timeout: 15_000 });
+  };
+
+  test('catalog and lobby keep their UI motion', async ({ page }) => {
+    await page.goto('/playroom/');
+    expect(await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches)).toBe(true);
+    for (const selector of ['.door-leaf', '.door-light', '.game-card', '.game-card-board', '.game-card-cta span']) {
+      expect(
+        await page
+          .locator(selector)
+          .first()
+          .evaluate((element) => getComputedStyle(element).transitionDuration),
+      ).not.toBe('0s');
+    }
+    await page.goto('/playroom/omokmaru/');
+    await page.evaluate(() => {
+      const clock = document.querySelector<HTMLElement>('#clock-black')!;
+      clock.classList.add('urgent');
+      const ready = document.querySelector<HTMLElement>('#black-ready')!.cloneNode(true) as HTMLElement;
+      ready.id = 'ready-motion-probe';
+      ready.hidden = false;
+      ready.classList.add('is-ready');
+      document.querySelector('#lobby')!.append(ready);
+    });
+    await expect(page.locator('#clock-black')).toHaveCSS('animation-name', 'clock-pulse');
+    await expect(page.locator('#ready-motion-probe')).toHaveCSS('animation-name', 'ready-pop');
+  });
+
+  test('solo keeps turn and victory motion', async ({ page }) => {
+    await page.goto('/playroom/omokmaru/solo/');
+    await expect(page.locator('#stage-overlay .overlay-card')).toHaveCSS('animation-name', 'overlay-enter');
+    await page.locator('#side-white').click();
+    await page.locator('#difficulty').selectOption('1');
+    await page.locator('#start').click();
+    await expect(page.locator('#status')).toHaveText('내 차례');
+    await expect(page.locator('.player.active .piece')).toHaveCSS('animation-name', 'turn-piece-pulse');
+    page.once('dialog', (dialog) => void dialog.accept());
+    await page.locator('#resign-solo').click();
+    await expectCanvasMotion(page, '.canvas canvas');
+  });
+
+  test('solo sound controls stay usable', async ({ page }) => {
+    await page.goto('/playroom/omokmaru/solo/');
+    await expect(page.locator('#sound')).toHaveAttribute('aria-expanded', 'false');
+    await page.locator('#sound').click();
+    await expect(page.locator('#sound-panel')).toBeVisible();
+    await expect(page.locator('#sound-volume')).toHaveValue('75');
+    await page.locator('#sound-toggle').click();
+    await expect(page.locator('#sound-toggle')).toHaveAttribute('aria-pressed', 'false');
+    await page.locator('#sound-toggle').click();
+    await expect(page.locator('#sound-toggle')).toHaveAttribute('aria-pressed', 'true');
+  });
+
   for (const category of ['stone', 'avatar', 'board'] as const) {
-    if (category !== 'stone') await page.locator(`.studio-tabs [data-category="${category}"]`).click();
-    await expect(page.locator('#studio-canvas')).toHaveAttribute('data-focus', category);
-    if (category === 'avatar') await page.locator('[data-item-id="luna"]').click();
-    const canvas = page.locator('#studio-canvas canvas');
-    const beforeOrbit = await canvas.screenshot();
-    const view = await canvas.boundingBox();
-    expect(view).not.toBeNull();
-    const scrollY = await page.evaluate(() => window.scrollY);
-    await page.mouse.move(view!.x + view!.width / 2, view!.y + view!.height / 2);
-    await page.mouse.down();
-    await page.mouse.move(view!.x + view!.width / 2 + 90, view!.y + view!.height / 2 + 25, { steps: 8 });
-    await page.mouse.up();
-    expect(await page.evaluate(() => window.scrollY)).toBe(scrollY);
-    expect((await canvas.screenshot()).equals(beforeOrbit)).toBe(false);
+    test(`wardrobe ${category} preview responds to orbit`, async ({ page }) => {
+      await page.goto('/playroom/omokmaru/wardrobe/');
+      if (category !== 'stone') await page.locator(`.studio-tabs [data-category="${category}"]`).click();
+      await expect(page.locator('#studio-canvas')).toHaveAttribute('data-focus', category);
+      if (category === 'avatar') await page.locator('[data-item-id="luna"]').click();
+      const canvas = page.locator('#studio-canvas canvas');
+      const beforeOrbit = await canvas.screenshot({ animations: 'allow' });
+      const view = await canvas.boundingBox();
+      expect(view).not.toBeNull();
+      const scrollY = await page.evaluate(() => window.scrollY);
+      await page.mouse.move(view!.x + view!.width / 2, view!.y + view!.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(view!.x + view!.width / 2 + 90, view!.y + view!.height / 2 + 25, { steps: 8 });
+      await page.mouse.up();
+      expect(await page.evaluate(() => window.scrollY)).toBe(scrollY);
+      expect((await canvas.screenshot({ animations: 'allow' })).equals(beforeOrbit)).toBe(false);
+    });
   }
-  await page.locator('.studio-tabs [data-category="avatar"]').click();
-  await page.locator('[data-item-id="petal"]').click();
-  await expect(page.locator('#studio-canvas')).toHaveAttribute('data-petal-black', 'ready', { timeout: 30_000 });
-  await expect(page.locator('#studio-avatar-motions')).toBeVisible();
-  await page.locator('[data-avatar-motion="win"]').click();
-  await expect(page.locator('#studio-canvas')).toHaveAttribute('data-avatar-black-motion', 'win');
-  const petalCanvas = page.locator('#studio-canvas canvas');
-  const firstPetalFrame = await petalCanvas.screenshot({ animations: 'allow' });
-  await expect(async () => {
-    expect((await petalCanvas.screenshot({ animations: 'allow' })).equals(firstPetalFrame)).toBe(false);
-  }).toPass({ timeout: 15_000 });
-  await page.locator('[data-item-id="luna"]').click();
-  await expect(page.locator('#studio-canvas')).toHaveAttribute('data-luna-black', 'ready', { timeout: 30_000 });
-  await expect(page.locator('#studio-avatar-motions')).toBeVisible();
-  for (const motion of ['idle', 'win', 'lose']) {
-    await test.step(`Luna ${motion} changes the rendered frame`, async () => {
+
+  const avatarMotions = [
+    { avatar: 'petal', motion: 'win' },
+    { avatar: 'luna', motion: 'idle' },
+    { avatar: 'luna', motion: 'win' },
+    { avatar: 'luna', motion: 'lose' },
+    { avatar: 'apron', motion: 'win' },
+    { avatar: 'serin', motion: 'win' },
+    { avatar: 'rose', motion: 'win' },
+  ] as const;
+
+  const selectAvatar = async (page: Page, avatar: (typeof avatarMotions)[number]['avatar']) => {
+    await page.goto('/playroom/omokmaru/wardrobe/?category=avatar');
+    await page.locator(`[data-item-id="${avatar === 'rose' ? 'luna' : avatar}"]`).click();
+    if (avatar === 'rose') await page.locator('[data-luna-variant="rose"]').click();
+    await expect(page.locator('#studio-canvas')).toHaveAttribute(`data-${avatar}-black`, 'ready', {
+      timeout: 45_000,
+    });
+    await expect(page.locator('#studio-avatar-motions')).toBeVisible();
+  };
+
+  for (const { avatar, motion } of avatarMotions) {
+    test(`${avatar} ${motion} keeps changing the rendered frame`, async ({ page }) => {
+      await selectAvatar(page, avatar);
       await page.locator(`[data-avatar-motion="${motion}"]`).click();
       await expect(page.locator('#studio-canvas')).toHaveAttribute('data-avatar-black-motion', motion);
       // Capture after the pose settles so this checks continuing motion.
       await page.waitForTimeout(800);
-      const avatarCanvas = page.locator('#studio-canvas canvas');
-      await avatarCanvas.scrollIntoViewIfNeeded();
-      const avatarBounds = await avatarCanvas.boundingBox();
-      expect(avatarBounds).not.toBeNull();
-      const captureAvatar = () => page.screenshot({ clip: avatarBounds!, animations: 'allow' });
-      const before = await captureAvatar();
-      // CI traces show a single software-GPU readback can take over six seconds.
-      await expect(async () => {
-        expect((await captureAvatar()).equals(before)).toBe(false);
-      }).toPass({ timeout: 15_000 });
+      await expectCanvasMotion(page, '#studio-canvas canvas');
     });
   }
-  for (const style of ['apron', 'serin']) {
-    await test.step(`${style} keeps moving under reduced motion`, async () => {
-      await page.locator(`[data-item-id="${style}"]`).click();
-      await expect(page.locator('#studio-canvas')).toHaveAttribute(`data-${style}-black`, 'ready', { timeout: 45_000 });
-      await page.locator('[data-avatar-motion="win"]').click();
-      await expect(page.locator('#studio-canvas')).toHaveAttribute('data-avatar-black-motion', 'win');
-      const canvas = page.locator('#studio-canvas canvas');
-      const before = await canvas.screenshot({ animations: 'allow' });
-      await expect(async () => {
-        expect((await canvas.screenshot({ animations: 'allow' })).equals(before)).toBe(false);
-      }).toPass({ timeout: 15_000 });
-    });
-  }
-  await test.step('Luna Rose variant keeps moving under reduced motion', async () => {
-    await page.locator('[data-item-id="luna"]').click();
-    await page.locator('[data-luna-variant="rose"]').click();
-    await expect(page.locator('#studio-canvas')).toHaveAttribute('data-rose-black', 'ready', { timeout: 45_000 });
+
+  test('Luna Rose encore changes the rendered frame', async ({ page }) => {
+    await selectAvatar(page, 'rose');
     await page.locator('[data-avatar-motion="win"]').click();
+    await expect(page.locator('.studio-tabs [data-category="victory"]')).toHaveCount(0);
+    await page.locator('[data-avatar-dance="encore"]').click();
+    await expect(page.locator('[data-avatar-dance="encore"]')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('#studio-canvas')).toHaveAttribute('data-avatar-black-dance', 'encore');
     await expect(page.locator('#studio-canvas')).toHaveAttribute('data-avatar-black-motion', 'win');
-    const canvas = page.locator('#studio-canvas canvas');
-    const before = await canvas.screenshot({ animations: 'allow' });
-    await expect(async () => {
-      expect((await canvas.screenshot({ animations: 'allow' })).equals(before)).toBe(false);
-    }).toPass({ timeout: 15_000 });
+    await page.waitForTimeout(800);
+    await expectCanvasMotion(page, '#studio-canvas canvas');
   });
-  await expect(page.locator('.studio-tabs [data-category="victory"]')).toHaveCount(0);
-  const customVictory = await page.locator('#studio-canvas canvas').screenshot();
-  await page.locator('[data-avatar-dance="encore"]').click();
-  await expect(page.locator('[data-avatar-dance="encore"]')).toHaveAttribute('aria-pressed', 'true');
-  await expect(async () => {
-    expect((await page.locator('#studio-canvas canvas').screenshot()).equals(customVictory)).toBe(false);
-  }).toPass({ timeout: 15_000 });
-  expect(errors).toEqual([]);
 });
 
 test('solo match replaces start with resign until the match ends', async ({ page }) => {
@@ -988,8 +987,8 @@ test('Omokmaru lobby separates play actions, styling, and public rooms', async (
   }
 });
 
-test('Omokmaru studio puts the 3D preview before options on a phone', async ({ browser }) => {
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+test('Omokmaru studio puts the 3D preview before options on a phone', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/playroom/omokmaru/wardrobe/');
   const preview = await page.locator('.studio-preview').boundingBox();
@@ -1023,24 +1022,31 @@ test('keyboard can inspect coordinates and place a solo move', async ({ page }) 
   await expect(page.locator('#undo')).toBeVisible();
 });
 
-test('small solo screen returns to the board when play starts', async ({ browser }) => {
-  const context = await browser.newContext({ hasTouch: true, isMobile: true, viewport: { width: 320, height: 568 } });
-  const page = await context.newPage();
-  try {
+test.describe('small solo screen', () => {
+  test.use({ hasTouch: true, isMobile: true, viewport: { width: 320, height: 568 } });
+
+  test('returns to the board when play starts', async ({ page }) => {
     await page.goto('/playroom/omokmaru/solo/');
     await page.locator('#side-white').click();
     await page.locator('#start').click();
     await expect.poll(() => page.evaluate(() => Math.round(window.scrollY))).toBe(0);
     await expect(page.locator('#stage-hint')).toContainText('내 차례');
-    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(320);
-    for (const button of await page.locator('.toolbar > button').all()) {
-      const bounds = await button.boundingBox();
-      expect(bounds!.y).toBeGreaterThanOrEqual(0);
-      expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(320);
+    // Read the layout together instead of waiting for a software-GPU frame per button.
+    const layout = await page.evaluate(() => ({
+      width: document.documentElement.scrollWidth,
+      buttons: [...document.querySelectorAll('.toolbar > button')].map((button) =>
+        button.getBoundingClientRect().toJSON(),
+      ),
+    }));
+    expect(layout.width).toBe(320);
+    expect(layout.buttons.length).toBeGreaterThan(0);
+    for (const bounds of layout.buttons) {
+      expect(bounds.width).toBeGreaterThan(0);
+      expect(bounds.height).toBeGreaterThan(0);
+      expect(bounds.y).toBeGreaterThanOrEqual(0);
+      expect(bounds.x + bounds.width).toBeLessThanOrEqual(320);
     }
-  } finally {
-    await context.close();
-  }
+  });
 });
 
 test('small online room keeps its controls inside the viewport', async ({ page }) => {
