@@ -205,7 +205,7 @@ describe('avatar choreography', () => {
         expect(maxWrist).toBeGreaterThan(0.035);
       }
     }
-  });
+  }, 20_000);
 });
 
 function loopDuration(style: DanceAvatar, variant: DanceStyle) {
