@@ -54,6 +54,15 @@ let lastChatId = '';
 let refreshingRooms = false;
 let navigationVersion = 0;
 
+function rematchPending() {
+  return (
+    state?.status === 'finished' &&
+    !state.rematchClosed &&
+    !!state.rematchDeadline &&
+    Date.now() + serverOffset < state.rematchDeadline
+  );
+}
+
 function status(message: string, kind: 'ready' | 'error' | 'idle' = 'idle') {
   $('#status').textContent = message;
   $('#connection-dot').className = `connection-dot ${kind === 'ready' ? 'connected' : kind === 'error' ? 'error' : ''}`;
@@ -122,7 +131,7 @@ function renderOverlay() {
     kicker = '',
     mode = '';
   const now = Date.now() + serverOffset;
-  if (offline && currentRoom && state?.status !== 'finished') {
+  if (offline && currentRoom && (state?.status !== 'finished' || rematchPending())) {
     title = '연결 복구 중';
     subtitle = '자동으로 다시 연결합니다';
     mode = 'waiting';
@@ -229,8 +238,8 @@ function render() {
     $(`#${seat}-ready`).hidden = !(waiting || (finished && !state?.rematchClosed));
     $(`#${seat}-ready`).classList.toggle('is-ready', !!state?.ready[seat]);
   }
-  if (finished) status('대국 종료', 'ready');
-  else if (offline) status('연결 복구 중', 'error');
+  if (offline) status('연결 복구 중', 'error');
+  else if (finished) status('대국 종료', 'ready');
   else if (waiting)
     status(!online ? '서버 연결 중' : role === 'spectator' ? '관전 중' : '대국 준비 중', online ? 'ready' : 'idle');
   else if (playing) status(role === 'spectator' ? '관전 중' : myTurn ? '내 차례' : '상대 차례', 'ready');
@@ -420,11 +429,13 @@ function connect() {
       $('#lobby-note').textContent = '방장이 내보냈습니다. 이 방에는 다시 입장할 수 없습니다.';
       return;
     }
-    offline = true;
-    if (state?.status !== 'finished') render();
+    const reconnecting = state?.status !== 'finished' || rematchPending();
+    offline = reconnecting;
+    if (!reconnecting) return;
+    render();
     const delay = Math.min(15000, 800 * 2 ** retry++);
     window.setTimeout(() => {
-      if (socket === ws && currentRoom && state?.status !== 'finished') connect();
+      if (socket === ws && currentRoom && (state?.status !== 'finished' || rematchPending())) connect();
     }, delay);
   };
   ws.onerror = () => ws.close();
