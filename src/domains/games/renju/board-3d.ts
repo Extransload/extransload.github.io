@@ -761,8 +761,8 @@ export class RenjuBoard {
     this.showcaseSeat = seat;
     this.host.dataset.focus = focus;
     this.topView = false;
-    // The studio previews inside the real game scene, so every choice is seen at play scale.
-    this.board.visible = true;
+    // Keep the avatar preview clear of the board and floor trays.
+    this.board.visible = focus !== 'avatar';
     this.stones.visible = true;
     this.lastMove.visible = false;
     this.highlights.visible = false;
@@ -772,7 +772,7 @@ export class RenjuBoard {
     for (const color of ['black', 'white'] as const) {
       const rig = this.avatars[color];
       rig.group.visible = true;
-      rig.plinth.visible = true;
+      rig.plinth.visible = focus !== 'avatar';
       rig.group.rotation.y = Math.atan2(-rig.group.position.x, -rig.group.position.z);
     }
     this.frameShowcaseCamera(focus);
