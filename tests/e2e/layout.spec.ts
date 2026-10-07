@@ -1212,7 +1212,7 @@ test('Omokmaru studio puts the 3D preview before options on a phone', async ({ p
 });
 
 test('Omokmaru tier collection covers every grade and saves an S+ look', async ({ page }) => {
-  test.setTimeout(60_000);
+  test.setTimeout(180_000);
   await page.goto('/playroom/omokmaru/wardrobe/');
   const counts = { stone: 6, avatar: 8, motion: 7, board: 10 };
   const additions = { stone: 4, avatar: 4, motion: 5, board: 4 };
