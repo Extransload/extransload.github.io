@@ -10,14 +10,14 @@ import {
 describe('Omokmaru appearance values', () => {
   it('keeps a separate dance choice for every avatar across selection and storage', () => {
     const selected = normalizeAppearance({
-      stone: 'jade',
+      stone: 'rose',
       avatar: 'luna',
       board: 'meadow',
       dances: { ...DEFAULT_APPEARANCE.dances, luna: 'encore', serin: 'signature' },
     });
-    expect(appearanceForSeat('black', 'black', selected)).toEqual({ stone: 'jade', avatar: 'luna', dance: 'encore' });
+    expect(appearanceForSeat('black', 'black', selected)).toEqual({ stone: 'rose', avatar: 'luna', dance: 'encore' });
     expect(appearanceForSeat('white', 'black', selected)).toEqual({
-      stone: 'classic',
+      stone: 'rose',
       avatar: 'luna',
       dance: 'encore',
     });
@@ -35,6 +35,12 @@ describe('Omokmaru appearance values', () => {
       ...DEFAULT_APPEARANCE.dances,
       luna: 'encore',
     });
+  });
+
+  it('offers only the rose stone and migrates retired stone designs to it', () => {
+    expect(APPEARANCE_OPTIONS.stone.map(({ id }) => id)).toEqual(['rose']);
+    expect(DEFAULT_APPEARANCE.stone).toBe('rose');
+    expect(normalizeAppearance({ stone: 'jade' }).stone).toBe('rose');
   });
 
   it('keeps only the current avatar designs and no separate victory category', () => {

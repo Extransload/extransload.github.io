@@ -3,6 +3,17 @@ import type { Move } from './rules';
 export type PlayerRole = 'black' | 'white';
 export type RoomRole = PlayerRole | 'spectator';
 export type PlayerIdentity = { name: string; country: string; maskedIp: string };
+// The server relays each seat's look without knowing the catalog; clients validate the values.
+export type PlayerLook = { stone: string; avatar: string; dance: string };
+export function sanitizePlayerLook(value: unknown): PlayerLook | null {
+  if (!value || typeof value !== 'object') return null;
+  const look = value as Record<string, unknown>;
+  const slug = (part: unknown) => (typeof part === 'string' && /^[a-z][a-z0-9-]{0,23}$/.test(part) ? part : null);
+  const stone = slug(look.stone);
+  const avatar = slug(look.avatar);
+  const dance = slug(look.dance);
+  return stone && avatar && dance ? { stone, avatar, dance } : null;
+}
 export function normalizeGuestName(value: unknown): string | null {
   if (typeof value !== 'string') return null;
   const name = value.trim();
@@ -59,6 +70,7 @@ export type RoomSnapshot = {
   serverNow: number;
   public: boolean;
   players: Record<PlayerRole, PlayerIdentity | null>;
+  looks?: Record<PlayerRole, PlayerLook | null>;
   chat: ChatMessage[];
 };
 

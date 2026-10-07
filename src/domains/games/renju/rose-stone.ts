@@ -10,8 +10,8 @@ function rosePetal(
   direction: number,
   curl: number,
 ) {
-  const radialSteps = 12;
-  const acrossSteps = 12;
+  const radialSteps = 7;
+  const acrossSteps = 6;
   const points: number[] = [];
   const tones: number[] = [];
   const triangles: number[] = [];
@@ -69,7 +69,7 @@ export function roseStoneGeometry() {
     const radius = 0.015 + t * 0.115;
     return new THREE.Vector3(Math.cos(angle) * radius, 0.39 - t * 0.05, Math.sin(angle) * radius);
   });
-  const center = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(spiralPoints), 96, 0.014, 7, false).toNonIndexed();
+  const center = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(spiralPoints), 48, 0.014, 5, false).toNonIndexed();
   center.deleteAttribute('uv');
   center.setAttribute(
     'color',

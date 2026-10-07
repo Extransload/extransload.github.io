@@ -12,55 +12,50 @@ import SeoHead from '../../../shared/components/SeoHead.astro';
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#142c35" />
-    <title>꾸미기 스튜디오 · 오목마루 — Extransload</title>
-    <SeoHead title="꾸미기 스튜디오 · 오목마루 — Extransload" description="무료 돌과 아바타, 바둑판, 아바타별 승리 춤을 3D로 미리 보고 꾸미세요" canonicalPath="/playroom/omokmaru/wardrobe/" />
+    <title>마루 옷장 · 오목마루 — Extransload</title>
+    <SeoHead title="마루 옷장 · 오목마루 — Extransload" description="오목마루의 아바타와 바둑판, 아바타별 승리 춤을 3D로 미리 보고 꾸미세요" canonicalPath="/playroom/omokmaru/wardrobe/" />
     <link rel="icon" type="image/png" href="/favicon.png" />
   </head>
   <body class="wardrobe-page">
     <header class="studio-top">
       <a class="door-control" href="/playroom/omokmaru/" aria-label="오목마루 로비로 돌아가기" title="오목마루로 돌아가기"><DoorIcon /></a>
-      <a class="studio-top-brand" href="/playroom/omokmaru/">OMOKMARU <span>/</span> WARDROBE</a>
-      <span class="studio-free">ALL FREE</span>
+      <h1 id="studio-title">마루 옷장</h1>
     </header>
     <main class="studio-shell">
-      <div class="studio-intro"><span class="studio-eyebrow">YOUR GAME, YOUR STYLE</span><h1 id="studio-title">꾸미기 스튜디오</h1><p>돌 하나부터 승리의 순간까지 마음에 드는 모습으로 꾸며 보세요. 모든 디자인은 무료이며 내 화면에만 적용됩니다.</p></div>
-      <section class="studio-editor" aria-labelledby="studio-title">
-        <nav class="studio-tabs" aria-label="꾸미기 종류">
-          <button type="button" data-category="stone" aria-pressed="true"><span>●</span> 돌</button>
-          <button type="button" data-category="avatar" aria-pressed="false"><span>◕</span> 아바타</button>
-          <button type="button" data-category="board" aria-pressed="false"><span>▦</span> 바둑판</button>
-        </nav>
-        <div class="studio-list-heading"><div><span id="studio-category-kicker">STONE COLLECTION</span><h2 id="studio-category-title">돌 컬렉션</h2></div><span id="studio-count">01 / 13</span></div>
-        <div id="studio-items" class="studio-items" aria-label="무료 디자인 목록"></div>
-        <div class="studio-sets"><div class="studio-sets-heading"><div><span>MY LOOKS</span><h2>내 세트</h2></div><button id="studio-random" class="studio-text-button" type="button">↝ 무작위 조합</button></div><p>마음에 드는 조합을 3개까지 저장하고 언제든 다시 적용하세요.</p><div id="studio-slots" class="studio-slots"></div><button id="studio-default" class="studio-text-button" type="button">기본 디자인으로 되돌리기</button></div>
-      </section>
       <section class="studio-preview" aria-label="3D 미리보기">
-        <div class="studio-preview-top"><div><span class="studio-eyebrow">LIVE PREVIEW</span><h2>나의 오목마루</h2></div><span id="studio-save-status" role="status">자동 저장됨</span></div>
-        <div class="studio-stage"><div id="studio-canvas" class="canvas"></div><div id="studio-stage-label" class="studio-stage-label">돌 회전 · 왼쪽 버튼이나 손가락으로 드래그</div></div>
-        <div class="studio-preview-controls">
-          <div id="studio-seats" class="studio-seats" role="group" aria-label="미리 볼 돌 색"><button type="button" data-seat="black" aria-pressed="true"><i class="studio-seat-stone black"></i> 흑돌 모습</button><button type="button" data-seat="white" aria-pressed="false"><i class="studio-seat-stone white"></i> 백돌 모습</button></div>
-          <div class="studio-camera" role="group" aria-label="미리보기 시점"><button id="studio-view" type="button" title="위에서 보기" aria-label="위에서 보기">▦</button><button id="studio-zoom-in" type="button" title="확대" aria-label="확대">＋</button><button id="studio-zoom-out" type="button" title="축소" aria-label="축소">−</button><button id="studio-reset-view" type="button" title="시점 초기화" aria-label="시점 초기화">↺</button></div>
+        <div class="studio-stage">
+          <div id="studio-canvas" class="canvas"></div>
         </div>
-        <div id="studio-luna-variants" class="studio-avatar-motions" role="group" aria-label="루나 모습" hidden>
-          <button type="button" data-luna-variant="luna" aria-pressed="true">기본</button>
-          <button type="button" data-luna-variant="rose" aria-pressed="false">노을빛</button>
+        <div id="studio-avatar-controls" class="studio-avatar-controls" hidden>
+          <div id="studio-luna-variants" class="studio-chips" role="group" aria-label="루나 모습" hidden>
+            <span class="studio-chips-label">모습</span>
+            <button type="button" data-luna-variant="luna" aria-pressed="true">기본</button>
+            <button type="button" data-luna-variant="rose" aria-pressed="false">노을빛</button>
+          </div>
+          <div id="studio-avatar-motions" class="studio-chips" role="group" aria-label="아바타 동작">
+            <span class="studio-chips-label">동작</span>
+            <button type="button" data-avatar-motion="idle" aria-pressed="true">대기</button>
+            <button type="button" data-avatar-motion="win" aria-pressed="false">승리</button>
+            <button type="button" data-avatar-motion="lose" aria-pressed="false">패배</button>
+          </div>
+          <div id="studio-avatar-dances" class="studio-chips" role="group" aria-label="선택한 아바타의 승리 춤">
+            <span class="studio-chips-label">승리 춤</span>
+            <button type="button" data-avatar-dance="signature" aria-pressed="true">시그니처</button>
+            <button type="button" data-avatar-dance="encore" aria-pressed="false">앙코르</button>
+          </div>
         </div>
-        <div id="studio-avatar-motions" class="studio-avatar-motions" role="group" aria-label="아바타 동작" hidden>
-          <button type="button" data-avatar-motion="idle" aria-pressed="true">대기</button>
-          <button type="button" data-avatar-motion="win" aria-pressed="false">승리</button>
-          <button type="button" data-avatar-motion="lose" aria-pressed="false">패배</button>
-        </div>
-        <div id="studio-avatar-dances" class="studio-avatar-dances" role="group" aria-label="선택한 아바타의 승리 춤" hidden>
-          <span class="studio-avatar-dances-label">승리 춤</span>
-          <button type="button" data-avatar-dance="signature" aria-pressed="true">시그니처</button>
-          <button type="button" data-avatar-dance="encore" aria-pressed="false">앙코르</button>
-          <small>아바타마다 따로 저장됩니다. 춤을 누르면 바로 미리 볼 수 있어요.</small>
-        </div>
-        <div class="studio-current"><span>현재 조합</span><strong id="studio-current-label"></strong></div>
-        <div class="studio-links"><a href="/playroom/omokmaru/solo/">AI 대국에서 사용 ↗</a><a href="/playroom/omokmaru/">온라인 대국에서 사용 ↗</a></div>
         <p id="studio-petal-credit" class="studio-avatar-credit" hidden>페탈 원작: <a href="https://studio.blender.org/characters/rain/v3/" target="_blank" rel="noreferrer">Rain Rig · Blender Foundation</a> · <a href="/models/omokmaru/ATTRIBUTION.md">CC BY 4.0 · 수정 내용</a></p>
         <p id="studio-luna-credit" class="studio-avatar-credit" hidden>루나 원작: <a href="https://github.com/madjin/vrm-samples/blob/master/vroid/beta/Victoria_Rubin.vrm" target="_blank" rel="noreferrer">Victoria Rubin · VRoid Project</a> · <a href="/models/omokmaru/ATTRIBUTION.md">CC0 · 수정 내용</a></p>
         <p id="studio-fashion-credit" class="studio-avatar-credit" hidden>새 아바타 원작: <a href="https://github.com/madjin/vrm-samples/tree/master/vroid/beta" target="_blank" rel="noreferrer">VRoid Project 샘플 모델</a> · <a href="/models/omokmaru/ATTRIBUTION.md">CC0 · 모델별 수정 내용</a></p>
+      </section>
+      <section class="studio-editor" aria-labelledby="studio-title">
+        <nav class="studio-tabs" aria-label="꾸밀 항목">
+          <button type="button" data-category="stone" aria-pressed="true">돌</button>
+          <button type="button" data-category="avatar" aria-pressed="false">아바타</button>
+          <button type="button" data-category="board" aria-pressed="false">바둑판</button>
+        </nav>
+        <div id="studio-items" class="studio-items" aria-label="디자인 목록"></div>
+        <button id="studio-default" class="studio-text-button" type="button">기본 디자인으로 되돌리기</button>
       </section>
     </main>
     <script>import '../../../domains/games/renju/wardrobe-page';</script>

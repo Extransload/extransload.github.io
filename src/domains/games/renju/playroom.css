@@ -127,70 +127,15 @@ button:disabled {
   top: 34px;
   left: 41px;
   width: 37px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 32% 25%, #60747b, #101a22 72%);
+  border-radius: 43% 57% 48% 52%;
+  background: conic-gradient(from 25deg, #9c1028, #4e0919, #c72c38, #841027, #4e0919, #c72c38, #9c1028);
 }
 .lobby-style-stone-alt {
   top: 8px;
   left: 16px;
   width: 24px;
-  border: 1px solid #a79c8a;
-  border-radius: 50%;
-  background: radial-gradient(circle at 32% 25%, #fffefa, #ded2bb 84%);
-}
-.lobby-style-card[data-stone='jade'] .lobby-style-stone {
-  border-radius: 0;
-  background: linear-gradient(135deg, #3e8075, #102d2b 72%);
-  clip-path: polygon(30% 0, 70% 0, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0 70%, 0 30%);
-}
-.lobby-style-card[data-stone='rose'] .lobby-style-stone {
-  border-radius: 43% 57% 48% 52%;
-  background: conic-gradient(from 25deg, #9c1028, #4e0919, #c72c38, #841027, #4e0919, #c72c38, #9c1028);
-}
-.lobby-style-card[data-stone='chick'] .lobby-style-stone,
-.lobby-style-card[data-stone='puppy'] .lobby-style-stone,
-.lobby-style-card[data-stone='kitten'] .lobby-style-stone,
-.lobby-style-card[data-stone='bunny'] .lobby-style-stone,
-.lobby-style-card[data-stone='fox'] .lobby-style-stone,
-.lobby-style-card[data-stone='panda'] .lobby-style-stone,
-.lobby-style-card[data-stone='frog'] .lobby-style-stone,
-.lobby-style-card[data-stone='owl'] .lobby-style-stone {
-  background:
-    radial-gradient(circle at 34% 43%, #253038 0 2px, transparent 3px),
-    radial-gradient(circle at 66% 43%, #253038 0 2px, transparent 3px), var(--stone-face);
-}
-.lobby-style-card[data-stone='chick'] .lobby-style-stone {
-  --stone-face: #d18b2d;
-}
-.lobby-style-card[data-stone='puppy'] .lobby-style-stone {
-  --stone-face: #83553f;
-}
-.lobby-style-card[data-stone='kitten'] .lobby-style-stone {
-  --stone-face: #545578;
-}
-.lobby-style-card[data-stone='bunny'] .lobby-style-stone {
-  --stone-face: #9474a4;
-}
-.lobby-style-card[data-stone='fox'] .lobby-style-stone {
-  --stone-face: #bd5a34;
-}
-.lobby-style-card[data-stone='panda'] .lobby-style-stone {
-  --stone-face: #f8f4e9;
-}
-.lobby-style-card[data-stone='frog'] .lobby-style-stone {
-  --stone-face: #277b5c;
-}
-.lobby-style-card[data-stone='owl'] .lobby-style-stone {
-  --stone-face: #655074;
-}
-.lobby-style-card[data-stone='star'] .lobby-style-stone {
-  border-radius: 0;
-  background: #3859a7;
-  clip-path: polygon(50% 0, 63% 34%, 100% 38%, 73% 61%, 82% 100%, 50% 78%, 18% 100%, 27% 61%, 0 38%, 37% 34%);
-}
-.lobby-style-card[data-stone='dragon'] .lobby-style-stone {
-  border-radius: 50% 50% 43% 43%;
-  background: radial-gradient(circle at 54% 54%, #75ddd1 0 4px, transparent 5px), #2b6d69;
+  border-radius: 48% 52% 45% 55%;
+  background: conic-gradient(from 25deg, #edb72f, #b9801a, #f6d36a, #d79a22, #b9801a, #f6d36a, #edb72f);
 }
 .lobby-style-copy {
   display: grid;

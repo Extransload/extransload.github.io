@@ -8,8 +8,9 @@ import { guestClientId, guestName, saveGuestName } from './identity';
 import { mountGameSound } from './sound';
 import {
   APPEARANCE_OPTIONS,
-  appearanceForSeat,
   DEFAULT_APPEARANCE,
+  normalizePlayerAppearance,
+  playerLook,
   watchAppearance,
   type Appearance,
 } from './appearance';
@@ -39,10 +40,20 @@ let lastBoardSignature = '';
 let lastRenderedStatus: RoomSnapshot['status'] | null = null;
 let name = guestName();
 let appearance: Appearance = { ...DEFAULT_APPEARANCE };
+// Each seat shows its own player's look: mine from local settings, the opponent's as relayed by the room.
+function applySeatAppearances() {
+  for (const seat of ['black', 'white'] as const)
+    board.setAppearance(seat, seat === role ? playerLook(appearance) : normalizePlayerAppearance(state?.looks?.[seat]));
+}
+function sendLook() {
+  if ((role === 'black' || role === 'white') && socket?.readyState === WebSocket.OPEN)
+    socket.send(JSON.stringify({ type: 'appearance', appearance: playerLook(appearance) }));
+}
 watchAppearance((next) => {
   appearance = next;
   board.setBoardStyle(next.board);
-  for (const seat of ['black', 'white'] as const) board.setAppearance(seat, appearanceForSeat(seat, role, next));
+  applySeatAppearances();
+  sendLook();
   $('#lobby-style-card').dataset.stone = next.stone;
   const avatar = APPEARANCE_OPTIONS.avatar.find((option) => option.id === next.avatar)!;
   const stone = APPEARANCE_OPTIONS.stone.find((option) => option.id === next.stone)!;
@@ -200,7 +211,7 @@ function render() {
   lastRenderedStatus = state?.status ?? null;
   moveConfirm.setAvailable(!!myTurn, role === 'white' ? 'white' : 'black');
   board.setSeats(role, playing ? turn : null, { black: !!state?.players.black, white: !!state?.players.white });
-  for (const seat of ['black', 'white'] as const) board.setAppearance(seat, appearanceForSeat(seat, role, appearance));
+  applySeatAppearances();
   if (finished && state?.winner && state.winner !== 'draw' && replayMove === state.moves.length)
     board.celebrate(state.winner, state.reason === 'five');
   else if (finished && state && replayMove < state.moves.length && board.clearCelebration()) board.reset();
@@ -393,6 +404,7 @@ function connect() {
   ws.onopen = () => {
     retry = 0;
     offline = false;
+    sendLook();
     if (state) render();
   };
   ws.onmessage = (event) => {

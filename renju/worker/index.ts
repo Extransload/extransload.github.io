@@ -15,6 +15,7 @@ import {
   ROLES,
   validSettings,
   normalizeGuestName,
+  sanitizePlayerLook,
   type ClockState,
   type FinishReason,
   type GameSettings,
@@ -23,6 +24,7 @@ import {
   type RoomRole,
   type RoomSnapshot,
   type PlayerIdentity,
+  type PlayerLook,
   type ChatMessage,
   type PublicRoom,
 } from '../../src/domains/games/renju/protocol';
@@ -55,13 +57,25 @@ type Room = {
   disconnects: Partial<Record<PlayerRole, number>>;
   public?: boolean;
   players?: Record<PlayerRole, PlayerIdentity | null>;
+  looks?: Record<PlayerRole, PlayerLook | null>;
   chat?: ChatMessage[];
 };
 type CachedRoom = PublicRoom & { version: number; updatedAt: number };
 const LOBBY_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 type SocketData = { id: string; role: RoomRole; visitor: Visitor; lastChat: number; seatHash?: string };
 type Message = {
-  type?: 'ready' | 'rematch' | 'rematch-decline' | 'settings' | 'move' | 'resign' | 'chat' | 'rename' | 'kick';
+  type?:
+    | 'ready'
+    | 'rematch'
+    | 'rematch-decline'
+    | 'settings'
+    | 'move'
+    | 'resign'
+    | 'chat'
+    | 'rename'
+    | 'kick'
+    | 'appearance';
+  appearance?: unknown;
   ready?: boolean;
   settings?: unknown;
   x?: number;
@@ -362,6 +376,7 @@ export class RenjuRoom {
       bannedClientIds: stored.bannedClientIds ?? [],
       public: stored.public ?? false,
       players: stored.players ?? { black: null, white: null },
+      looks: stored.looks ?? { black: null, white: null },
       chat: stored.chat ?? [],
     };
   }
@@ -441,6 +456,7 @@ export class RenjuRoom {
         black: players.black ? publicIdentity(players.black) : null,
         white: players.white ? publicIdentity(players.white) : null,
       },
+      looks: room.looks ?? { black: null, white: null },
       chat: room.chat ?? [],
     };
   }
@@ -532,6 +548,7 @@ export class RenjuRoom {
       room.guestHash = undefined;
       room.guestClientId = null;
       if (room.players) room.players.white = null;
+      if (room.looks) room.looks.white = null;
       room.ready.white = false;
       delete room.disconnects.white;
       room.version++;
@@ -645,6 +662,7 @@ export class RenjuRoom {
           latest.guestHash = undefined;
           latest.guestClientId = null;
           if (latest.players) latest.players.white = null;
+          if (latest.looks) latest.looks.white = null;
           latest.ready.white = false;
           delete latest.disconnects.white;
           latest.version++;
@@ -670,6 +688,7 @@ export class RenjuRoom {
             ...(latest.players ?? { black: null, white: null }),
             white: visitor ? publicIdentity(visitor) : null,
           };
+          if (latest.looks) latest.looks.white = null;
           latest.ready.white = false;
           latest.disconnects.white = Date.now() + DISCONNECT_GRACE_MS;
           latest.version++;
@@ -803,6 +822,7 @@ export class RenjuRoom {
       room.guestHash = undefined;
       room.guestClientId = null;
       if (room.players) room.players.white = null;
+      if (room.looks) room.looks.white = null;
       room.ready = { black: false, white: false };
       delete room.disconnects.white;
       room.version++;
@@ -844,6 +864,16 @@ export class RenjuRoom {
       return;
     }
     if (role === 'spectator') return;
+    if (message.type === 'appearance') {
+      const look = sanitizePlayerLook(message.appearance);
+      const looks = room.looks ?? { black: null, white: null };
+      if (!look || JSON.stringify(looks[role]) === JSON.stringify(look)) return;
+      room.looks = { ...looks, [role]: look };
+      room.version++;
+      await this.write(room);
+      this.broadcast(room);
+      return;
+    }
     if (
       room.status === 'finished' &&
       message.type !== 'rematch' &&
