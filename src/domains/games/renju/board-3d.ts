@@ -5,8 +5,16 @@ import { observeViewerAccess } from './avatar-access';
 import { loadLunaAvatar, type LunaAvatar } from './luna-avatar';
 import { FASHION_AVATARS, loadFashionAvatar, type FashionAvatar, type FashionStyle } from './fashion-avatar';
 import { loadPetalAvatar, type PetalAvatar, type AvatarMotion } from './petal-avatar';
-import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { roseStoneGeometry } from './rose-stone';
+import { classicStoneGeometry, roseStoneGeometry, roseStoneStamp } from './rose-stone';
+import {
+  TIER_STONE_IDS,
+  TIER_BOARD_IDS,
+  createTierStone,
+  animateTierStone,
+  createTierBoard,
+  type TierStoneStyle,
+  type TierBoardStyle,
+} from './tier-pieces';
 import { DEFAULT_APPEARANCE, appearanceForSeat, type BoardStyle, type PlayerAppearance } from './appearance';
 import {
   analyzeMove,
@@ -70,30 +78,34 @@ export class RenjuBoard {
   private showcaseSeat: Seat = 'black';
   private preview = new THREE.Group();
   private stoneGeometry = roseStoneGeometry();
+  private classicStoneGeometry = classicStoneGeometry();
   private avatarBodies = {
     round: new THREE.SphereGeometry(0.82, 32, 22),
   };
   private avatarHeads = {
     round: new THREE.SphereGeometry(0.73, 32, 22),
   };
+  private stoneStamp = roseStoneStamp();
+  private woodTexture?: THREE.CanvasTexture;
+  private tierBoard?: ReturnType<typeof createTierBoard>;
   private stoneMaterials = {
     black: new THREE.MeshPhysicalMaterial({
-      color: 0x9c1028,
-      roughness: 0.68,
-      metalness: 0.03,
-      clearcoat: 0.14,
-      clearcoatRoughness: 0.22,
+      color: 0x18191c,
+      roughness: 0.34,
+      metalness: 0.04,
+      clearcoat: 0.6,
+      bumpScale: this.stoneStamp.bumpScale,
+      clearcoatRoughness: 0.18,
       vertexColors: true,
-      side: THREE.DoubleSide,
     }),
     white: new THREE.MeshPhysicalMaterial({
-      color: 0xedb72f,
-      roughness: 0.68,
-      metalness: 0.03,
-      clearcoat: 0.14,
-      clearcoatRoughness: 0.2,
+      color: 0xf5f3ed,
+      roughness: 0.34,
+      metalness: 0.02,
+      clearcoat: 0.6,
+      bumpScale: this.stoneStamp.bumpScale,
+      clearcoatRoughness: 0.18,
       vertexColors: true,
-      side: THREE.DoubleSide,
     }),
   };
   private chosenAppearance = new Set<Seat>();
@@ -102,11 +114,13 @@ export class RenjuBoard {
     white: appearanceForSeat('white', 'white', DEFAULT_APPEARANCE),
   };
   private boardMaterials?: {
-    surface: THREE.MeshStandardMaterial;
-    line: THREE.MeshStandardMaterial;
-    ink: THREE.MeshStandardMaterial;
+    body: THREE.MeshPhysicalMaterial;
+    surface: THREE.MeshPhysicalMaterial;
+    line: THREE.MeshBasicMaterial;
+    ink: THREE.MeshBasicMaterial;
+    detail: THREE.MeshBasicMaterial;
+    edge: THREE.LineBasicMaterial;
   };
-  private boardVariants: Partial<Record<BoardStyle, THREE.Group>> = {};
   private highlights = new THREE.Group();
   private lastMove = new THREE.Group();
   private lastMoveFrame = 0;
@@ -177,8 +191,8 @@ export class RenjuBoard {
     this.modelStatus.setAttribute('role', 'status');
     this.modelStatus.hidden = true;
     host.append(this.modelStatus);
-    this.scene.add(new THREE.AmbientLight(0xf4e9d6, 1.2));
-    const key = new THREE.DirectionalLight(0xffe5b4, 4.3);
+    this.scene.add(new THREE.AmbientLight(0xf4eef8, 1.2));
+    const key = new THREE.DirectionalLight(0xfff4ec, 4.3);
     key.position.set(-6, 13, 8);
     key.castShadow = true;
     key.shadow.mapSize.set(2048, 2048);
@@ -188,7 +202,7 @@ export class RenjuBoard {
     key.shadow.camera.bottom = -12;
     key.shadow.bias = -0.0002;
     this.scene.add(key);
-    const rim = new THREE.DirectionalLight(0x8098b0, 1.3);
+    const rim = new THREE.DirectionalLight(0xaaa5da, 1.3);
     rim.position.set(8, 8, -9);
     this.scene.add(rim);
     this.scene.add(this.board);
@@ -305,6 +319,18 @@ export class RenjuBoard {
       renderedLastFrame = false;
       if (this.controls instanceof TrackballControls) this.controls.update();
       let animated = false;
+      if (this.board.visible) {
+        if (this.tierBoard?.update) {
+          this.tierBoard.update(now / 1000);
+          animated = true;
+        }
+        for (const group of [this.stones, this.preview])
+          for (const stone of group.children) {
+            if (!stone.userData.tierStoneStyle) continue;
+            animateTierStone(stone as THREE.Group, now / 1000);
+            if (['astral', 'sovereign'].includes(stone.userData.tierStoneStyle)) animated = true;
+          }
+      }
       for (const seat of ['black', 'white'] as const) {
         const rig = this.avatars[seat];
         if (!rig.group.visible || !rig.character.visible) continue;
@@ -386,16 +412,6 @@ export class RenjuBoard {
     this.host.dataset.freeAvatarRotation = String(avatarView && this.freeAvatarRotation);
   }
 
-  private box(w: number, h: number, d: number, material: THREE.Material, y: number, radius = 0) {
-    const mesh = new THREE.Mesh(
-      radius ? new RoundedBoxGeometry(w, h, d, 4, radius) : new THREE.BoxGeometry(w, h, d),
-      material,
-    );
-    mesh.position.y = y;
-    mesh.receiveShadow = true;
-    mesh.castShadow = true;
-    this.board.add(mesh);
-  }
   private makeEmbroidery() {
     const canvas = document.createElement('canvas');
     canvas.width = 2048;
@@ -427,94 +443,121 @@ export class RenjuBoard {
     const texture = new THREE.CanvasTexture(canvas);
     texture.colorSpace = THREE.SRGBColorSpace;
     texture.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
-    const material = new THREE.MeshBasicMaterial({
+    const lettering = new THREE.MeshBasicMaterial({
       map: texture,
       transparent: true,
       side: THREE.DoubleSide,
       depthWrite: false,
+      toneMapped: false,
     });
-    const front = new THREE.Mesh(new THREE.PlaneGeometry(5, 0.72), material);
-    front.position.set(0, -0.24, 7.235);
-    this.board.add(front);
-    const back = front.clone();
-    back.position.z = -7.235;
-    back.rotation.y = Math.PI;
-    this.board.add(back);
-    const base = new THREE.Mesh(new THREE.PlaneGeometry(8, 1.16), material);
-    base.position.set(0, -0.614, 0);
+    const navy = new THREE.MeshBasicMaterial({ color: 0x1c3543, toneMapped: false });
+    const plaque = new THREE.Shape();
+    plaque.moveTo(-1.98, -0.36);
+    plaque.lineTo(1.98, -0.36);
+    plaque.absarc(1.98, 0, 0.36, -Math.PI / 2, Math.PI / 2, false);
+    plaque.lineTo(-1.98, 0.36);
+    plaque.absarc(-1.98, 0, 0.36, Math.PI / 2, Math.PI * 1.5, false);
+    const plaqueGeometry = new THREE.ShapeGeometry(plaque, 16);
+    const labelGeometry = new THREE.PlaneGeometry(6.3, 0.92);
+    for (const side of [-1, 1]) {
+      const badge = new THREE.Group();
+      const backing = new THREE.Mesh(plaqueGeometry, navy);
+      const label = new THREE.Mesh(labelGeometry, lettering);
+      label.position.z = 0.004;
+      badge.add(backing, label);
+      badge.position.set(0, -0.345, side * 7.24);
+      badge.rotation.y = side === 1 ? 0 : Math.PI;
+      this.board.add(badge);
+    }
+    // Keep the original underside signature; the playing surface stays clear.
+    const base = new THREE.Mesh(new THREE.PlaneGeometry(8, 1.16), lettering);
+    base.position.set(0, -0.966, 0);
     base.rotation.x = Math.PI / 2;
     this.board.add(base);
   }
+
   private makeBoard() {
-    const dark = new THREE.MeshStandardMaterial({ color: 0x1c3543, roughness: 0.68, metalness: 0.06 });
-    const brass = new THREE.MeshStandardMaterial({ color: 0xb99a62, roughness: 0.46, metalness: 0.38 });
-    this.box(14.45, 0.74, 14.45, dark, -0.235, 0.2);
-    this.box(14.23, 0.11, 14.23, brass, 0.14, 0.05);
-    this.makeEmbroidery();
-    const surface = new THREE.MeshStandardMaterial({ color: 0xb98250, roughness: 0.86 });
-    this.box(13.96, 0.16, 13.96, surface, 0.28, 0.06);
-    const line = new THREE.MeshStandardMaterial({ color: 0x64472e, roughness: 0.95 });
-    for (let i = 0; i < 15; i++) {
+    const roundedSquare = (size: number, radius: number) => {
+      const edge = size / 2;
+      const shape = new THREE.Shape();
+      shape.moveTo(-edge + radius, -edge);
+      shape.lineTo(edge - radius, -edge);
+      shape.quadraticCurveTo(edge, -edge, edge, -edge + radius);
+      shape.lineTo(edge, edge - radius);
+      shape.quadraticCurveTo(edge, edge, edge - radius, edge);
+      shape.lineTo(-edge + radius, edge);
+      shape.quadraticCurveTo(-edge, edge, -edge, edge - radius);
+      shape.lineTo(-edge, -edge + radius);
+      shape.quadraticCurveTo(-edge, -edge, -edge + radius, -edge);
+      return shape;
+    };
+    const body = new THREE.MeshPhysicalMaterial({ roughness: 0.42, clearcoat: 0.25 });
+    const surface = new THREE.MeshPhysicalMaterial({ roughness: 0.48, clearcoat: 0.3, clearcoatRoughness: 0.4 });
+    const slab = (size: number, depth: number, y: number, material: THREE.Material) => {
+      const geometry = new THREE.ExtrudeGeometry(roundedSquare(size, 0.55), {
+        depth,
+        steps: 1,
+        curveSegments: 16,
+        bevelEnabled: true,
+        bevelSize: 0.035,
+        bevelThickness: 0.025,
+        bevelSegments: 4,
+      });
+      geometry.rotateX(-Math.PI / 2);
+      const positions = geometry.getAttribute('position');
+      const normals = geometry.getAttribute('normal');
+      const uv = geometry.getAttribute('uv');
+      for (let i = 0; i < positions.count; i++) {
+        const top = Math.abs(normals.getY(i)) > 0.5;
+        const along = Math.abs(normals.getX(i)) > 0.5 ? positions.getZ(i) : positions.getX(i);
+        uv.setXY(i, 0.5 + along / size, top ? 0.5 + positions.getZ(i) / size : positions.getY(i) / depth);
+      }
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.y = y;
+      mesh.receiveShadow = true;
+      mesh.castShadow = true;
+      this.board.add(mesh);
+    };
+    // Thicken downward so the playing surface, picking and stones keep their existing height.
+    slab(14.4, 1.19, -0.94, body);
+    slab(14.22, 0.085, 0.25, surface);
+    const line = new THREE.MeshBasicMaterial({ toneMapped: false });
+    for (let i = 0; i < SIZE; i++) {
       const p = START + i * STEP;
-      const h = new THREE.Mesh(new THREE.BoxGeometry(12.61, 0.006, 0.022), line);
+      const h = new THREE.Mesh(new THREE.BoxGeometry(12.62, 0.006, 0.019), line);
       h.position.set(0, 0.368, p);
-      this.board.add(h);
-      const v = new THREE.Mesh(new THREE.BoxGeometry(0.022, 0.006, 12.61), line);
+      const v = new THREE.Mesh(new THREE.BoxGeometry(0.019, 0.006, 12.62), line);
       v.position.set(p, 0.368, 0);
-      this.board.add(v);
+      this.board.add(h, v);
     }
-    const ink = new THREE.MeshStandardMaterial({ color: 0x4e3828, roughness: 0.8 });
-    this.boardMaterials = { surface, line, ink };
+    const ink = new THREE.MeshBasicMaterial({ toneMapped: false });
     for (const x of [3, 7, 11])
       for (const y of [3, 7, 11]) {
-        const dot = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.009, 20), ink);
+        const dot = new THREE.Mesh(new THREE.CircleGeometry(0.055, 24), ink);
+        dot.rotation.x = -Math.PI / 2;
         dot.position.set(START + x * STEP, 0.377, START + y * STEP);
         this.board.add(dot);
       }
-    const detail = (style: BoardStyle, color: number) => {
-      const group = new THREE.Group();
-      group.visible = false;
-      this.board.add(group);
-      this.boardVariants[style] = group;
-      return { group, material: new THREE.MeshStandardMaterial({ color, roughness: 0.52, metalness: 0.12 }) };
-    };
-    const walnut = detail('walnut', 0xc6a779);
-    for (const side of [-1, 1]) {
-      const railX = new THREE.Mesh(new RoundedBoxGeometry(0.15, 0.11, 13.55, 2, 0.05), walnut.material);
-      railX.position.set(side * 6.78, 0.41, 0);
-      walnut.group.add(railX);
-      const railZ = new THREE.Mesh(new RoundedBoxGeometry(13.55, 0.11, 0.15, 2, 0.05), walnut.material);
-      railZ.position.set(0, 0.41, side * 6.78);
-      walnut.group.add(railZ);
-    }
-    const linen = detail('linen', 0xf1e4c8);
-    for (const side of [-1, 1])
-      for (let i = 0; i < 28; i++) {
-        const p = -6.37 + i * 0.47;
-        const stitchX = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.018, 0.035), linen.material);
-        stitchX.position.set(p, 0.377, side * 6.69);
-        linen.group.add(stitchX);
-        const stitchZ = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.018, 0.16), linen.material);
-        stitchZ.position.set(side * 6.69, 0.377, p);
-        linen.group.add(stitchZ);
+    const edge = new THREE.LineBasicMaterial({ transparent: true, opacity: 0.55, toneMapped: false });
+    const border = roundedSquare(13.54, 0.32)
+      .getPoints(12)
+      .map((point) => new THREE.Vector3(point.x, 0.371, point.y));
+    this.board.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(border), edge));
+    const detail = new THREE.MeshBasicMaterial({ toneMapped: false });
+    // Small, flush flower inlays sit outside the playable grid.
+    for (const x of [-6.77, 6.77])
+      for (const z of [-6.77, 6.77]) {
+        for (let i = 0; i < 5; i++) {
+          const angle = (i / 5) * Math.PI * 2;
+          const petal = new THREE.Mesh(new THREE.CircleGeometry(0.06, 16), detail);
+          petal.rotation.x = -Math.PI / 2;
+          petal.position.set(x + Math.cos(angle) * 0.067, 0.374, z + Math.sin(angle) * 0.067);
+          this.board.add(petal);
+        }
       }
-    const inkFrame = detail('ink', 0xb2c8d3);
-    for (const x of [-6.67, 6.67])
-      for (const z of [-6.67, 6.67]) {
-        const plate = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.045, 0.42), inkFrame.material);
-        plate.position.set(x, 0.396, z);
-        plate.rotation.y = Math.PI / 4;
-        inkFrame.group.add(plate);
-      }
-    const meadow = detail('meadow', 0xd5c892);
-    for (const x of [-6.6, 6.6])
-      for (const z of [-6.6, 6.6]) {
-        const leaf = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.65, 5), meadow.material);
-        leaf.position.set(x, 0.395, z);
-        leaf.rotation.x = Math.PI / 2;
-        leaf.rotation.z = x * z > 0 ? 0.65 : -0.65;
-        meadow.group.add(leaf);
-      }
+    this.makeEmbroidery();
+    this.boardMaterials = { body, surface, line, ink, detail, edge };
+    this.setBoardStyle(DEFAULT_APPEARANCE.board);
   }
   private makeAvatar() {
     const group = new THREE.Group();
@@ -537,7 +580,14 @@ export class RenjuBoard {
       group.add(mesh);
       return mesh;
     };
-    const plinth = add(new THREE.CylinderGeometry(1.12, 1.2, 0.13, 40), accent, 0, 0.01, 0);
+    const trayMaterial = new THREE.MeshPhysicalMaterial({
+      color: 0xe2d6e5,
+      roughness: 0.4,
+      clearcoat: 0.35,
+    });
+    const trayGeometry = new THREE.SphereGeometry(1.17, 48, 20);
+    trayGeometry.scale(1, 0.04, 1);
+    const plinth = add(trayGeometry, trayMaterial, 0, 0.01, 0);
     plinth.receiveShadow = true;
     const body = add(this.avatarBodies.round, shell, 0, 0.88, 0);
     body.scale.set(1, 1.18, 0.78);
@@ -587,26 +637,117 @@ export class RenjuBoard {
     };
   }
   setBoardStyle(style: BoardStyle) {
-    if (!this.boardMaterials) return;
-    const palette = {
-      oak: [0xb98250, 0x64472e, 0x4e3828],
-      walnut: [0x997653, 0x473627, 0x35291e],
-      linen: [0x8e8b7d, 0x464438, 0x36342d],
-      ink: [0x7b8c96, 0x3b4f5b, 0x2d404b],
-      meadow: [0x87916d, 0x4b5e38, 0x39492d],
-    }[style];
-    this.boardMaterials.surface.color.setHex(palette[0]);
-    this.boardMaterials.line.color.setHex(palette[1]);
-    this.boardMaterials.ink.color.setHex(palette[2]);
-    for (const [name, detail] of Object.entries(this.boardVariants)) detail.visible = name === style;
+    if (!this.boardMaterials || this.host.dataset.boardStyle === style) return;
+    if (this.tierBoard) {
+      this.board.remove(this.tierBoard.decorations);
+      this.tierBoard.dispose();
+      this.tierBoard = undefined;
+    }
+    if ((TIER_BOARD_IDS as readonly string[]).includes(style)) {
+      this.tierBoard = createTierBoard(style as TierBoardStyle);
+      this.board.add(this.tierBoard.decorations);
+    }
+    const wood = style === 'wood';
+    const palettes = {
+      wood: { surface: 0xe5b878, body: 0xad7c4b, line: 0x614931, detail: 0x916c44 },
+      oak: { surface: 0xe9dfd9, body: 0xc2afb5, line: 0x9b8b98, detail: 0xb392a9 },
+      walnut: { surface: 0xddbac9, body: 0xb58ca5, line: 0x9b718a, detail: 0xf2dae6 },
+      linen: { surface: 0xcac5e0, body: 0x9c93b8, line: 0x8d82ab, detail: 0xeee8fb },
+      ink: { surface: 0x464d70, body: 0x313752, line: 0x949ab4, detail: 0xc5b4da },
+      meadow: { surface: 0xc4d6ca, body: 0x8faa9c, line: 0x7d978a, detail: 0xe7f1e8 },
+    };
+    const palette = this.tierBoard?.palette ?? palettes[style as keyof typeof palettes];
+    this.boardMaterials.body.color.setHex(palette.body);
+    this.boardMaterials.surface.color.setHex(palette.surface);
+    this.boardMaterials.line.color.setHex(palette.line);
+    this.boardMaterials.ink.color.setHex(palette.line);
+    this.boardMaterials.detail.color.setHex(palette.detail);
+    this.boardMaterials.detail.visible = !wood && !this.tierBoard;
+    this.boardMaterials.edge.color.setHex(palette.line);
+    if (wood && !this.woodTexture) this.woodTexture = this.makeWoodTexture();
+    for (const material of [this.boardMaterials.body, this.boardMaterials.surface]) {
+      const map = this.tierBoard?.map ?? (wood ? this.woodTexture! : null);
+      if (material.map !== map) {
+        material.map = map;
+        material.needsUpdate = true;
+      }
+      material.roughness = this.tierBoard?.roughness ?? (wood ? 0.66 : 0.46);
+      material.clearcoat = this.tierBoard?.clearcoat ?? (wood ? 0.12 : 0.3);
+    }
+    this.host.dataset.boardStyle = style;
     this.render();
   }
-  private get stoneRestY() {
-    if (!this.stoneGeometry.boundingBox) this.stoneGeometry.computeBoundingBox();
-    return SURFACE - this.stoneGeometry.boundingBox!.min.y * STONE_SCALE_Y + 0.005;
+  private makeWoodTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 1024;
+    const ctx = canvas.getContext('2d')!;
+    const grain = ctx.createImageData(1024, 1024);
+    for (let y = 0; y < 1024; y++)
+      for (let x = 0; x < 1024; x++) {
+        const flow = y + 9 * Math.sin(x * 0.006) + 3 * Math.sin(x * 0.017 + y * 0.004);
+        const rings = Math.pow((1 + Math.sin(flow * 0.18)) / 2, 10);
+        const fibers = Math.sin(flow * 1.7 + Math.sin(x * 0.04)) * 2;
+        const tone = 242 - rings * 23 + fibers;
+        const offset = (y * 1024 + x) * 4;
+        grain.data[offset] = tone;
+        grain.data[offset + 1] = tone - 3;
+        grain.data[offset + 2] = tone - 9;
+        grain.data[offset + 3] = 255;
+      }
+    ctx.putImageData(grain, 0, 0);
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
+    return texture;
+  }
+  private makePlacedStone(move: Move, preview = false) {
+    const seat = move.color === 1 ? 'black' : 'white';
+    const style = this.appearance[seat].stone;
+    const stone = (TIER_STONE_IDS as readonly string[]).includes(style)
+      ? createTierStone(style as TierStoneStyle, seat)
+      : new THREE.Mesh(style === 'classic' ? this.classicStoneGeometry : this.stoneGeometry, this.stoneMaterials[seat]);
+    const bottom = new THREE.Box3().setFromObject(stone).min.y;
+    stone.traverse((object) => {
+      if (!(object instanceof THREE.Mesh)) return;
+      object.castShadow = !preview && !object.userData.stoneEffect;
+      object.receiveShadow = true;
+      if (!preview) return;
+      const ghost = (material: THREE.Material) => {
+        const copy = material.clone();
+        copy.transparent = true;
+        copy.opacity *= 0.86;
+        if (copy instanceof THREE.ShaderMaterial && copy.uniforms.opacity) copy.uniforms.opacity.value = copy.opacity;
+        copy.depthWrite = false;
+        return copy;
+      };
+      object.material = Array.isArray(object.material) ? object.material.map(ghost) : ghost(object.material);
+    });
+    stone.scale.set(1, STONE_SCALE_Y, 1);
+    stone.position.set(START + move.x * STEP, SURFACE - bottom * STONE_SCALE_Y + 0.005, START + move.y * STEP);
+    return stone;
   }
   setAppearance(seat: Seat, appearance: PlayerAppearance) {
+    if (appearance.avatar === 'rose') appearance = { ...appearance, avatar: 'luna' };
+    const stoneChanged = this.appearance[seat].stone !== appearance.stone;
+    const stone = this.stoneMaterials[seat];
+    const classic = appearance.stone === 'classic';
+    stone.color.setHex(classic ? (seat === 'black' ? 0x18191c : 0xf5f3ed) : seat === 'black' ? 0x681934 : 0xf7c4d2);
+    const stamp = classic ? null : this.stoneStamp.map;
+    if (stone.map !== stamp) {
+      stone.map = stamp;
+      stone.bumpMap = classic ? null : this.stoneStamp.bumpMap;
+      stone.needsUpdate = true;
+    }
+    stone.roughness = classic ? 0.34 : 0.52;
+    stone.clearcoat = classic ? 0.6 : 0.2;
+    if (stoneChanged) this.clearSelection();
     this.appearance[seat] = appearance;
+    if (stoneChanged) {
+      this.clearImpact();
+      this.stones.clear();
+      for (const move of this.moves) this.stones.add(this.makePlacedStone(move));
+    }
+    this.host.dataset[`stone${seat === 'black' ? 'Black' : 'White'}`] = appearance.stone;
     const rig = this.avatars[seat];
     const avatar = [0x182d3a, 0x304859, 0xe4bd77];
     rig.shell.color.setHex(avatar[0]);
@@ -637,7 +778,7 @@ export class RenjuBoard {
     const style = this.appearance[seat].avatar;
     if (style === 'petal') void this.ensurePetal(seat);
     if (style === 'luna') void this.ensureLuna(seat);
-    if (isFashionAvatar(style)) void this.ensureFashion(seat, style);
+    if (style !== 'petal' && isFashionAvatar(style)) void this.ensureFashion(seat, style);
   }
   private async ensurePetal(seat: Seat) {
     const rig = this.avatars[seat];
@@ -772,7 +913,7 @@ export class RenjuBoard {
     for (const color of ['black', 'white'] as const) {
       const rig = this.avatars[color];
       rig.group.visible = true;
-      rig.plinth.visible = focus !== 'avatar';
+      rig.plinth.visible = focus !== 'avatar' && rig.character.visible;
       rig.group.rotation.y = Math.atan2(-rig.group.position.x, -rig.group.position.z);
     }
     this.frameShowcaseCamera(focus);
@@ -1013,18 +1154,7 @@ export class RenjuBoard {
   private select(point: Point) {
     if (!this.color) return;
     this.selected = { ...point };
-    const material = new THREE.MeshPhysicalMaterial({
-      color: this.stoneMaterials[this.color === 1 ? 'black' : 'white'].color,
-      roughness: 0.25,
-      transparent: true,
-      opacity: 0.86,
-      depthWrite: false,
-      vertexColors: true,
-      side: THREE.DoubleSide,
-    });
-    const stone = new THREE.Mesh(this.stoneGeometry, material);
-    stone.scale.set(1, STONE_SCALE_Y, 1);
-    stone.position.set(START + point.x * STEP, this.stoneRestY, START + point.y * STEP);
+    const stone = this.makePlacedStone({ ...point, color: this.color }, true);
     this.preview.add(stone);
     this.onSelectionChange?.(this.selectedPoint);
   }
@@ -1033,7 +1163,11 @@ export class RenjuBoard {
     this.selected = null;
     for (const child of [...this.preview.children]) {
       this.preview.remove(child);
-      ((child as THREE.Mesh).material as THREE.Material).dispose();
+      child.traverse((object) => {
+        if (!(object instanceof THREE.Mesh)) return;
+        const materials = Array.isArray(object.material) ? object.material : [object.material];
+        materials.forEach((material) => material.dispose());
+      });
     }
     this.onSelectionChange?.(null);
     this.render();
@@ -1057,7 +1191,7 @@ export class RenjuBoard {
     const z = START + move.y * STEP;
     const ring = new THREE.Mesh(
       new THREE.RingGeometry(0.4, 0.48, 48),
-      new THREE.MeshBasicMaterial({ color: 0xffbd55, side: THREE.DoubleSide, toneMapped: false }),
+      new THREE.MeshBasicMaterial({ color: 0xe16eab, side: THREE.DoubleSide, toneMapped: false }),
     );
     ring.rotation.x = -Math.PI / 2;
     ring.position.set(x, 0.405, z);
@@ -1066,7 +1200,7 @@ export class RenjuBoard {
     const glow = new THREE.Mesh(
       new THREE.RingGeometry(0.38, 0.55, 48),
       new THREE.MeshBasicMaterial({
-        color: 0xffaa42,
+        color: 0xf1a6cc,
         side: THREE.DoubleSide,
         transparent: true,
         opacity: 0.25,
@@ -1083,7 +1217,7 @@ export class RenjuBoard {
       const pulse = new THREE.Mesh(
         new THREE.RingGeometry(0.38, 0.44, 48),
         new THREE.MeshBasicMaterial({
-          color: 0xffd677,
+          color: 0xf7c9e6,
           side: THREE.DoubleSide,
           transparent: true,
           opacity: 0,
@@ -1120,12 +1254,12 @@ export class RenjuBoard {
       ((child as THREE.Mesh).material as THREE.Material).dispose();
     }
   }
-  private animateImpact(stone: THREE.Mesh, move: Move) {
+  private animateImpact(stone: THREE.Object3D, move: Move) {
     this.clearImpact();
     const ring = new THREE.Mesh(
       new THREE.RingGeometry(0.35, 0.42, 48),
       new THREE.MeshBasicMaterial({
-        color: 0xffd17a,
+        color: 0xf3b5dc,
         side: THREE.DoubleSide,
         transparent: true,
         opacity: 0.75,
@@ -1167,7 +1301,7 @@ export class RenjuBoard {
     this.winningPoints = points.map((point) => new THREE.Vector3(START + point.x * STEP, 0.92, START + point.y * STEP));
     const geometry = new THREE.BufferGeometry().setFromPoints([this.winningPoints[0], this.winningPoints[0]]);
     const material = new THREE.LineBasicMaterial({
-      color: 0xffb949,
+      color: 0xd957a5,
       transparent: true,
       opacity: 0.96,
       depthTest: false,
@@ -1231,12 +1365,7 @@ export class RenjuBoard {
       ((child as THREE.Mesh).material as THREE.Material).dispose();
     }
     for (const move of moves) {
-      const seat = move.color === 1 ? 'black' : 'white';
-      const stone = new THREE.Mesh(this.stoneGeometry, this.stoneMaterials[seat]);
-      stone.scale.set(1, STONE_SCALE_Y, 1);
-      stone.position.set(START + move.x * STEP, this.stoneRestY, START + move.y * STEP);
-      stone.castShadow = true;
-      stone.receiveShadow = true;
+      const stone = this.makePlacedStone(move);
       this.stones.add(stone);
       if (move === committed) this.animateImpact(stone, move);
     }

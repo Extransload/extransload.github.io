@@ -3,7 +3,12 @@ import { expect, test } from '@playwright/test';
 test('Petal persists from the wardrobe into actual solo win and loss animations', async ({ page, context }) => {
   test.setTimeout(120_000);
   const errors: string[] = [];
+  const models: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
+  page.on('request', (request) => {
+    const path = new URL(request.url()).pathname;
+    if (path.endsWith('.glb')) models.push(path);
+  });
   // Deterministic opponent moves; the real board, legal move checks and result UI run normally.
   await context.route('**/ai-worker*.js', (route) =>
     route.fulfill({
@@ -15,8 +20,12 @@ test('Petal persists from the wardrobe into actual solo win and loss animations'
     }),
   );
   await page.goto('/playroom/omokmaru/wardrobe/?category=avatar');
+  await expect(page.locator('[data-item-id="petal"] strong')).toHaveText('페탈');
   await page.locator('[data-item-id="petal"]').click();
   await expect(page.locator('#studio-canvas')).toHaveAttribute('data-petal-black', 'ready', { timeout: 30_000 });
+  expect(models).toContain('/models/omokmaru/petal.glb');
+  expect(models.some((path) => path.includes('/male-'))).toBe(false);
+  await expect(page.locator('#studio-petal-credit')).toBeVisible();
   await page.reload();
   await expect(page.locator('[data-item-id="petal"]')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByText('관리자 로그인', { exact: true })).toHaveCount(0);

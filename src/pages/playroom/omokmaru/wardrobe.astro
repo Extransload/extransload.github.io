@@ -4,6 +4,7 @@ import '../../../domains/games/renju/wardrobe-page.css';
 import '../../../domains/games/styles/door.css';
 import DoorIcon from '../../../domains/games/components/DoorIcon.astro';
 import SeoHead from '../../../shared/components/SeoHead.astro';
+import { TIERS } from '../../../domains/games/renju/appearance';
 ---
 
 <!doctype html>
@@ -13,7 +14,7 @@ import SeoHead from '../../../shared/components/SeoHead.astro';
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#142c35" />
     <title>마루 옷장 · 오목마루 — Extransload</title>
-    <SeoHead title="마루 옷장 · 오목마루 — Extransload" description="오목마루의 아바타와 바둑판, 아바타별 승리 춤을 3D로 미리 보고 꾸미세요" canonicalPath="/playroom/omokmaru/wardrobe/" />
+    <SeoHead title="마루 옷장 · 오목마루 — Extransload" description="오목마루의 돌, 아바타, 모션, 바둑판을 C부터 S+까지 등급별로 미리 보고 꾸미세요" canonicalPath="/playroom/omokmaru/wardrobe/" />
     <link rel="icon" type="image/png" href="/favicon.png" />
   </head>
   <body class="wardrobe-page">
@@ -27,11 +28,6 @@ import SeoHead from '../../../shared/components/SeoHead.astro';
           <div id="studio-canvas" class="canvas"></div>
         </div>
         <div id="studio-avatar-controls" class="studio-avatar-controls" hidden>
-          <div id="studio-luna-variants" class="studio-chips" role="group" aria-label="루나 모습" hidden>
-            <span class="studio-chips-label">모습</span>
-            <button type="button" data-luna-variant="luna" aria-pressed="true">기본</button>
-            <button type="button" data-luna-variant="rose" aria-pressed="false">노을빛</button>
-          </div>
           <div id="studio-avatar-motions" class="studio-chips" role="group" aria-label="아바타 동작">
             <span class="studio-chips-label">동작</span>
             <button type="button" data-avatar-motion="idle" aria-pressed="true">대기</button>
@@ -44,16 +40,23 @@ import SeoHead from '../../../shared/components/SeoHead.astro';
             <button type="button" data-avatar-dance="encore" aria-pressed="false">앙코르</button>
           </div>
         </div>
+        <p id="studio-motion-note" class="studio-motion-note" hidden></p>
         <p id="studio-petal-credit" class="studio-avatar-credit" hidden>페탈 원작: <a href="https://studio.blender.org/characters/rain/v3/" target="_blank" rel="noreferrer">Rain Rig · Blender Foundation</a> · <a href="/models/omokmaru/ATTRIBUTION.md">CC BY 4.0 · 수정 내용</a></p>
         <p id="studio-luna-credit" class="studio-avatar-credit" hidden>루나 원작: <a href="https://github.com/madjin/vrm-samples/blob/master/vroid/beta/Victoria_Rubin.vrm" target="_blank" rel="noreferrer">Victoria Rubin · VRoid Project</a> · <a href="/models/omokmaru/ATTRIBUTION.md">CC0 · 수정 내용</a></p>
-        <p id="studio-fashion-credit" class="studio-avatar-credit" hidden>새 아바타 원작: <a href="https://github.com/madjin/vrm-samples/tree/master/vroid/beta" target="_blank" rel="noreferrer">VRoid Project 샘플 모델</a> · <a href="/models/omokmaru/ATTRIBUTION.md">CC0 · 모델별 수정 내용</a></p>
+        <p id="studio-fashion-credit" class="studio-avatar-credit" hidden>아바타 원작: <a href="https://vroid.pixiv.help/hc/en-us/articles/4402614652569-Do-VRoid-Studio-s-sample-models-come-with-conditions-of-use" target="_blank" rel="noreferrer">VRoid Project 샘플 모델</a> · <a href="/models/omokmaru/ATTRIBUTION.md">CC0 · 모델별 수정 내용</a></p>
       </section>
       <section class="studio-editor" aria-labelledby="studio-title">
         <nav class="studio-tabs" aria-label="꾸밀 항목">
           <button type="button" data-category="stone" aria-pressed="true">돌</button>
           <button type="button" data-category="avatar" aria-pressed="false">아바타</button>
+          <button type="button" data-category="motion" aria-pressed="false">모션</button>
           <button type="button" data-category="board" aria-pressed="false">바둑판</button>
         </nav>
+        <div class="studio-tier-filters" role="group" aria-label="등급 필터">
+          <button type="button" data-tier-filter="all" aria-pressed="true">전체</button>
+          {TIERS.map((tier) => <button type="button" data-tier-filter={tier} data-tier={tier} aria-pressed="false" aria-label={`${tier} 등급`}>{tier}</button>)}
+        </div>
+        <p id="studio-list-summary" class="studio-list-summary" role="status" aria-live="polite"></p>
         <div id="studio-items" class="studio-items" aria-label="디자인 목록"></div>
         <button id="studio-default" class="studio-text-button" type="button">기본 디자인으로 되돌리기</button>
       </section>

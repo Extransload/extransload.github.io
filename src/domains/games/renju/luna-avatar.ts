@@ -1,22 +1,14 @@
 import * as THREE from 'three';
-import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js';
+import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import { clone } from 'three/addons/utils/SkeletonUtils.js';
+import { loadVroidSource } from './fashion-avatar';
 import { updateVroidGesture } from './avatar-gestures';
 import type { AvatarMotion } from './petal-avatar';
 import type { DanceStyle } from './appearance';
-
-let source: Promise<GLTF> | undefined;
-
-function loadLunaSource() {
-  source ??= new GLTFLoader().loadAsync('/models/omokmaru/luna.glb').catch((error) => {
-    source = undefined;
-    throw error;
-  });
-  return source;
-}
+import { repairLunaSkinTexture } from './luna-skin';
 
 export async function loadLunaAvatar() {
-  return new LunaAvatar(await loadLunaSource());
+  return new LunaAvatar(await loadVroidSource('/models/omokmaru/luna.glb'));
 }
 
 export class LunaAvatar {
@@ -32,6 +24,13 @@ export class LunaAvatar {
   private readonly rightLeg: THREE.Object3D;
   private readonly leftShin: THREE.Object3D;
   private readonly rightShin: THREE.Object3D;
+  private readonly joints: {
+    chest?: THREE.Object3D;
+    leftHand?: THREE.Object3D;
+    rightHand?: THREE.Object3D;
+    leftFoot?: THREE.Object3D;
+    rightFoot?: THREE.Object3D;
+  };
   private readonly restHipY: number;
   private elapsed = 0;
   motion: AvatarMotion = 'idle';
@@ -54,6 +53,13 @@ export class LunaAvatar {
     this.rightLeg = this.bone(model, 'J_Bip_R_UpperLeg');
     this.leftShin = this.bone(model, 'J_Bip_L_LowerLeg');
     this.rightShin = this.bone(model, 'J_Bip_R_LowerLeg');
+    this.joints = {
+      chest: model.getObjectByName('J_Bip_C_Chest'),
+      leftHand: model.getObjectByName('J_Bip_L_Hand'),
+      rightHand: model.getObjectByName('J_Bip_R_Hand'),
+      leftFoot: model.getObjectByName('J_Bip_L_Foot'),
+      rightFoot: model.getObjectByName('J_Bip_R_Foot'),
+    };
     this.restHipY = this.hips.position.y;
 
     model.traverse((object) => {
@@ -65,6 +71,14 @@ export class LunaAvatar {
       if (!material || Array.isArray(material)) return;
       object.material = material.clone();
       object.material.toneMapped = false;
+      if (
+        material.name.includes('_Body_') &&
+        material.name.endsWith('_SKIN') &&
+        'map' in object.material &&
+        object.material.map instanceof THREE.Texture
+      ) {
+        object.material.map = repairLunaSkinTexture(object.material.map);
+      }
       if (!material.name.includes('HAIR')) return;
       const hair = object.material;
       hair.onBeforeCompile = (shader: THREE.WebGLProgramParametersWithUniforms) => {
@@ -108,6 +122,7 @@ export class LunaAvatar {
       rightLeg: this.rightLeg,
       leftShin: this.leftShin,
       rightShin: this.rightShin,
+      ...this.joints,
     });
   }
 }

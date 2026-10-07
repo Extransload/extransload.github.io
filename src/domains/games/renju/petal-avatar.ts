@@ -32,6 +32,8 @@ export class PetalAvatar {
   private danceBones: Record<string, THREE.Object3D | undefined> = {};
   private danceRest = new Map<THREE.Object3D, { rotation: THREE.Euler; position: THREE.Vector3 }>();
   private elapsed = 0;
+  private readonly jointOffset = new THREE.Quaternion();
+  private readonly jointAngles = new THREE.Euler();
   motion: AvatarMotion = 'idle';
   dance: DanceStyle = 'signature';
 
@@ -54,15 +56,20 @@ export class PetalAvatar {
     for (const name of [
       'Hips',
       'Spine',
+      'Chest',
       'Head',
       'UpperArm.L',
       'UpperArm.R',
       'Forearm.L',
       'Forearm.R',
+      'Hand.L',
+      'Hand.R',
       'Thigh.L',
       'Thigh.R',
       'Shin.L',
       'Shin.R',
+      'Foot.L',
+      'Foot.R',
     ]) {
       const bone = model.getObjectByName(name);
       this.danceBones[name] = bone;
@@ -101,31 +108,35 @@ export class PetalAvatar {
     this.mixer.update(delta);
     if (this.motion === 'win') {
       const move = sampleVictoryDance('petal', this.dance, this.elapsed);
-      const bone = (name: string) => this.danceBones[name];
-      const leftArm = bone('UpperArm.L');
-      const rightArm = bone('UpperArm.R');
-      const hips = bone('Hips');
-      if (leftArm) {
-        leftArm.rotation.z += move.leftZ * 1.6;
-        leftArm.rotation.x += move.leftX * 1.4;
-      }
-      if (rightArm) {
-        rightArm.rotation.z += move.rightZ * 1.6;
-        rightArm.rotation.x += move.rightX * 1.4;
-      }
-      if (bone('Forearm.L')) bone('Forearm.L')!.rotation.x += -0.25 + move.leftX * 0.5;
-      if (bone('Forearm.R')) bone('Forearm.R')!.rotation.x += -0.25 + move.rightX * 0.5;
-      if (bone('Thigh.L')) bone('Thigh.L')!.rotation.x += move.leftLeg;
-      if (bone('Thigh.R')) bone('Thigh.R')!.rotation.x += move.rightLeg;
-      if (bone('Shin.L')) bone('Shin.L')!.rotation.x += Math.max(0, -move.leftLeg) * 0.7;
-      if (bone('Shin.R')) bone('Shin.R')!.rotation.x += Math.max(0, -move.rightLeg) * 0.7;
+      // The baked clip supplies the relaxed posture. Apply modest local joint offsets
+      // with quaternions so the rig's rotated bind axes never hit Euler singularities.
+      const joint = (name: string, x = 0, y = 0, z = 0) => {
+        const bone = this.danceBones[name];
+        if (!bone) return;
+        this.jointOffset.setFromEuler(this.jointAngles.set(x, y, z));
+        bone.quaternion.multiply(this.jointOffset);
+      };
+      joint('UpperArm.L', move.leftX * 0.5, 0, move.leftZ * 0.65);
+      joint('UpperArm.R', move.rightX * 0.5, 0, move.rightZ * 0.65);
+      joint('Forearm.L', -(move.leftElbow ?? 0.25) * 0.65);
+      joint('Forearm.R', -(move.rightElbow ?? 0.25) * 0.65);
+      joint('Hand.L', move.leftWrist ?? 0, 0, move.leftWristZ ?? 0);
+      joint('Hand.R', move.rightWrist ?? 0, 0, move.rightWristZ ?? 0);
+      joint('Thigh.L', move.leftLeg * 0.6, 0, move.leftLegZ ?? 0);
+      joint('Thigh.R', move.rightLeg * 0.6, 0, move.rightLegZ ?? 0);
+      joint('Shin.L', (move.leftKnee ?? 0) * 0.6);
+      joint('Shin.R', (move.rightKnee ?? 0) * 0.6);
+      joint('Foot.L', -(move.leftAnkle ?? 0) * 0.6);
+      joint('Foot.R', -(move.rightAnkle ?? 0) * 0.6);
+      joint('Spine', (move.torsoPitch ?? 0) * 0.7, 0, move.torso * 0.65);
+      joint('Chest', (move.chestPitch ?? 0) * 0.8);
+      joint('Head', move.headPitch ?? 0, 0, move.head * 0.7);
+      joint('Hips', 0, move.hipTurn * 0.65);
+      const hips = this.danceBones.Hips;
       if (hips) {
         hips.position.x += move.hipX;
         hips.position.y += move.hipY;
-        hips.rotation.y += move.hipTurn;
       }
-      if (bone('Spine')) bone('Spine')!.rotation.z += move.torso;
-      if (this.head) this.head.rotation.z += move.head;
     }
     if (this.head) {
       this.root.updateWorldMatrix(true, true);

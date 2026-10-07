@@ -709,6 +709,34 @@ test.describe('Playroom animations stay active under reduced motion', () => {
     await expectCanvasMotion(page, '.canvas canvas');
   });
 
+  test('porcelain last-move ring keeps pulsing on the midnight board', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('omokmaru-appearance-v1', JSON.stringify({ board: 'ink' }));
+    });
+    await page.goto('/playroom/omokmaru/solo/');
+    await page.locator('#side-white').click();
+    await page.locator('#start').click();
+    await expect(page.locator('#status')).toHaveText('내 차례');
+    await expect(page.locator('#canvas')).toHaveAttribute('data-board-style', 'ink');
+    await expect(page.locator('#canvas')).toHaveAttribute('data-rendered-moves', '1');
+    await page.locator('#view').click();
+    await page.mouse.move(0, 0);
+    const bounds = await page.locator('#canvas canvas').boundingBox();
+    expect(bounds).not.toBeNull();
+    // Only the central H8 stone and its ring are in this crop; avatar motion cannot satisfy it.
+    const clip = {
+      x: bounds!.x + bounds!.width / 2 - 28,
+      y: bounds!.y + bounds!.height / 2 - 28,
+      width: 56,
+      height: 56,
+    };
+    await page.waitForTimeout(800);
+    const before = await page.screenshot({ clip, animations: 'allow' });
+    await expect(async () => {
+      expect((await page.screenshot({ clip, animations: 'allow' })).equals(before)).toBe(false);
+    }).toPass({ timeout: 15_000 });
+  });
+
   test('solo sound controls stay usable', async ({ page }) => {
     await page.goto('/playroom/omokmaru/solo/');
     await expect(page.locator('#sound')).toHaveAttribute('aria-expanded', 'false');
@@ -748,13 +776,17 @@ test.describe('Playroom animations stay active under reduced motion', () => {
     { avatar: 'luna', motion: 'lose' },
     { avatar: 'apron', motion: 'win' },
     { avatar: 'serin', motion: 'win' },
-    { avatar: 'rose', motion: 'win' },
+    { avatar: 'sylvie', motion: 'win' },
+    { avatar: 'astra', motion: 'idle' },
+    { avatar: 'seraphine', motion: 'win' },
+    { avatar: 'aurelia', motion: 'idle' },
+    { avatar: 'aurelia', motion: 'win' },
+    { avatar: 'aurelia', motion: 'lose' },
   ] as const;
 
   const selectAvatar = async (page: Page, avatar: (typeof avatarMotions)[number]['avatar']) => {
     await page.goto('/playroom/omokmaru/wardrobe/?category=avatar');
-    await page.locator(`[data-item-id="${avatar === 'rose' ? 'luna' : avatar}"]`).click();
-    if (avatar === 'rose') await page.locator('[data-luna-variant="rose"]').click();
+    await page.locator(`[data-item-id="${avatar}"]`).click();
     await expect(page.locator('#studio-canvas')).toHaveAttribute(`data-${avatar}-black`, 'ready', {
       timeout: 45_000,
     });
@@ -772,8 +804,8 @@ test.describe('Playroom animations stay active under reduced motion', () => {
     });
   }
 
-  test('Luna Rose encore changes the rendered frame', async ({ page }) => {
-    await selectAvatar(page, 'rose');
+  test('Luna encore changes the rendered frame', async ({ page }) => {
+    await selectAvatar(page, 'luna');
     await page.locator('[data-avatar-motion="win"]').click();
     await expect(page.locator('.studio-tabs [data-category="victory"]')).toHaveCount(0);
     await page.locator('[data-avatar-dance="encore"]').click();
@@ -783,6 +815,126 @@ test.describe('Playroom animations stay active under reduced motion', () => {
     await page.waitForTimeout(800);
     await expectCanvasMotion(page, '#studio-canvas canvas');
   });
+
+  for (const motion of ['ribbon', 'waltz', 'moonwalk', 'constellation', 'apotheosis']) {
+    test(`${motion} tier motion keeps animating in its own preview`, async ({ page }) => {
+      await selectAvatar(page, 'luna');
+      await page.locator('.studio-tabs [data-category="motion"]').click();
+      await page.locator(`[data-item-id="${motion}"]`).click();
+      await expect(page.locator('#studio-canvas')).toHaveAttribute('data-avatar-black-dance', motion);
+      await expect(page.locator('#studio-canvas')).toHaveAttribute('data-avatar-black-motion', 'win');
+      await page.waitForTimeout(800);
+      await expectCanvasMotion(page, '#studio-canvas canvas');
+    });
+  }
+
+  for (const stone of ['astral', 'sovereign']) {
+    test(`${stone} stone details keep moving without avatar motion in the crop`, async ({ page }) => {
+      await page.goto('/playroom/omokmaru/wardrobe/');
+      await page.locator(`[data-item-id="${stone}"]`).click();
+      await expect(page.locator('#studio-canvas')).toHaveAttribute('data-stone-black', stone);
+      const bounds = await page.locator('#studio-canvas canvas').boundingBox();
+      const clip = {
+        x: bounds!.x + bounds!.width / 2 - 100,
+        y: bounds!.y + bounds!.height / 2 - 100,
+        width: 200,
+        height: 200,
+      };
+      const before = await page.screenshot({ clip, animations: 'allow' });
+      await expect(async () =>
+        expect((await page.screenshot({ clip, animations: 'allow' })).equals(before)).toBe(false),
+      ).toPass({ timeout: 15_000 });
+    });
+  }
+
+  test('S+ flame crown and embers keep both seat colors moving after reload and overhead orbit', async ({ page }) => {
+    const errors: string[] = [];
+    page.on('console', (message) => {
+      if (message.type() === 'error' && /WebGL|shader|VALIDATE_STATUS/i.test(message.text()))
+        errors.push(message.text());
+    });
+    await page.goto('/playroom/omokmaru/wardrobe/');
+    await page.locator('[data-item-id="sovereign"]').click();
+    await expect(page.locator('[data-item-id="sovereign"] strong')).toHaveText('불꽃');
+    await page.reload();
+    await expect(page.locator('#studio-canvas')).toHaveAttribute('data-stone-black', 'sovereign');
+    await expect(page.locator('[data-item-id="sovereign"]')).toHaveAttribute('aria-pressed', 'true');
+    const bounds = await page.locator('#studio-canvas canvas').boundingBox();
+    // Check the taller crown from the default angle before flattening the view.
+    // The stone preview contains no avatar animation that could satisfy this.
+    await expectCanvasMotion(page, '#studio-canvas canvas');
+    // Orbit to the overhead limit: camera-facing fire used to be sliced by the stone here.
+    await page.mouse.move(bounds!.x + bounds!.width / 2, bounds!.y + bounds!.height * 0.3);
+    await page.mouse.down();
+    await page.mouse.move(bounds!.x + bounds!.width / 2, bounds!.y + bounds!.height * 0.8, { steps: 8 });
+    await page.mouse.up();
+    const clip = {
+      x: bounds!.x + bounds!.width / 2 - 100,
+      y: bounds!.y + bounds!.height / 2 - 100,
+      width: 200,
+      height: 200,
+    };
+    const before = await page.screenshot({ clip, animations: 'allow' });
+    const readFireColors = (capture: Buffer) =>
+      page.evaluate(async (encoded) => {
+        const image = new Image();
+        image.src = `data:image/png;base64,${encoded}`;
+        await image.decode();
+        const canvas = document.createElement('canvas');
+        canvas.width = image.width;
+        canvas.height = image.height;
+        const context = canvas.getContext('2d')!;
+        context.drawImage(image, 0, 0);
+        const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+        let red = 0;
+        let blue = 0;
+        let redPattern = 0;
+        let bluePattern = 0;
+        for (let i = 0; i < pixels.length; i += 4) {
+          if (pixels[i] > 150 && pixels[i] > pixels[i + 1] * 1.3 && pixels[i] > pixels[i + 2] * 1.6) {
+            red++;
+            redPattern += (i + 1) * pixels[i + 1];
+          }
+          if (pixels[i + 2] > 150 && pixels[i + 2] > pixels[i] * 1.6 && pixels[i + 1] > pixels[i] * 1.2) {
+            blue++;
+            bluePattern += (i + 1) * pixels[i + 1];
+          }
+        }
+        return { red, blue, redPattern, bluePattern };
+      }, capture.toString('base64'));
+    const colors = await readFireColors(before);
+    expect(colors.red).toBeGreaterThan(10);
+    expect(colors.blue).toBeGreaterThan(10);
+    await expect(async () => {
+      const after = await readFireColors(await page.screenshot({ clip, animations: 'allow' }));
+      expect(after.red).toBeGreaterThan(10);
+      expect(after.blue).toBeGreaterThan(10);
+      expect(after.redPattern).not.toBe(colors.redPattern);
+      expect(after.bluePattern).not.toBe(colors.bluePattern);
+    }).toPass({ timeout: 15_000 });
+    expect(errors).toEqual([]);
+  });
+
+  for (const board of ['celestial', 'imperial']) {
+    test(`${board} corner crystals keep moving under reduced motion`, async ({ page }) => {
+      await page.setViewportSize({ width: 1440, height: 1000 });
+      await page.goto('/playroom/omokmaru/wardrobe/?category=board');
+      await page.locator(`[data-item-id="${board}"]`).click();
+      await expect(page.locator('#studio-canvas')).toHaveAttribute('data-board-style', board);
+      const bounds = await page.locator('#studio-canvas canvas').boundingBox();
+      // Far corner excludes both the character and its moving foreground shadow.
+      const clip = {
+        x: bounds!.x + bounds!.width * 0.69,
+        y: bounds!.y + bounds!.height * 0.24,
+        width: 130,
+        height: 115,
+      };
+      const before = await page.screenshot({ clip, animations: 'allow' });
+      await expect(async () =>
+        expect((await page.screenshot({ clip, animations: 'allow' })).equals(before)).toBe(false),
+      ).toPass({ timeout: 15_000 });
+    });
+  }
 });
 
 test('solo match replaces start with resign until the match ends', async ({ page }) => {
@@ -899,27 +1051,29 @@ test('Omokmaru studio previews and saves a look', async ({ page }) => {
     '#studio-zoom-in',
   ])
     await expect(page.locator(removed)).toHaveCount(0);
-  await expect(page.locator('#studio-items .studio-item')).toHaveCount(1);
+  await expect(page.locator('#studio-items .studio-item')).toHaveCount(6);
+  await expect(page.locator('[data-item-id="classic"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#studio-canvas')).toHaveAttribute('data-board-style', 'wood');
+  await expect(page.locator('#studio-canvas')).toHaveAttribute('data-stone-black', 'classic');
+  await page.locator('[data-item-id="rose"]').click();
   await expect(page.locator('[data-item-id="rose"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#studio-canvas')).toHaveAttribute('data-stone-black', 'rose');
+  await expect(page.locator('#studio-canvas')).toHaveAttribute('data-stone-white', 'rose');
   await expect(page.locator('[data-seat]')).toHaveCount(0);
   await page.locator('[data-category="avatar"]').click();
   await expect(page.locator('#studio-canvas')).toHaveAttribute('data-focus', 'avatar');
-  await expect(page.locator('#studio-items .studio-item')).toHaveCount(4);
+  await expect(page.locator('#studio-items .studio-item')).toHaveCount(8);
   await expect(page.locator('.studio-tabs [data-category="accessory"]')).toHaveCount(0);
   const originalAvatar = await page.locator('#studio-canvas canvas').screenshot();
   await page.locator('[data-item-id="luna"]').click();
   await expect(page.locator('#studio-canvas')).toHaveAttribute('data-avatar-black', 'luna');
   await expect(page.locator('#studio-canvas')).toHaveAttribute('data-avatar-white', 'luna');
   expect((await page.locator('#studio-canvas canvas').screenshot()).equals(originalAvatar)).toBe(false);
-  await expect(page.locator('#studio-luna-variants')).toBeVisible();
-  await expect(page.locator('[data-luna-variant="rose"]')).toHaveText('노을빛');
-  await page.locator('[data-luna-variant="rose"]').click();
-  await expect(page.locator('#studio-canvas')).toHaveAttribute('data-avatar-black', 'rose');
-  await expect(page.locator('#studio-canvas')).toHaveAttribute('data-avatar-white', 'rose');
+  await expect(page.locator('#studio-luna-variants')).toHaveCount(0);
+  await expect(page.locator('[data-luna-variant]')).toHaveCount(0);
   await expect(page.locator('[data-item-id="luna"]')).toHaveAttribute('aria-pressed', 'true');
   await page.goto('/playroom/omokmaru/wardrobe/?category=avatar');
-  await expect(page.locator('[data-luna-variant="rose"]')).toHaveAttribute('aria-pressed', 'true');
-  await page.locator('[data-luna-variant="luna"]').click();
+  await expect(page.locator('[data-item-id="luna"]')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#studio-avatar-dances')).toBeVisible();
   await expect(page.locator('[data-avatar-dance="signature"]')).toHaveText('팝 웨이브');
   await expect(page.locator('[data-avatar-dance="encore"]')).toHaveText('핑크 피날레');
@@ -933,6 +1087,8 @@ test('Omokmaru studio previews and saves a look', async ({ page }) => {
   await expect(page.locator('[data-avatar-dance="encore"]')).toHaveAttribute('aria-pressed', 'true');
   await page.locator('[data-category="board"]').click();
   await expect(page.locator('#studio-canvas')).toHaveAttribute('data-focus', 'board');
+  await expect(page.locator('#studio-items .studio-item')).toHaveCount(10);
+  await expect(page.locator('[data-item-id="wood"]')).toHaveAttribute('aria-pressed', 'true');
   await page.locator('[data-item-id="walnut"]').click();
   await expect(page.locator('[data-category="victory"]')).toHaveCount(0);
   await page.reload();
@@ -945,23 +1101,70 @@ test('Omokmaru studio previews and saves a look', async ({ page }) => {
   await expect(page.locator('#canvas')).toHaveAttribute('data-rendered-moves', '2');
   await page.goto('/playroom/omokmaru/');
   await expect(page.locator('#lobby-style-card')).toHaveAttribute('data-stone', 'rose');
-  await expect(page.locator('#lobby-style-current')).toHaveText('루나 · 장미꽃');
-  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('omokmaru-appearance-v1') || 'null'))).toEqual({
-    stone: 'rose',
-    avatar: 'luna',
-    board: 'walnut',
-    dances: { petal: 'signature', luna: 'encore', apron: 'signature', rose: 'signature', serin: 'signature' },
-  });
+  await expect(page.locator('#lobby-style-current')).toHaveText('루나 · 장미 송이');
+  await expect(page.locator('.lobby-style-stones')).toHaveAttribute('src', '/images/omokmaru/stones/rose.webp');
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('omokmaru-appearance-v1') || 'null'))).toMatchObject(
+    {
+      stone: 'rose',
+      avatar: 'luna',
+      board: 'walnut',
+      dances: { petal: 'signature', luna: 'encore', apron: 'signature', rose: 'signature', serin: 'signature' },
+    },
+  );
   await page.goto('/playroom/omokmaru/wardrobe/?category=avatar');
   await page.locator('#studio-default').click();
   await expect(page.locator('[data-item-id="petal"]')).toHaveAttribute('aria-pressed', 'true');
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('omokmaru-appearance-v1') || 'null'))).toMatchObject(
     {
-      stone: 'rose',
+      stone: 'classic',
       avatar: 'petal',
-      board: 'oak',
+      board: 'wood',
     },
   );
+  await expect(page.locator('#studio-canvas')).toHaveAttribute('data-stone-black', 'classic');
+  await expect(page.locator('#studio-canvas')).toHaveAttribute('data-board-style', 'wood');
+  await page.goto('/playroom/omokmaru/');
+  await expect(page.locator('#lobby-style-current')).toHaveText('페탈 · 기본 흑백');
+  await expect(page.locator('.lobby-style-stones')).toHaveAttribute('src', '/images/omokmaru/stones/classic.webp');
+});
+
+test('Omokmaru studio migrates the retired avatar to Luna and keeps its dance', async ({ page }) => {
+  await page.addInitScript(() => {
+    if (!localStorage.getItem('omokmaru-appearance-v1')) {
+      localStorage.setItem(
+        'omokmaru-appearance-v1',
+        JSON.stringify({
+          stone: 'classic',
+          avatar: 'rose',
+          board: 'wood',
+          dances: { luna: 'signature', rose: 'moonwalk', petal: 'encore' },
+        }),
+      );
+    }
+  });
+  await page.goto('/playroom/omokmaru/wardrobe/?category=avatar');
+  await expect(page.locator('#studio-canvas')).toHaveAttribute('data-avatar-black', 'luna');
+  await expect(page.locator('[data-item-id="luna"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('[data-luna-variant]')).toHaveCount(0);
+  await expect(page.locator('#studio-items .studio-item strong')).toHaveText([
+    '페탈',
+    '루나',
+    '레온',
+    '노아',
+    '로언',
+    '아스트라',
+    '세라핀',
+    '아우렐리아',
+  ]);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('omokmaru-appearance-v1') || 'null'))).toMatchObject(
+    {
+      avatar: 'luna',
+      dances: { luna: 'moonwalk', rose: 'moonwalk', petal: 'encore' },
+    },
+  );
+  await page.reload();
+  await page.locator('.studio-tabs [data-category="motion"]').click();
+  await expect(page.locator('[data-item-id="moonwalk"]')).toHaveAttribute('aria-pressed', 'true');
 });
 
 test('Omokmaru lobby separates play actions, styling, and public rooms', async ({ browser }) => {
@@ -1006,6 +1209,107 @@ test('Omokmaru studio puts the 3D preview before options on a phone', async ({ p
   const startFrame = await captureMotion();
   // The result animation has an intentional lead-in before the character starts moving.
   await expect(async () => expect((await captureMotion()).equals(startFrame)).toBe(false)).toPass({ timeout: 5000 });
+});
+
+test('Omokmaru tier collection covers every grade and saves an S+ look', async ({ page }) => {
+  test.setTimeout(60_000);
+  await page.goto('/playroom/omokmaru/wardrobe/');
+  const counts = { stone: 6, avatar: 8, motion: 7, board: 10 };
+  const additions = { stone: 4, avatar: 4, motion: 5, board: 4 };
+  for (const category of ['stone', 'avatar', 'motion', 'board'] as const) {
+    await page.locator('.studio-tabs [data-category="' + category + '"]').click();
+    await expect(page.locator('#studio-items .studio-item')).toHaveCount(counts[category]);
+    await expect(page.locator('#studio-items [data-collection="tier"]')).toHaveCount(additions[category]);
+    await expect
+      .poll(() =>
+        page
+          .locator('#studio-items img')
+          .evaluateAll((images) =>
+            images.every(
+              (image) => (image as HTMLImageElement).complete && (image as HTMLImageElement).naturalWidth > 0,
+            ),
+          ),
+      )
+      .toBe(true);
+    for (const tier of ['C', 'B', 'A', 'A+', 'S', 'S+']) {
+      await page.locator(`[data-tier-filter="${tier}"]`).click();
+      const cards = page.locator('#studio-items .studio-item');
+      expect(await cards.count()).toBeGreaterThan(0);
+      expect(await cards.evaluateAll((items) => items.map((item) => (item as HTMLElement).dataset.tier))).toEqual(
+        Array(await cards.count()).fill(tier),
+      );
+    }
+    await page.locator('[data-tier-filter="all"]').click();
+  }
+  await page.locator('[data-tier-filter="S+"]').click();
+  await page.locator('[data-item-id="imperial"]').click();
+  await page.locator('.studio-tabs [data-category="stone"]').click();
+  await expect(page.locator('#studio-items .studio-item')).toHaveCount(1);
+  await page.locator('[data-item-id="sovereign"]').click();
+  await page.locator('.studio-tabs [data-category="avatar"]').click();
+  await page.locator('[data-item-id="seraphine"]').click();
+  await expect(page.locator('#studio-canvas')).toHaveAttribute('data-seraphine-black', 'ready', { timeout: 45_000 });
+  await page.locator('.studio-tabs [data-category="motion"]').click();
+  await page.locator('[data-item-id="apotheosis"]').click();
+  await expect(page.locator('#studio-canvas')).toHaveAttribute('data-avatar-black-motion', 'win');
+  await page.reload();
+  await expect(page.locator('#studio-canvas')).toHaveAttribute('data-stone-black', 'sovereign');
+  await expect(page.locator('#studio-canvas')).toHaveAttribute('data-board-style', 'imperial');
+  await expect(page.locator('#studio-canvas')).toHaveAttribute('data-avatar-black-dance', 'apotheosis');
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.locator('#studio-default').click();
+  await expect(page.locator('[data-tier-filter="all"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#studio-canvas')).toHaveAttribute('data-board-style', 'wood');
+  await expect(page.locator('#studio-canvas')).toHaveAttribute('data-stone-black', 'classic');
+});
+
+test('Omokmaru Aurelia is an additional S+ avatar and saves her own dance into solo play', async ({ page }) => {
+  test.setTimeout(60_000);
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  page.on('console', (message) => {
+    if (message.type() === 'error' && /WebGL|shader|VALIDATE_STATUS/i.test(message.text())) errors.push(message.text());
+  });
+  await page.addInitScript(() => {
+    if (!localStorage.getItem('omokmaru-appearance-v1')) {
+      localStorage.setItem(
+        'omokmaru-appearance-v1',
+        JSON.stringify({
+          avatar: 'petal',
+          dances: { petal: 'encore', luna: 'moonwalk', seraphine: 'apotheosis' },
+        }),
+      );
+    }
+  });
+  await page.goto('/playroom/omokmaru/wardrobe/?category=avatar');
+  await page.locator('[data-tier-filter="S+"]').click();
+  await expect(page.locator('#studio-items .studio-item strong')).toHaveText(['세라핀', '아우렐리아']);
+  await page.locator('[data-item-id="aurelia"]').click();
+  await expect(page.locator('#studio-canvas')).toHaveAttribute('data-aurelia-black', 'ready', { timeout: 45_000 });
+  await expect(page.locator('[data-item-id="aurelia"] .studio-tier-badge')).toHaveText('S+');
+  await expect(page.locator('[data-item-id="aurelia"] img')).toHaveAttribute(
+    'src',
+    '/images/omokmaru/avatars/aurelia.webp',
+  );
+  await page.locator('[data-avatar-dance="encore"]').click();
+  await expect(page.locator('[data-avatar-dance="encore"]')).toHaveText('황금빛 인사');
+  await page.reload();
+  await expect(page.locator('[data-item-id="aurelia"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#studio-canvas')).toHaveAttribute('data-aurelia-black', 'ready', { timeout: 45_000 });
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('omokmaru-appearance-v1') || 'null'))).toMatchObject(
+    {
+      avatar: 'aurelia',
+      dances: { petal: 'encore', luna: 'moonwalk', seraphine: 'apotheosis', aurelia: 'encore' },
+    },
+  );
+  await page.goto('/playroom/omokmaru/solo/');
+  await page.locator('#side-white').click();
+  await page.locator('#start').click();
+  await expect(page.locator('#canvas')).toHaveAttribute('data-aurelia-white', 'ready', { timeout: 45_000 });
+  await expect(page.locator('#canvas')).toHaveAttribute('data-avatar-white', 'aurelia');
+  await expect(page.locator('#canvas')).toHaveAttribute('data-avatar-white-dance', 'encore');
+  expect(errors).toEqual([]);
 });
 
 test('keyboard can inspect coordinates and place a solo move', async ({ page }) => {
@@ -1068,9 +1372,13 @@ test('small online room keeps its controls inside the viewport', async ({ page }
 
 test('touch board tap previews a stone until the move button confirms it', async ({ browser }) => {
   const context = await browser.newContext({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 844 } });
+  await context.addInitScript(() => {
+    localStorage.setItem('omokmaru-appearance-v1', JSON.stringify({ stone: 'sovereign' }));
+  });
   const page = await context.newPage();
   try {
     await page.goto('/playroom/omokmaru/solo/');
+    await expect(page.locator('#canvas')).toHaveAttribute('data-stone-black', 'sovereign');
     await page.locator('#difficulty').selectOption('1');
     await page.locator('#start').click();
     const box = await page.locator('.canvas canvas').boundingBox();

@@ -174,12 +174,12 @@ a {
   position: relative;
   width: min(76%, 305px);
   aspect-ratio: 1;
-  border: 11px solid #e7d8b5;
-  border-bottom-width: 17px;
-  border-radius: 7px;
-  background: #f2ead6;
+  border: 8px solid #c79861;
+  border-bottom-width: 9px;
+  border-radius: 20px;
+  background: repeating-linear-gradient(2deg, #e5bd84 0 5px, #dbb17a 6px, #e5bd84 7px 12px);
   box-shadow:
-    0 16px 0 #24423f,
+    0 13px 0 #956d45,
     0 27px 38px #05131bb0;
   transform: perspective(650px) rotateX(24deg) rotateZ(-13deg);
   transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -191,10 +191,10 @@ a {
   position: absolute;
   inset: 8%;
   background-image:
-    linear-gradient(#a9967488 1px, transparent 1px), linear-gradient(90deg, #a9967488 1px, transparent 1px);
+    linear-gradient(#71513288 1px, transparent 1px), linear-gradient(90deg, #71513288 1px, transparent 1px);
   background-size: 12.5% 12.5%;
-  border-right: 1px solid #a9967488;
-  border-bottom: 1px solid #a9967488;
+  border-right: 1px solid #71513288;
+  border-bottom: 1px solid #71513288;
 }
 .mini-stone {
   position: absolute;
@@ -205,11 +205,11 @@ a {
   box-shadow: 2px 5px 5px #14242f5c;
 }
 .mini-stone-black {
-  background: radial-gradient(circle at 30% 24%, #506573, #0c1924 76%);
+  background: radial-gradient(circle at 30% 24%, #676b70, #18191c 76%);
 }
 .mini-stone-white {
-  background: radial-gradient(circle at 30% 24%, #fff, #d6c9aa 80%);
-  border: 1px solid #baae96;
+  background: radial-gradient(circle at 30% 24%, #fff, #e8e6e1 80%);
+  border: 1px solid #b8b6b0;
 }
 .mini-stone.one {
   left: 46%;

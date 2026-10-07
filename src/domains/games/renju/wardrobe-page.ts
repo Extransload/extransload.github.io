@@ -7,13 +7,16 @@ import {
   normalizeAppearance,
   saveAppearance,
   DANCE_NAMES,
+  TIERS,
   type Appearance,
   type DanceStyle,
+  type Tier,
 } from './appearance';
 import type { Move } from './rules';
 import type { AvatarMotion } from './petal-avatar';
 
-type Category = 'stone' | 'avatar' | 'board';
+type Category = keyof typeof APPEARANCE_OPTIONS;
+const CATEGORY_NAMES: Record<Category, string> = { stone: '돌', avatar: '아바타', motion: '모션', board: '바둑판' };
 const $ = <T extends HTMLElement>(selector: string) => document.querySelector<T>(selector)!;
 const board = new RenjuBoard($('#studio-canvas'));
 const sampleMoves: Move[] = [
@@ -28,31 +31,41 @@ const sampleMoves: Move[] = [
 ];
 
 let appearance = loadAppearance();
-let category: Category = new URLSearchParams(location.search).get('category') === 'avatar' ? 'avatar' : 'stone';
+const requestedCategory = new URLSearchParams(location.search).get('category');
+let category: Category =
+  requestedCategory && Object.prototype.hasOwnProperty.call(APPEARANCE_OPTIONS, requestedCategory)
+    ? (requestedCategory as Category)
+    : 'stone';
+let tier: Tier | 'all' = 'all';
 
 function showScene() {
   board.clearCelebration();
   board.setState(sampleMoves, null, false, false);
   // My look sits at the black seat of a real table; the opponent's seat stays empty.
   board.setSeats('black', null, { black: true, white: false });
-  board.focusShowcase(category, 'black');
+  board.focusShowcase(category === 'motion' ? 'avatar' : category, 'black');
   updateAvatarPreview();
+  if (category === 'motion') board.previewAvatarMotion('win');
 }
 
 function updateAvatarPreview() {
-  $('#studio-avatar-controls').hidden = category !== 'avatar';
+  $('#studio-avatar-controls').hidden = category !== 'avatar' && category !== 'motion';
+  $('#studio-avatar-dances').hidden = category !== 'avatar';
+  $('#studio-motion-note').hidden = category !== 'motion';
+  const currentAvatar = APPEARANCE_OPTIONS.avatar.find((option) => option.id === appearance.avatar);
+  $('#studio-motion-note').textContent = `${currentAvatar?.name ?? '아바타'}의 승리 모션 · 아바타마다 따로 저장됩니다`;
   for (const button of document.querySelectorAll<HTMLButtonElement>('[data-avatar-dance]')) {
     button.textContent = DANCE_NAMES[appearance.avatar][button.dataset.avatarDance as DanceStyle];
     button.setAttribute('aria-pressed', String(button.dataset.avatarDance === appearance.dances[appearance.avatar]));
   }
-  $('#studio-luna-variants').hidden = category !== 'avatar' || !['luna', 'rose'].includes(appearance.avatar);
-  for (const button of document.querySelectorAll<HTMLButtonElement>('[data-luna-variant]'))
-    button.setAttribute('aria-pressed', String(button.dataset.lunaVariant === appearance.avatar));
   $('#studio-petal-credit').hidden = appearance.avatar !== 'petal';
-  $('#studio-luna-credit').hidden = !['luna', 'rose'].includes(appearance.avatar);
-  $('#studio-fashion-credit').hidden = !['apron', 'serin'].includes(appearance.avatar);
+  $('#studio-luna-credit').hidden = appearance.avatar !== 'luna';
+  $('#studio-fashion-credit').hidden = ['petal', 'luna'].includes(appearance.avatar);
   for (const button of document.querySelectorAll<HTMLButtonElement>('[data-avatar-motion]'))
-    button.setAttribute('aria-pressed', String(button.dataset.avatarMotion === 'idle'));
+    button.setAttribute(
+      'aria-pressed',
+      String(button.dataset.avatarMotion === (category === 'motion' ? 'win' : 'idle')),
+    );
 }
 
 function applySeatAppearance() {
@@ -62,31 +75,58 @@ function applySeatAppearance() {
 
 function renderItems() {
   const options = APPEARANCE_OPTIONS[category];
-  const selectedId = category === 'avatar' && appearance.avatar === 'rose' ? 'luna' : appearance[category];
+  const selectedId = category === 'motion' ? appearance.dances[appearance.avatar] : appearance[category];
+  const visibleOptions = options.filter((option) => tier === 'all' || option.tier === tier);
+  $('#studio-list-summary').textContent =
+    `${tier === 'all' ? '전체 등급' : `${tier} 등급`} · ${CATEGORY_NAMES[category]} ${visibleOptions.length}개`;
   const list = $('#studio-items');
   list.replaceChildren();
-  for (const option of options) {
+  for (const option of visibleOptions) {
     const card = document.createElement('button');
     card.type = 'button';
     card.className = 'studio-item';
     card.dataset.category = category;
     card.dataset.itemId = option.id;
+    card.dataset.tier = option.tier;
+    card.dataset.collection = option.collection;
     card.setAttribute('aria-pressed', String(selectedId === option.id));
-    card.style.setProperty('--item-a', option.colors[0]);
-    card.style.setProperty('--item-b', option.colors[1]);
     const art = document.createElement('span');
     art.className = 'studio-item-art';
     art.setAttribute('aria-hidden', 'true');
-    art.append(document.createElement('i'), document.createElement('i'));
+    const thumbnail = document.createElement('img');
+    thumbnail.src = `/images/omokmaru/${category}s/${option.id}.webp`;
+    thumbnail.alt = '';
+    thumbnail.width = 336;
+    thumbnail.height = 232;
+    thumbnail.decoding = 'async';
+    art.append(thumbnail);
     const title = document.createElement('strong');
-    title.textContent = option.name;
+    title.textContent = category === 'motion' ? DANCE_NAMES[appearance.avatar][option.id as DanceStyle] : option.name;
+    const badge = document.createElement('span');
+    badge.className = 'studio-tier-badge';
+    const displayedTier = option.tier;
+    badge.dataset.tier = displayedTier;
+    badge.textContent = displayedTier;
+    badge.setAttribute('aria-label', `${displayedTier} 등급`);
+    const heading = document.createElement('span');
+    heading.className = 'studio-item-heading';
+    heading.append(title, badge);
     const detail = document.createElement('small');
     detail.textContent = option.detail;
     const copy = document.createElement('span');
     copy.className = 'studio-item-copy';
-    copy.append(title, detail);
+    copy.append(heading, detail);
     card.append(art, copy);
-    card.addEventListener('click', () => setAppearance({ ...appearance, [category]: option.id }));
+    card.addEventListener('click', () => {
+      if (category === 'motion') {
+        setAppearance({
+          ...appearance,
+          dances: { ...appearance.dances, [appearance.avatar]: option.id as DanceStyle },
+        });
+      } else {
+        setAppearance({ ...appearance, [category]: option.id });
+      }
+    });
     list.append(card);
   }
   for (const tab of document.querySelectorAll<HTMLButtonElement>('.studio-tabs [data-category]'))
@@ -100,8 +140,17 @@ function setAppearance(next: Appearance) {
   applySeatAppearance();
   renderItems();
   updateAvatarPreview();
-  board.previewAvatarMotion('idle');
+  board.previewAvatarMotion(category === 'motion' ? 'win' : 'idle');
 }
+
+for (const filter of document.querySelectorAll<HTMLButtonElement>('[data-tier-filter]'))
+  filter.addEventListener('click', () => {
+    const selectedTier = filter.dataset.tierFilter;
+    tier = TIERS.includes(selectedTier as Tier) ? (selectedTier as Tier) : 'all';
+    for (const peer of document.querySelectorAll<HTMLButtonElement>('[data-tier-filter]'))
+      peer.setAttribute('aria-pressed', String(peer === filter));
+    renderItems();
+  });
 
 for (const tab of document.querySelectorAll<HTMLButtonElement>('.studio-tabs [data-category]'))
   tab.addEventListener('click', () => {
@@ -126,10 +175,11 @@ for (const button of document.querySelectorAll<HTMLButtonElement>('[data-avatar-
     for (const peer of document.querySelectorAll<HTMLButtonElement>('[data-avatar-motion]'))
       peer.setAttribute('aria-pressed', String(peer.dataset.avatarMotion === 'win'));
   });
-for (const button of document.querySelectorAll<HTMLButtonElement>('[data-luna-variant]'))
-  button.addEventListener('click', () =>
-    setAppearance({ ...appearance, avatar: button.dataset.lunaVariant as 'luna' | 'rose' }),
-  );
-$('#studio-default').addEventListener('click', () => setAppearance({ ...DEFAULT_APPEARANCE }));
+$('#studio-default').addEventListener('click', () => {
+  tier = 'all';
+  for (const filter of document.querySelectorAll<HTMLButtonElement>('[data-tier-filter]'))
+    filter.setAttribute('aria-pressed', String(filter.dataset.tierFilter === 'all'));
+  setAppearance({ ...DEFAULT_APPEARANCE });
+});
 showScene();
 setAppearance(appearance);

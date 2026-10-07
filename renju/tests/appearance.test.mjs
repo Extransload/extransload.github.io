@@ -56,7 +56,7 @@ async function until(check, label) {
   throw new Error(`Timed out: ${label}`);
 }
 
-test('each player sees the look the opponent chose', { timeout: 30_000 }, async () => {
+test('each player sees both classic and custom looks the opponent chose', { timeout: 30_000 }, async () => {
   const dataDir = await mkdtemp(join(tmpdir(), 'omokmaru-looks-'));
   const child = spawn('./node_modules/.bin/wrangler', ['dev', '--port', String(port), '--persist-to', dataDir], {
     cwd: new URL('..', import.meta.url),
@@ -76,19 +76,42 @@ test('each player sees the look the opponent chose', { timeout: 30_000 }, async 
     await until(() => black.states.at(-1)?.connected.white && white.states.at(-1)?.connected.black, 'both connected');
 
     black.socket.send(
-      JSON.stringify({ type: 'appearance', appearance: { stone: 'rose', avatar: 'luna', dance: 'encore' } }),
+      JSON.stringify({ type: 'appearance', appearance: { stone: 'classic', avatar: 'luna', dance: 'encore' } }),
     );
     white.socket.send(
       JSON.stringify({ type: 'appearance', appearance: { stone: 'rose', avatar: 'serin', dance: 'signature' } }),
     );
     const expected = {
-      black: { stone: 'rose', avatar: 'luna', dance: 'encore' },
+      black: { stone: 'classic', avatar: 'luna', dance: 'encore' },
       white: { stone: 'rose', avatar: 'serin', dance: 'signature' },
     };
     await until(() => white.states.at(-1)?.looks?.black?.avatar === 'luna', 'guest sees host look');
     await until(() => black.states.at(-1)?.looks?.white?.avatar === 'serin', 'host sees guest look');
     assert.deepEqual(black.states.at(-1).looks, expected);
     assert.deepEqual(white.states.at(-1).looks, expected);
+
+    expected.black.stone = 'rose';
+    expected.white.stone = 'classic';
+    black.socket.send(JSON.stringify({ type: 'appearance', appearance: expected.black }));
+    white.socket.send(JSON.stringify({ type: 'appearance', appearance: expected.white }));
+    await until(() => white.states.at(-1)?.looks?.black?.stone === 'rose', 'guest sees changed host stones');
+    await until(() => black.states.at(-1)?.looks?.white?.stone === 'classic', 'host sees changed guest stones');
+    assert.deepEqual(black.states.at(-1).looks, expected);
+    assert.deepEqual(white.states.at(-1).looks, expected);
+
+    expected.black = { stone: 'sovereign', avatar: 'seraphine', dance: 'apotheosis' };
+    expected.white = { stone: 'opal', avatar: 'astra', dance: 'constellation' };
+    black.socket.send(JSON.stringify({ type: 'appearance', appearance: expected.black }));
+    white.socket.send(JSON.stringify({ type: 'appearance', appearance: expected.white }));
+    await until(() => white.states.at(-1)?.looks?.black?.avatar === 'seraphine', 'guest sees S+ collection');
+    await until(() => black.states.at(-1)?.looks?.white?.dance === 'constellation', 'host sees tier motion');
+    assert.deepEqual(black.states.at(-1).looks, expected);
+    assert.deepEqual(white.states.at(-1).looks, expected);
+
+    expected.white = { stone: 'classic', avatar: 'aurelia', dance: 'encore' };
+    white.socket.send(JSON.stringify({ type: 'appearance', appearance: expected.white }));
+    await until(() => black.states.at(-1)?.looks?.white?.avatar === 'aurelia', 'host sees the additional S+ avatar');
+    assert.deepEqual(black.states.at(-1).looks, expected);
 
     const watcher = connect(host.id, null, 'Watcher');
     sockets.push(watcher.socket);

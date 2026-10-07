@@ -108,34 +108,19 @@ button:disabled {
   width: 118px;
   height: 102px;
   overflow: hidden;
-  border: 4px solid #8f704a;
-  border-radius: 10px;
-  background-color: #c49b68;
+  border: 3px solid #ae8053;
+  border-radius: 15px;
+  background-color: #e4be88;
   background-image:
-    repeating-linear-gradient(0deg, transparent 0 23px, #5e432b8c 23px 24px),
-    repeating-linear-gradient(90deg, transparent 0 23px, #5e432b8c 23px 24px);
-  box-shadow: inset 0 2px 9px #4b301b55;
+    repeating-linear-gradient(0deg, transparent 0 23px, #76533166 23px 24px),
+    repeating-linear-gradient(90deg, transparent 0 23px, #76533166 23px 24px);
+  box-shadow: inset 0 1px 5px #70502e20;
 }
-.lobby-style-stone,
-.lobby-style-stone-alt {
-  position: absolute;
+.lobby-style-stones {
   display: block;
-  aspect-ratio: 1;
-  box-shadow: 0 5px 6px #3a281e66;
-}
-.lobby-style-stone {
-  top: 34px;
-  left: 41px;
-  width: 37px;
-  border-radius: 43% 57% 48% 52%;
-  background: conic-gradient(from 25deg, #9c1028, #4e0919, #c72c38, #841027, #4e0919, #c72c38, #9c1028);
-}
-.lobby-style-stone-alt {
-  top: 8px;
-  left: 16px;
-  width: 24px;
-  border-radius: 48% 52% 45% 55%;
-  background: conic-gradient(from 25deg, #edb72f, #b9801a, #f6d36a, #d79a22, #b9801a, #f6d36a, #edb72f);
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 .lobby-style-copy {
   display: grid;
@@ -540,11 +525,11 @@ button:disabled {
   border-radius: 50%;
 }
 .piece.black {
-  background: radial-gradient(circle at 32% 25%, #506471, #09131d 72%);
+  background: radial-gradient(circle at 32% 25%, #676b70, #18191c 72%);
 }
 .piece.white {
-  background: radial-gradient(circle at 32% 25%, #fffdf4, #d5c9ae 83%);
-  border: 1px solid #bdae91;
+  background: radial-gradient(circle at 32% 25%, #fff, #e8e6e1 83%);
+  border: 1px solid #b8b6b0;
 }
 .player.active .piece {
   box-shadow:
@@ -1089,16 +1074,6 @@ button:disabled {
     width: 83px;
     height: 82px;
   }
-  .lobby-style-stone {
-    top: 28px;
-    left: 30px;
-    width: 28px;
-  }
-  .lobby-style-stone-alt {
-    top: 6px;
-    left: 12px;
-    width: 19px;
-  }
   .lobby-style-copy {
     gap: 4px;
   }
@@ -1184,16 +1159,6 @@ button:disabled {
   .lobby-style-scene {
     width: 67px;
     height: 70px;
-  }
-  .lobby-style-stone {
-    top: 26px;
-    left: 24px;
-    width: 25px;
-  }
-  .lobby-style-stone-alt {
-    top: 6px;
-    left: 8px;
-    width: 17px;
   }
   .lobby-style-copy strong {
     font-size: 16px;
@@ -1407,11 +1372,11 @@ button:disabled {
   animation: turn-piece-pulse 1.7s ease-in-out infinite;
 }
 .clock-piece.black {
-  background: #1d2d39;
+  background: #18191c;
 }
 .clock-piece.white {
-  background: #f6efdc;
-  border: 1px solid #ac9d81;
+  background: #f5f3ed;
+  border: 1px solid #b8b6b0;
 }
 .stage-overlay {
   position: absolute;

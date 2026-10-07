@@ -4,39 +4,38 @@ import { clone } from 'three/addons/utils/SkeletonUtils.js';
 import { updateVroidGesture } from './avatar-gestures';
 import type { AvatarMotion } from './petal-avatar';
 import type { DanceStyle } from './appearance';
+import { TIER_AVATAR_LOOKS, TierAvatarAccessories, tailorTierGarment } from './tier-avatar';
+import { MALE_AVATARS, MALE_AVATAR_LOOKS, MaleAvatarWardrobe, isMaleAvatar, tailorMaleBase } from './male-avatar';
+import { AURELIA_LOOK, AureliaWardrobe, tailorAureliaBodice } from './aurelia-avatar';
+import { repairLunaSkinTexture } from './luna-skin';
 
-export const FASHION_AVATARS = ['apron', 'rose', 'serin'] as const;
+export const FASHION_AVATARS = [...MALE_AVATARS, 'seraphine', 'aurelia'] as const;
 export type FashionStyle = (typeof FASHION_AVATARS)[number];
+const LOOKS = { ...MALE_AVATAR_LOOKS, seraphine: TIER_AVATAR_LOOKS.seraphine, aurelia: AURELIA_LOOK };
+const source = new Map<string, Promise<GLTF>>();
 
-const SOURCES: Record<FashionStyle, string> = {
-  apron: '/models/omokmaru/apron.glb',
-  rose: '/models/omokmaru/luna.glb',
-  serin: '/models/omokmaru/ribbon.glb',
-};
-const COLORS: Record<FashionStyle, { hair: number; dress: number; shoes: number }> = {
-  apron: { hair: 0xeebd69, dress: 0xd7ba91, shoes: 0x916741 },
-  rose: { hair: 0xe987a8, dress: 0x4c334d, shoes: 0x342a42 },
-  serin: { hair: 0x49342f, dress: 0x35495f, shoes: 0x242a38 },
-};
-const source = new Map<FashionStyle, Promise<GLTF>>();
-
-export async function loadFashionAvatar(style: FashionStyle) {
-  let loaded = source.get(style);
+export function loadVroidSource(url: string) {
+  let loaded = source.get(url);
   if (!loaded) {
-    loaded = new GLTFLoader().loadAsync(SOURCES[style]).catch((error) => {
-      source.delete(style);
+    loaded = new GLTFLoader().loadAsync(url).catch((error) => {
+      source.delete(url);
       throw error;
     });
-    source.set(style, loaded);
+    source.set(url, loaded);
   }
-  return new FashionAvatar(style, await loaded);
+  return loaded;
+}
+
+export async function loadFashionAvatar(style: FashionStyle) {
+  return new FashionAvatar(style, await loadVroidSource(LOOKS[style].source));
 }
 
 export class FashionAvatar {
   readonly root = new THREE.Group();
   private readonly hips: THREE.Object3D;
   private readonly spine: THREE.Object3D;
-  private readonly head: THREE.Object3D;
+  readonly head: THREE.Object3D;
+  private readonly accessories: TierAvatarAccessories | MaleAvatarWardrobe | AureliaWardrobe;
   private readonly leftArm: THREE.Object3D;
   private readonly rightArm: THREE.Object3D;
   private readonly leftForearm: THREE.Object3D;
@@ -45,6 +44,13 @@ export class FashionAvatar {
   private readonly rightLeg: THREE.Object3D;
   private readonly leftShin: THREE.Object3D;
   private readonly rightShin: THREE.Object3D;
+  private readonly articulation: {
+    chest?: THREE.Object3D;
+    leftHand?: THREE.Object3D;
+    rightHand?: THREE.Object3D;
+    leftFoot?: THREE.Object3D;
+    rightFoot?: THREE.Object3D;
+  };
   private readonly restHipY: number;
   private elapsed = 0;
   motion: AvatarMotion = 'idle';
@@ -74,8 +80,17 @@ export class FashionAvatar {
     this.rightLeg = bone('J_Bip_R_UpperLeg');
     this.leftShin = bone('J_Bip_L_LowerLeg');
     this.rightShin = bone('J_Bip_R_LowerLeg');
+    this.articulation = {
+      chest: model.getObjectByName('J_Bip_C_Chest'),
+      leftHand: model.getObjectByName('J_Bip_L_Hand'),
+      rightHand: model.getObjectByName('J_Bip_R_Hand'),
+      leftFoot: model.getObjectByName('J_Bip_L_Foot'),
+      rightFoot: model.getObjectByName('J_Bip_R_Foot'),
+    };
     this.restHipY = this.hips.position.y;
-    if (style === 'serin') this.head.scale.set(0.84, 0.89, 0.9);
+    const originalBounds = new THREE.Box3().setFromObject(model);
+    const modelHeight = originalBounds.getSize(new THREE.Vector3()).y;
+    const male = isMaleAvatar(style);
 
     model.traverse((object) => {
       if (!(object instanceof THREE.Mesh)) return;
@@ -84,74 +99,76 @@ export class FashionAvatar {
       object.frustumCulled = false;
       const material = object.material;
       if (!material || Array.isArray(material)) return;
-      if (style === 'serin' && material.name.includes('Tops')) {
-        // Shorten the existing skinned skirt to mid-thigh. The hem remains one
-        // mesh with the outfit, so it follows the original dress rig in dances.
-        const geometry = object.geometry.clone();
-        const positions = geometry.getAttribute('position') as THREE.BufferAttribute;
-        for (let i = 0; i < positions.count; i++) {
-          const y = positions.getY(i);
-          if (y < 0.94 && y > 0.6) positions.setY(i, 0.78 + ((y - 0.63) * (0.94 - 0.78)) / (0.94 - 0.63));
-        }
-        positions.needsUpdate = true;
-        geometry.computeVertexNormals();
-        object.geometry = geometry;
-      }
+      if (male && material.name.includes('Tops')) tailorMaleBase(style, object);
+      if (style === 'seraphine' && material.name.includes('Tops')) tailorTierGarment(style, object, modelHeight);
+      if (style === 'aurelia' && material.name.includes('Tops')) tailorAureliaBodice(object);
       const copy = material.clone();
       copy.toneMapped = false;
       const name = material.name;
-      if (style === 'serin' && name.includes('Body_00_SKIN')) {
-        const skin = new THREE.Color(0xffd9ca);
-        const shorts = new THREE.Color(0x26384d);
-        copy.onBeforeCompile = (shader: THREE.WebGLProgramParametersWithUniforms) => {
-          shader.vertexShader = shader.vertexShader
-            .replace('void main() {', 'varying float serinY;\nvarying vec3 serinNormal;\nvoid main() {')
-            .replace(
-              '#include <defaultnormal_vertex>',
-              '#include <defaultnormal_vertex>\n serinNormal = normalize(transformedNormal);',
-            )
-            .replace('#include <begin_vertex>', '#include <begin_vertex>\n serinY = position.y;');
-          shader.fragmentShader = shader.fragmentShader
-            .replace('void main() {', 'varying float serinY;\nvarying vec3 serinNormal;\nvoid main() {')
-            .replace(
-              '#include <map_fragment>',
-              `#include <map_fragment>
-               float serinSkinLight = 0.82 + 0.16 * normalize(serinNormal).x + 0.12 * abs(normalize(serinNormal).z);
-               vec3 serinSkin = vec3(${skin.r.toFixed(4)}, ${skin.g.toFixed(4)}, ${skin.b.toFixed(4)}) * serinSkinLight;
-               diffuseColor.rgb = mix(diffuseColor.rgb, serinSkin, 1.0 - smoothstep(1.02, 1.06, serinY));
-               float serinShorts = smoothstep(0.81, 0.84, serinY) * (1.0 - smoothstep(1.01, 1.05, serinY));
-               diffuseColor.rgb = mix(diffuseColor.rgb, vec3(${shorts.r.toFixed(4)}, ${shorts.g.toFixed(4)}, ${shorts.b.toFixed(4)}), serinShorts);`,
-            );
-        };
-        copy.customProgramCacheKey = () => 'serin-shaded-legs-lined-shorts';
-        object.material = copy;
-        return;
-      }
       const color = name.includes('HAIR')
-        ? COLORS[style].hair
+        ? LOOKS[style].hair
         : name.includes('Shoes')
-          ? COLORS[style].shoes
-          : name.includes('Tops')
-            ? COLORS[style].dress
-            : null;
+          ? LOOKS[style].shoes
+          : male && name.includes('AccessoryNeck')
+            ? style === 'apron'
+              ? 0xb38a4e
+              : style === 'astra'
+                ? 0x889dbe
+                : 0x627e89
+            : male && name.includes('Bottoms')
+              ? MALE_AVATAR_LOOKS[style].pants
+              : name.includes('Tops')
+                ? LOOKS[style].dress
+                : null;
       if (color !== null) {
         const target = new THREE.Color(color);
         const strength = name.includes('HAIR') ? 0.9 : style === 'apron' ? 0.83 : 0.94;
         copy.onBeforeCompile = (shader: THREE.WebGLProgramParametersWithUniforms) => {
+          const trimBodiceHem = style === 'aurelia' && name.includes('Tops');
+          if (trimBodiceHem) {
+            shader.vertexShader = `varying float aureliaBodiceY;\n${shader.vertexShader}`;
+            shader.vertexShader = shader.vertexShader.replace(
+              '#include <begin_vertex>',
+              '#include <begin_vertex>\n aureliaBodiceY = position.y;',
+            );
+            shader.fragmentShader = `varying float aureliaBodiceY;\n${shader.fragmentShader}`;
+          }
           shader.fragmentShader = shader.fragmentShader.replace(
             '#include <map_fragment>',
-            `#include <map_fragment>\n float fashionLight = dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114));\n diffuseColor.rgb = mix(diffuseColor.rgb, vec3(${target.r.toFixed(4)}, ${target.g.toFixed(4)}, ${target.b.toFixed(4)}) * mix(0.65, 1.28, fashionLight), ${strength.toFixed(2)});`,
+            `#include <map_fragment>
+             ${trimBodiceHem ? `if (aureliaBodiceY < 1.064) discard;` : ''}
+             float fashionLight = dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114));
+             diffuseColor.rgb = mix(diffuseColor.rgb, vec3(${target.r.toFixed(4)}, ${target.g.toFixed(4)}, ${target.b.toFixed(4)}) * mix(0.65, 1.28, fashionLight), ${strength.toFixed(2)});`,
           );
         };
-        copy.customProgramCacheKey = () => `${style}-${name}-tint`;
+        copy.customProgramCacheKey = () => `${style}-${name}-tint${style === 'aurelia' ? '-trimmed-hem' : ''}`;
+      }
+      if ((style === 'aurelia' || style === 'seraphine') && name.endsWith('_SKIN')) {
+        if (name.includes('_Body_') && 'map' in copy && copy.map instanceof THREE.Texture) {
+          copy.map = repairLunaSkinTexture(copy.map);
+        } else if (style === 'aurelia') {
+          copy.onBeforeCompile = (shader: THREE.WebGLProgramParametersWithUniforms) => {
+            shader.fragmentShader = shader.fragmentShader.replace(
+              '#include <map_fragment>',
+              '#include <map_fragment>\n diffuseColor.rgb = mix(diffuseColor.rgb, vec3(1.0, 0.94, 0.91), 0.11);',
+            );
+          };
+          copy.customProgramCacheKey = () => 'aurelia-porcelain-face';
+        }
       }
       object.material = copy;
     });
 
+    // Base body stays the same height when regalia extends its silhouette.
     const bounds = new THREE.Box3().setFromObject(model);
     const scale = 2.85 / bounds.getSize(new THREE.Vector3()).y;
     this.root.scale.setScalar(scale);
     this.root.position.y = 0.08 - bounds.min.y * scale;
+    this.accessories = male
+      ? new MaleAvatarWardrobe(style, model, modelHeight)
+      : style === 'aurelia'
+        ? new AureliaWardrobe(model)
+        : new TierAvatarAccessories(style, model, modelHeight);
     this.update(0);
   }
 
@@ -163,7 +180,9 @@ export class FashionAvatar {
 
   update(delta: number) {
     this.elapsed += delta;
-    updateVroidGesture(this.style, this.motion, this.dance, this.elapsed, delta, this.restHipY, {
+    const gesture = LOOKS[this.style].gesture;
+    updateVroidGesture(gesture, this.motion, this.dance, this.elapsed, delta, this.restHipY, {
+      ...this.articulation,
       hips: this.hips,
       spine: this.spine,
       head: this.head,
@@ -176,5 +195,6 @@ export class FashionAvatar {
       leftShin: this.leftShin,
       rightShin: this.rightShin,
     });
+    this.accessories?.update(this.elapsed);
   }
 }

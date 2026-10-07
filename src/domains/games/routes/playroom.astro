@@ -23,9 +23,9 @@ const apiUrl = import.meta.env.PUBLIC_RENJU_API_URL ?? '';
           <a class="mode-link" href="/playroom/omokmaru/solo/"><span class="mode-link-copy"><strong>AI와 대국</strong><small>혼자 연습하기</small></span><span>↗</span></a>
           <button id="match" class="primary" disabled>⚡ 빠른 매칭</button>
           <div class="lobby-actions"><button id="create-public" class="secondary" disabled>공개 방 만들기</button><button id="create" class="secondary" disabled>비공개 방 만들기</button></div>
-        </div><div class="lobby-aside"><a id="lobby-style-card" class="lobby-style-card" href="/playroom/omokmaru/wardrobe/" target="_blank" rel="noopener" data-stone="rose" aria-label="마루 옷장, 새 탭에서 열기" aria-describedby="lobby-style-current">
-          <span class="lobby-style-scene" aria-hidden="true"><span class="lobby-style-stone"></span><span class="lobby-style-stone-alt"></span></span>
-          <span class="lobby-style-copy"><span class="lobby-style-eyebrow">내 스타일 · 무료</span><strong>마루 옷장</strong><small id="lobby-style-current">페탈 · 장미꽃</small></span>
+        </div><div class="lobby-aside"><a id="lobby-style-card" class="lobby-style-card" href="/playroom/omokmaru/wardrobe/" target="_blank" rel="noopener" data-stone="classic" aria-label="마루 옷장, 새 탭에서 열기" aria-describedby="lobby-style-current">
+          <span class="lobby-style-scene" aria-hidden="true"><img class="lobby-style-stones" src="/images/omokmaru/stones/classic.webp" width="336" height="232" alt="" /></span>
+          <span class="lobby-style-copy"><span class="lobby-style-eyebrow">내 스타일 · 무료</span><strong>마루 옷장</strong><small id="lobby-style-current">페탈 · 기본 흑백</small></span>
           <span class="lobby-style-arrow" aria-hidden="true">↗</span>
         </a><div class="lobby-room-panel"><div class="room-list-heading"><strong>공개 대국</strong><button id="refresh-rooms" class="room-list-refresh" aria-label="방 목록 새로고침" title="새로고침">↻</button></div>
           <div id="public-rooms" class="public-rooms" aria-live="polite">방 목록 불러오는 중…</div>

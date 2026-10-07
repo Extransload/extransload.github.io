@@ -55,7 +55,10 @@ watchAppearance((next) => {
   applySeatAppearances();
   sendLook();
   $('#lobby-style-card').dataset.stone = next.stone;
-  const avatar = APPEARANCE_OPTIONS.avatar.find((option) => option.id === next.avatar)!;
+  $<HTMLImageElement>('.lobby-style-stones').src = `/images/omokmaru/stones/${next.stone}.webp`;
+  const avatar = APPEARANCE_OPTIONS.avatar.find(
+    (option) => option.id === (next.avatar === 'rose' ? 'luna' : next.avatar),
+  )!;
   const stone = APPEARANCE_OPTIONS.stone.find((option) => option.id === next.stone)!;
   $('#lobby-style-current').textContent = `${avatar.name} · ${stone.name}`;
 });
