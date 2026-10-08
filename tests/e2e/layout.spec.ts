@@ -629,6 +629,8 @@ test('playroom lists Omokmaru, opens its board, and About remains standalone', a
   await expect(page.locator('.stage canvas')).toHaveCount(0);
   await page.locator('a.game-card[href="/playroom/omokmaru/"]').click();
   await expect(page).toHaveURL(/\/playroom\/omokmaru\/$/);
+  await page.locator('#name-input').fill('MaruPlayer');
+  await page.locator('#name-submit').click();
   await expect(page.locator('#lobby-nav .door-control')).toHaveAttribute('href', '/playroom/');
   const lobbyDoor = await page.locator('#lobby-nav .door-control').boundingBox();
   expect(Math.abs(lobbyDoor!.x - homeDoor!.x)).toBeLessThan(1);
@@ -790,6 +792,10 @@ test.describe('Playroom animations stay active under reduced motion', () => {
     await expect(page.locator('#studio-canvas')).toHaveAttribute(`data-${avatar}-black`, 'ready', {
       timeout: 45_000,
     });
+    await expect(page.locator('#studio-avatar-controls')).toBeHidden();
+    await expect(page.locator('#studio-canvas')).toHaveAttribute('data-avatar-black-motion', 'idle');
+    await page.locator('.studio-tabs [data-category="motion"]').click();
+    await expect(page.locator('#studio-avatar-controls')).toBeVisible();
     await expect(page.locator('#studio-avatar-motions')).toBeVisible();
   };
 
@@ -808,8 +814,8 @@ test.describe('Playroom animations stay active under reduced motion', () => {
     await selectAvatar(page, 'luna');
     await page.locator('[data-avatar-motion="win"]').click();
     await expect(page.locator('.studio-tabs [data-category="victory"]')).toHaveCount(0);
-    await page.locator('[data-avatar-dance="encore"]').click();
-    await expect(page.locator('[data-avatar-dance="encore"]')).toHaveAttribute('aria-pressed', 'true');
+    await page.locator('[data-item-id="encore"]').click();
+    await expect(page.locator('[data-item-id="encore"]')).toHaveAttribute('aria-pressed', 'true');
     await expect(page.locator('#studio-canvas')).toHaveAttribute('data-avatar-black-dance', 'encore');
     await expect(page.locator('#studio-canvas')).toHaveAttribute('data-avatar-black-motion', 'win');
     await page.waitForTimeout(800);
@@ -817,9 +823,8 @@ test.describe('Playroom animations stay active under reduced motion', () => {
   });
 
   for (const motion of ['ribbon', 'waltz', 'moonwalk', 'constellation', 'apotheosis']) {
-    test(`${motion} tier motion keeps animating in its own preview`, async ({ page }) => {
+    test(`${motion} motion keeps animating in its own preview`, async ({ page }) => {
       await selectAvatar(page, 'luna');
-      await page.locator('.studio-tabs [data-category="motion"]').click();
       await page.locator(`[data-item-id="${motion}"]`).click();
       await expect(page.locator('#studio-canvas')).toHaveAttribute('data-avatar-black-dance', motion);
       await expect(page.locator('#studio-canvas')).toHaveAttribute('data-avatar-black-motion', 'win');
@@ -1074,17 +1079,24 @@ test('Omokmaru studio previews and saves a look', async ({ page }) => {
   await expect(page.locator('[data-item-id="luna"]')).toHaveAttribute('aria-pressed', 'true');
   await page.goto('/playroom/omokmaru/wardrobe/?category=avatar');
   await expect(page.locator('[data-item-id="luna"]')).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.locator('#studio-avatar-dances')).toBeVisible();
-  await expect(page.locator('[data-avatar-dance="signature"]')).toHaveText('팝 웨이브');
-  await expect(page.locator('[data-avatar-dance="encore"]')).toHaveText('핑크 피날레');
-  await page.locator('[data-avatar-dance="encore"]').click();
+  await expect(page.locator('#studio-avatar-controls')).toBeHidden();
+  await expect(page.locator('#studio-avatar-dances, [data-avatar-dance]')).toHaveCount(0);
+  await expect(page.locator('#studio-canvas')).toHaveAttribute('data-avatar-black-motion', 'idle');
+  await page.locator('.studio-tabs [data-category="motion"]').click();
+  await expect(page.locator('[data-item-id="signature"] strong')).toHaveText('팝 웨이브');
+  await expect(page.locator('[data-item-id="encore"] strong')).toHaveText('핑크 피날레');
+  await page.locator('[data-item-id="encore"]').click();
   await expect(page.locator('#studio-canvas')).toHaveAttribute('data-avatar-black-motion', 'win');
   await expect(page.locator('#studio-canvas')).toHaveAttribute('data-avatar-black-dance', 'encore');
+  await page.locator('.studio-tabs [data-category="avatar"]').click();
   await page.locator('[data-item-id="serin"]').click();
-  await expect(page.locator('[data-avatar-dance="signature"]')).toHaveText('나이트 그루브');
-  await expect(page.locator('[data-avatar-dance="signature"]')).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('.studio-tabs [data-category="motion"]').click();
+  await expect(page.locator('[data-item-id="signature"] strong')).toHaveText('나이트 그루브');
+  await expect(page.locator('[data-item-id="signature"]')).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('.studio-tabs [data-category="avatar"]').click();
   await page.locator('[data-item-id="luna"]').click();
-  await expect(page.locator('[data-avatar-dance="encore"]')).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('.studio-tabs [data-category="motion"]').click();
+  await expect(page.locator('[data-item-id="encore"]')).toHaveAttribute('aria-pressed', 'true');
   await page.locator('[data-category="board"]').click();
   await expect(page.locator('#studio-canvas')).toHaveAttribute('data-focus', 'board');
   await expect(page.locator('#studio-items .studio-item')).toHaveCount(10);
@@ -1167,22 +1179,28 @@ test('Omokmaru studio migrates the retired avatar to Luna and keeps its dance', 
   await expect(page.locator('[data-item-id="moonwalk"]')).toHaveAttribute('aria-pressed', 'true');
 });
 
-test('Omokmaru lobby separates play actions, styling, and public rooms', async ({ browser }) => {
+test('Omokmaru lobby keeps wardrobe compact beside the public room list', async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  await context.addInitScript(() => localStorage.setItem('extransload-renju-name', 'MaruPlayer'));
   const page = await context.newPage();
   try {
     await page.goto('/playroom/omokmaru/');
     const actions = await page.locator('.lobby-actions-panel').boundingBox();
     const styling = await page.locator('#lobby-style-card').boundingBox();
     const rooms = await page.locator('.lobby-room-panel').boundingBox();
-    expect(styling!.x).toBeGreaterThan(actions!.x + actions!.width);
-    expect(rooms!.y).toBeGreaterThan(styling!.y + styling!.height);
+    expect(styling!.x).toBeGreaterThan(actions!.x);
+    expect(styling!.x + styling!.width).toBeLessThan(actions!.x + actions!.width);
+    expect(styling!.y + styling!.height).toBeLessThan(actions!.y + actions!.height);
+    expect(styling!.height).toBeLessThanOrEqual(72);
+    expect(rooms!.x).toBeGreaterThan(actions!.x + actions!.width);
+    expect(rooms!.y).toBe(actions!.y);
     await page.setViewportSize({ width: 320, height: 720 });
     const mobileActions = await page.locator('.lobby-actions-panel').boundingBox();
     const mobileStyling = await page.locator('#lobby-style-card').boundingBox();
     const mobileRooms = await page.locator('.lobby-room-panel').boundingBox();
-    expect(mobileStyling!.y).toBeGreaterThan(mobileActions!.y + mobileActions!.height);
-    expect(mobileRooms!.y).toBeGreaterThan(mobileStyling!.y + mobileStyling!.height);
+    expect(mobileStyling!.y + mobileStyling!.height).toBeLessThan(mobileActions!.y + mobileActions!.height);
+    expect(mobileStyling!.height).toBeLessThanOrEqual(72);
+    expect(mobileRooms!.y).toBeGreaterThan(mobileActions!.y + mobileActions!.height);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
     await expect(page.locator('#lobby-style-card .lobby-style-copy strong')).toHaveText('마루 옷장');
   } finally {
@@ -1199,7 +1217,10 @@ test('Omokmaru studio puts the 3D preview before options on a phone', async ({ p
   expect(preview!.y).toBeLessThan(options!.y);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   await page.locator('[data-category="avatar"]').click();
-  await page.locator('[data-avatar-dance="encore"]').click();
+  await expect(page.locator('#studio-avatar-controls')).toBeHidden();
+  await page.locator('.studio-tabs [data-category="motion"]').click();
+  await expect(page.locator('#studio-avatar-controls')).toBeVisible();
+  await page.locator('[data-item-id="encore"]').click();
   await expect(page.locator('#studio-canvas')).toHaveAttribute('data-petal-black', 'ready', { timeout: 30_000 });
   await expect(page.locator('#studio-canvas')).toHaveAttribute('data-avatar-black-motion', 'win');
   await page.evaluate(() => window.scrollTo(0, 0));
@@ -1211,15 +1232,30 @@ test('Omokmaru studio puts the 3D preview before options on a phone', async ({ p
   await expect(async () => expect((await captureMotion()).equals(startFrame)).toBe(false)).toPass({ timeout: 5000 });
 });
 
-test('Omokmaru tier collection covers every grade and saves an S+ look', async ({ page }) => {
+test('Omokmaru wardrobe shows the complete catalog without classes or descriptions and saves a look', async ({
+  page,
+}) => {
   test.setTimeout(180_000);
   await page.goto('/playroom/omokmaru/wardrobe/');
   const counts = { stone: 6, avatar: 8, motion: 7, board: 10 };
-  const additions = { stone: 4, avatar: 4, motion: 5, board: 4 };
+  const categoryNames = { stone: '돌', avatar: '아바타', motion: '모션', board: '바둑판' };
+  const itemIds = {
+    stone: ['classic', 'rose', 'obsidian', 'opal', 'astral', 'sovereign'],
+    avatar: ['petal', 'luna', 'apron', 'serin', 'sylvie', 'astra', 'seraphine', 'aurelia'],
+    motion: ['signature', 'encore', 'ribbon', 'waltz', 'moonwalk', 'constellation', 'apotheosis'],
+    board: ['wood', 'oak', 'walnut', 'linen', 'ink', 'meadow', 'marble', 'moonstone', 'celestial', 'imperial'],
+  };
+  await expect(page.locator('[data-tier-filter], .studio-tier-badge')).toHaveCount(0);
   for (const category of ['stone', 'avatar', 'motion', 'board'] as const) {
     await page.locator('.studio-tabs [data-category="' + category + '"]').click();
     await expect(page.locator('#studio-items .studio-item')).toHaveCount(counts[category]);
-    await expect(page.locator('#studio-items [data-collection="tier"]')).toHaveCount(additions[category]);
+    await expect(page.locator('#studio-list-summary')).toHaveText(`${categoryNames[category]} ${counts[category]}개`);
+    await expect(page.locator('#studio-items [data-tier], #studio-items small')).toHaveCount(0);
+    expect(
+      await page
+        .locator('#studio-items .studio-item')
+        .evaluateAll((items) => items.map((item) => (item as HTMLElement).dataset.itemId)),
+    ).toEqual(itemIds[category]);
     await expect
       .poll(() =>
         page
@@ -1231,20 +1267,10 @@ test('Omokmaru tier collection covers every grade and saves an S+ look', async (
           ),
       )
       .toBe(true);
-    for (const tier of ['C', 'B', 'A', 'A+', 'S', 'S+']) {
-      await page.locator(`[data-tier-filter="${tier}"]`).click();
-      const cards = page.locator('#studio-items .studio-item');
-      expect(await cards.count()).toBeGreaterThan(0);
-      expect(await cards.evaluateAll((items) => items.map((item) => (item as HTMLElement).dataset.tier))).toEqual(
-        Array(await cards.count()).fill(tier),
-      );
-    }
-    await page.locator('[data-tier-filter="all"]').click();
   }
-  await page.locator('[data-tier-filter="S+"]').click();
   await page.locator('[data-item-id="imperial"]').click();
   await page.locator('.studio-tabs [data-category="stone"]').click();
-  await expect(page.locator('#studio-items .studio-item')).toHaveCount(1);
+  await expect(page.locator('#studio-items .studio-item')).toHaveCount(6);
   await page.locator('[data-item-id="sovereign"]').click();
   await page.locator('.studio-tabs [data-category="avatar"]').click();
   await page.locator('[data-item-id="seraphine"]').click();
@@ -1259,12 +1285,14 @@ test('Omokmaru tier collection covers every grade and saves an S+ look', async (
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.locator('#studio-default').click();
-  await expect(page.locator('[data-tier-filter="all"]')).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('.studio-tabs [data-category="motion"]').click();
+  await expect(page.locator('#studio-items .studio-item')).toHaveCount(7);
+  await expect(page.locator('[data-item-id="signature"]')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#studio-canvas')).toHaveAttribute('data-board-style', 'wood');
   await expect(page.locator('#studio-canvas')).toHaveAttribute('data-stone-black', 'classic');
 });
 
-test('Omokmaru Aurelia is an additional S+ avatar and saves her own dance into solo play', async ({ page }) => {
+test('Omokmaru Aurelia saves her own motion-card dance into solo play', async ({ page }) => {
   test.setTimeout(60_000);
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
@@ -1283,17 +1311,16 @@ test('Omokmaru Aurelia is an additional S+ avatar and saves her own dance into s
     }
   });
   await page.goto('/playroom/omokmaru/wardrobe/?category=avatar');
-  await page.locator('[data-tier-filter="S+"]').click();
-  await expect(page.locator('#studio-items .studio-item strong')).toHaveText(['세라핀', '아우렐리아']);
+  await expect(page.locator('#studio-items .studio-item')).toHaveCount(8);
   await page.locator('[data-item-id="aurelia"]').click();
   await expect(page.locator('#studio-canvas')).toHaveAttribute('data-aurelia-black', 'ready', { timeout: 45_000 });
-  await expect(page.locator('[data-item-id="aurelia"] .studio-tier-badge')).toHaveText('S+');
   await expect(page.locator('[data-item-id="aurelia"] img')).toHaveAttribute(
     'src',
     '/images/omokmaru/avatars/aurelia.webp',
   );
-  await page.locator('[data-avatar-dance="encore"]').click();
-  await expect(page.locator('[data-avatar-dance="encore"]')).toHaveText('황금빛 인사');
+  await page.locator('.studio-tabs [data-category="motion"]').click();
+  await expect(page.locator('[data-item-id="encore"] strong')).toHaveText('황금빛 인사');
+  await page.locator('[data-item-id="encore"]').click();
   await page.reload();
   await expect(page.locator('[data-item-id="aurelia"]')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#studio-canvas')).toHaveAttribute('data-aurelia-black', 'ready', { timeout: 45_000 });
@@ -1405,9 +1432,17 @@ test('touch board tap previews a stone until the move button confirms it', async
   }
 });
 
-test('Omokmaru guest name can be edited and survives a reload', async ({ page }) => {
+test('Omokmaru asks for a name on first visit and remembers later edits', async ({ page }) => {
   await page.goto('/playroom/omokmaru/');
-  await page.locator('#rename-lobby').click();
+  await expect(page.locator('#name-dialog')).toBeVisible();
+  await expect(page.locator('#name-dialog-title')).toHaveText('이름을 알려주세요');
+  await expect(page.locator('#name-input')).toBeFocused();
+  await expect(page.locator('#name-input')).toHaveValue('');
+  await expect(page.locator('#name-cancel')).toBeHidden();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#name-dialog')).toBeVisible();
+  await page.reload();
+  await expect(page.locator('#name-dialog')).toBeVisible();
   await page.locator('#name-input').fill('ab');
   await page.locator('#name-form button[type="submit"]').click();
   await expect(page.locator('#name-error')).toContainText('3~30자');
@@ -1417,6 +1452,16 @@ test('Omokmaru guest name can be edited and survives a reload', async ({ page })
   await expect(page.locator('#guest-name')).toHaveText('NimbleFox');
   await page.reload();
   await expect(page.locator('#guest-name')).toHaveText('NimbleFox');
+  await expect(page.locator('#name-dialog')).toBeHidden();
+  await page.locator('#rename-lobby').click();
+  await expect(page.locator('#name-dialog-title')).toHaveText('이름 변경');
+  await expect(page.locator('#name-cancel')).toBeVisible();
+  await page.locator('#name-input').fill('MaruPlayer');
+  await page.locator('#name-input').press('Enter');
+  await expect(page.locator('#name-dialog')).toBeHidden();
+  await page.reload();
+  await expect(page.locator('#guest-name')).toHaveText('MaruPlayer');
+  await expect(page.locator('#name-dialog')).toBeHidden();
 });
 
 test('old playroom invitations keep their room when redirected to Omokmaru', async ({ page }) => {

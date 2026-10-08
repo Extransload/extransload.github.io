@@ -4,7 +4,6 @@ import '../../../domains/games/renju/wardrobe-page.css';
 import '../../../domains/games/styles/door.css';
 import DoorIcon from '../../../domains/games/components/DoorIcon.astro';
 import SeoHead from '../../../shared/components/SeoHead.astro';
-import { TIERS } from '../../../domains/games/renju/appearance';
 ---
 
 <!doctype html>
@@ -14,7 +13,7 @@ import { TIERS } from '../../../domains/games/renju/appearance';
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#142c35" />
     <title>마루 옷장 · 오목마루 — Extransload</title>
-    <SeoHead title="마루 옷장 · 오목마루 — Extransload" description="오목마루의 돌, 아바타, 모션, 바둑판을 C부터 S+까지 등급별로 미리 보고 꾸미세요" canonicalPath="/playroom/omokmaru/wardrobe/" />
+    <SeoHead title="마루 옷장 · 오목마루 — Extransload" description="오목마루의 돌, 아바타, 모션, 바둑판을 미리 보고 꾸미세요" canonicalPath="/playroom/omokmaru/wardrobe/" />
     <link rel="icon" type="image/png" href="/favicon.png" />
   </head>
   <body class="wardrobe-page">
@@ -34,11 +33,6 @@ import { TIERS } from '../../../domains/games/renju/appearance';
             <button type="button" data-avatar-motion="win" aria-pressed="false">승리</button>
             <button type="button" data-avatar-motion="lose" aria-pressed="false">패배</button>
           </div>
-          <div id="studio-avatar-dances" class="studio-chips" role="group" aria-label="선택한 아바타의 승리 춤">
-            <span class="studio-chips-label">승리 춤</span>
-            <button type="button" data-avatar-dance="signature" aria-pressed="true">시그니처</button>
-            <button type="button" data-avatar-dance="encore" aria-pressed="false">앙코르</button>
-          </div>
         </div>
         <p id="studio-motion-note" class="studio-motion-note" hidden></p>
         <p id="studio-petal-credit" class="studio-avatar-credit" hidden>페탈 원작: <a href="https://studio.blender.org/characters/rain/v3/" target="_blank" rel="noreferrer">Rain Rig · Blender Foundation</a> · <a href="/models/omokmaru/ATTRIBUTION.md">CC BY 4.0 · 수정 내용</a></p>
@@ -52,10 +46,6 @@ import { TIERS } from '../../../domains/games/renju/appearance';
           <button type="button" data-category="motion" aria-pressed="false">모션</button>
           <button type="button" data-category="board" aria-pressed="false">바둑판</button>
         </nav>
-        <div class="studio-tier-filters" role="group" aria-label="등급 필터">
-          <button type="button" data-tier-filter="all" aria-pressed="true">전체</button>
-          {TIERS.map((tier) => <button type="button" data-tier-filter={tier} data-tier={tier} aria-pressed="false" aria-label={`${tier} 등급`}>{tier}</button>)}
-        </div>
         <p id="studio-list-summary" class="studio-list-summary" role="status" aria-live="polite"></p>
         <div id="studio-items" class="studio-items" aria-label="디자인 목록"></div>
         <button id="studio-default" class="studio-text-button" type="button">기본 디자인으로 되돌리기</button>

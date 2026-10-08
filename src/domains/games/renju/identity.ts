@@ -2,33 +2,11 @@ import { normalizeGuestName } from './protocol';
 
 const key = 'extransload-renju-name';
 const clientKey = 'extransload-renju-client-id';
-const adjectives = [
-  'Bright',
-  'Calm',
-  'Curious',
-  'Gentle',
-  'Lucky',
-  'Mellow',
-  'Misty',
-  'Nimble',
-  'Quiet',
-  'Sunny',
-  'Swift',
-  'Witty',
-];
-const animals = ['Badger', 'Bear', 'Crane', 'Deer', 'Fox', 'Hare', 'Heron', 'Otter', 'Owl', 'Panda', 'Robin', 'Seal'];
-
-export function guestName(): string {
+export function guestName(): string | null {
   try {
-    const saved = localStorage.getItem(key);
-    const normalized = normalizeGuestName(saved);
-    if (normalized) return normalized;
-    const random = crypto.getRandomValues(new Uint32Array(3));
-    const name = `${adjectives[random[0] % adjectives.length]}${animals[random[1] % animals.length]}${random[2] % 100}`;
-    localStorage.setItem(key, name);
-    return name;
+    return normalizeGuestName(localStorage.getItem(key));
   } catch {
-    return 'GuestFox';
+    return null;
   }
 }
 

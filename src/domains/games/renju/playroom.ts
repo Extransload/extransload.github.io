@@ -38,7 +38,7 @@ let previousStatus: RoomSnapshot['status'] | null = null;
 let serverOffset = 0;
 let lastBoardSignature = '';
 let lastRenderedStatus: RoomSnapshot['status'] | null = null;
-let name = guestName();
+let name = guestName() ?? '';
 let appearance: Appearance = { ...DEFAULT_APPEARANCE };
 // Each seat shows its own player's look: mine from local settings, the opponent's as relayed by the room.
 function applySeatAppearances() {
@@ -591,6 +591,10 @@ function leaveRoom(updateHistory = true, notifyServer = true) {
 $('#room-exit').addEventListener('click', () => leaveRoom());
 window.addEventListener('popstate', () => {
   const id = new URLSearchParams(location.search).get('room');
+  if (!name) {
+    currentRoom = id;
+    return;
+  }
   if (!id) leaveRoom(false);
   else if (id !== currentRoom) {
     socket?.close();
@@ -599,14 +603,21 @@ window.addEventListener('popstate', () => {
   }
 });
 async function refreshRooms(force = false) {
-  if (!api || currentRoom || (document.hidden && !force) || refreshingRooms) return;
+  if (!name || !api || currentRoom || (document.hidden && !force) || refreshingRooms) return;
   refreshingRooms = true;
   const list = $('#public-rooms');
   try {
     const { rooms } = (await request('/api/public/rooms')) as { rooms: PublicRoom[] };
     list.replaceChildren();
     if (!rooms.length) {
-      list.textContent = '열린 대국이 없습니다. 새 방을 만들어 보세요.';
+      const empty = document.createElement('div');
+      empty.className = 'room-list-empty';
+      const title = document.createElement('strong');
+      title.textContent = '아직 열린 대국이 없습니다';
+      const hint = document.createElement('span');
+      hint.textContent = '공개 방을 만들거나 빠른 매칭으로 상대를 만나보세요.';
+      empty.append(title, hint);
+      list.append(empty);
       return;
     }
     for (const room of rooms) {
@@ -642,25 +653,38 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('focus', () => void refreshRooms());
 function openNameDialog() {
   const dialog = $<HTMLDialogElement>('#name-dialog');
-  $<HTMLInputElement>('#name-input').value = name;
+  const input = $<HTMLInputElement>('#name-input');
+  input.value = name;
+  input.removeAttribute('aria-invalid');
+  $('#name-dialog-title').textContent = name ? '이름 변경' : '이름을 알려주세요';
+  $('#name-cancel').hidden = !name;
+  $('#name-submit').textContent = name ? '저장' : '시작하기';
   $('#name-error').textContent = '';
   dialog.showModal();
-  $<HTMLInputElement>('#name-input').focus();
+  input.focus();
 }
 $('#rename-lobby').addEventListener('click', openNameDialog);
 $('#rename-room').addEventListener('click', openNameDialog);
+$('#name-dialog').addEventListener('cancel', (event) => {
+  if (!name) event.preventDefault();
+});
 $('#name-cancel').addEventListener('click', () => $<HTMLDialogElement>('#name-dialog').close());
 $('#name-form').addEventListener('submit', (event) => {
   event.preventDefault();
-  const updated = saveGuestName($<HTMLInputElement>('#name-input').value);
+  const input = $<HTMLInputElement>('#name-input');
+  const updated = saveGuestName(input.value);
   if (!updated) {
     $('#name-error').textContent = '영문으로 시작하는 3~30자 이름을 입력해 주세요.';
+    input.setAttribute('aria-invalid', 'true');
+    input.focus();
     return;
   }
+  const firstName = !name;
   name = updated;
   $('#guest-name').textContent = name;
   if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'rename', name }));
   $<HTMLDialogElement>('#name-dialog').close();
+  if (firstName) startLobby();
 });
 $('#chat-form').addEventListener('submit', (event) => {
   event.preventDefault();
@@ -752,16 +776,20 @@ $('#help').addEventListener('click', () => {
   $('#board-help').hidden = !$('#board-help').hidden;
 });
 mountRulesHelp();
-if (!api) {
-  status('대국 서버 설정이 필요합니다', 'error');
-  $('#lobby-note').textContent = '실시간 대국 서버 설정이 필요합니다.';
-  render();
-} else {
-  for (const button of ['#create', '#create-public', '#match']) $<HTMLButtonElement>(button).disabled = false;
-  if (currentRoom) void openRoom(currentRoom);
-  else {
-    status('새 대국을 시작하세요');
+function startLobby() {
+  if (!api) {
+    status('대국 서버 설정이 필요합니다', 'error');
+    $('#lobby-note').textContent = '실시간 대국 서버 설정이 필요합니다.';
     render();
-    void refreshRooms();
+  } else {
+    for (const button of ['#create', '#create-public', '#match']) $<HTMLButtonElement>(button).disabled = false;
+    if (currentRoom) void openRoom(currentRoom);
+    else {
+      status('새 대국을 시작하세요');
+      render();
+      void refreshRooms();
+    }
   }
 }
+if (name) startLobby();
+else openNameDialog();

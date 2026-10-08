@@ -7,10 +7,8 @@ import {
   normalizeAppearance,
   saveAppearance,
   DANCE_NAMES,
-  TIERS,
   type Appearance,
   type DanceStyle,
-  type Tier,
 } from './appearance';
 import type { Move } from './rules';
 import type { AvatarMotion } from './petal-avatar';
@@ -36,7 +34,6 @@ let category: Category =
   requestedCategory && Object.prototype.hasOwnProperty.call(APPEARANCE_OPTIONS, requestedCategory)
     ? (requestedCategory as Category)
     : 'stone';
-let tier: Tier | 'all' = 'all';
 
 function showScene() {
   board.clearCelebration();
@@ -49,15 +46,10 @@ function showScene() {
 }
 
 function updateAvatarPreview() {
-  $('#studio-avatar-controls').hidden = category !== 'avatar' && category !== 'motion';
-  $('#studio-avatar-dances').hidden = category !== 'avatar';
+  $('#studio-avatar-controls').hidden = category !== 'motion';
   $('#studio-motion-note').hidden = category !== 'motion';
   const currentAvatar = APPEARANCE_OPTIONS.avatar.find((option) => option.id === appearance.avatar);
   $('#studio-motion-note').textContent = `${currentAvatar?.name ?? '아바타'}의 승리 모션 · 아바타마다 따로 저장됩니다`;
-  for (const button of document.querySelectorAll<HTMLButtonElement>('[data-avatar-dance]')) {
-    button.textContent = DANCE_NAMES[appearance.avatar][button.dataset.avatarDance as DanceStyle];
-    button.setAttribute('aria-pressed', String(button.dataset.avatarDance === appearance.dances[appearance.avatar]));
-  }
   $('#studio-petal-credit').hidden = appearance.avatar !== 'petal';
   $('#studio-luna-credit').hidden = appearance.avatar !== 'luna';
   $('#studio-fashion-credit').hidden = ['petal', 'luna'].includes(appearance.avatar);
@@ -76,18 +68,16 @@ function applySeatAppearance() {
 function renderItems() {
   const options = APPEARANCE_OPTIONS[category];
   const selectedId = category === 'motion' ? appearance.dances[appearance.avatar] : appearance[category];
-  const visibleOptions = options.filter((option) => tier === 'all' || option.tier === tier);
-  $('#studio-list-summary').textContent =
-    `${tier === 'all' ? '전체 등급' : `${tier} 등급`} · ${CATEGORY_NAMES[category]} ${visibleOptions.length}개`;
+  $('#studio-list-summary').textContent = `${CATEGORY_NAMES[category]} ${options.length}개`;
   const list = $('#studio-items');
+  list.classList.toggle('studio-items-avatars', category === 'avatar');
   list.replaceChildren();
-  for (const option of visibleOptions) {
+  for (const option of options) {
     const card = document.createElement('button');
     card.type = 'button';
     card.className = 'studio-item';
     card.dataset.category = category;
     card.dataset.itemId = option.id;
-    card.dataset.tier = option.tier;
     card.dataset.collection = option.collection;
     card.setAttribute('aria-pressed', String(selectedId === option.id));
     const art = document.createElement('span');
@@ -102,21 +92,7 @@ function renderItems() {
     art.append(thumbnail);
     const title = document.createElement('strong');
     title.textContent = category === 'motion' ? DANCE_NAMES[appearance.avatar][option.id as DanceStyle] : option.name;
-    const badge = document.createElement('span');
-    badge.className = 'studio-tier-badge';
-    const displayedTier = option.tier;
-    badge.dataset.tier = displayedTier;
-    badge.textContent = displayedTier;
-    badge.setAttribute('aria-label', `${displayedTier} 등급`);
-    const heading = document.createElement('span');
-    heading.className = 'studio-item-heading';
-    heading.append(title, badge);
-    const detail = document.createElement('small');
-    detail.textContent = option.detail;
-    const copy = document.createElement('span');
-    copy.className = 'studio-item-copy';
-    copy.append(heading, detail);
-    card.append(art, copy);
+    card.append(art, title);
     card.addEventListener('click', () => {
       if (category === 'motion') {
         setAppearance({
@@ -143,15 +119,6 @@ function setAppearance(next: Appearance) {
   board.previewAvatarMotion(category === 'motion' ? 'win' : 'idle');
 }
 
-for (const filter of document.querySelectorAll<HTMLButtonElement>('[data-tier-filter]'))
-  filter.addEventListener('click', () => {
-    const selectedTier = filter.dataset.tierFilter;
-    tier = TIERS.includes(selectedTier as Tier) ? (selectedTier as Tier) : 'all';
-    for (const peer of document.querySelectorAll<HTMLButtonElement>('[data-tier-filter]'))
-      peer.setAttribute('aria-pressed', String(peer === filter));
-    renderItems();
-  });
-
 for (const tab of document.querySelectorAll<HTMLButtonElement>('.studio-tabs [data-category]'))
   tab.addEventListener('click', () => {
     category = tab.dataset.category as Category;
@@ -165,20 +132,7 @@ for (const button of document.querySelectorAll<HTMLButtonElement>('[data-avatar-
     for (const peer of document.querySelectorAll<HTMLButtonElement>('[data-avatar-motion]'))
       peer.setAttribute('aria-pressed', String(peer === button));
   });
-for (const button of document.querySelectorAll<HTMLButtonElement>('[data-avatar-dance]'))
-  button.addEventListener('click', () => {
-    setAppearance({
-      ...appearance,
-      dances: { ...appearance.dances, [appearance.avatar]: button.dataset.avatarDance as DanceStyle },
-    });
-    board.previewAvatarMotion('win');
-    for (const peer of document.querySelectorAll<HTMLButtonElement>('[data-avatar-motion]'))
-      peer.setAttribute('aria-pressed', String(peer.dataset.avatarMotion === 'win'));
-  });
 $('#studio-default').addEventListener('click', () => {
-  tier = 'all';
-  for (const filter of document.querySelectorAll<HTMLButtonElement>('[data-tier-filter]'))
-    filter.setAttribute('aria-pressed', String(filter.dataset.tierFilter === 'all'));
   setAppearance({ ...DEFAULT_APPEARANCE });
 });
 showScene();
