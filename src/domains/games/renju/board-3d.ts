@@ -16,6 +16,7 @@ import {
   type TierBoardStyle,
 } from './tier-pieces';
 import { DEFAULT_APPEARANCE, appearanceForSeat, type BoardStyle, type PlayerAppearance } from './appearance';
+import { AVATAR_FLOOR, AVATAR_SPOTS } from './board-decor';
 import {
   analyzeMove,
   boardFromMoves,
@@ -559,6 +560,10 @@ export class RenjuBoard {
     this.boardMaterials = { body, surface, line, ink, detail, edge };
     this.setBoardStyle(DEFAULT_APPEARANCE.board);
   }
+  /** Avatar trays rest on the slab's unseen table, or on the ground a living edition raises around it. */
+  private avatarFloor() {
+    return this.tierBoard?.avatarFloor ?? AVATAR_FLOOR;
+  }
   private makeAvatar() {
     const group = new THREE.Group();
     const shell = new THREE.MeshPhysicalMaterial({
@@ -647,13 +652,16 @@ export class RenjuBoard {
       this.tierBoard = createTierBoard(style as TierBoardStyle);
       this.board.add(this.tierBoard.decorations);
     }
+    // The first style is applied while the board is built, before the avatars exist.
+    if (this.avatars) {
+      for (const seat of ['black', 'white'] as const) this.avatars[seat].group.position.y = this.avatarFloor();
+      if (this.showcaseFocus === 'avatar') this.frameShowcaseCamera(this.showcaseFocus);
+    }
     const wood = style === 'wood';
     const palettes = {
       wood: { surface: 0xe5b878, body: 0xad7c4b, line: 0x614931, detail: 0x916c44 },
-      oak: { surface: 0xe9dfd9, body: 0xc2afb5, line: 0x9b8b98, detail: 0xb392a9 },
       walnut: { surface: 0xddbac9, body: 0xb58ca5, line: 0x9b718a, detail: 0xf2dae6 },
       linen: { surface: 0xcac5e0, body: 0x9c93b8, line: 0x8d82ab, detail: 0xeee8fb },
-      ink: { surface: 0x464d70, body: 0x313752, line: 0x949ab4, detail: 0xc5b4da },
       meadow: { surface: 0xc4d6ca, body: 0x8faa9c, line: 0x7d978a, detail: 0xe7f1e8 },
     };
     const palette = this.tierBoard?.palette ?? palettes[style as keyof typeof palettes];
@@ -953,7 +961,8 @@ export class RenjuBoard {
       for (const color of ['black', 'white'] as const) {
         const near = color === front;
         const avatar = this.avatars[color].group;
-        avatar.position.set(near ? -4.8 : 4.8, -0.08, near ? 9.1 : -9.1);
+        const spot = AVATAR_SPOTS[near ? 0 : 1];
+        avatar.position.set(spot.x, this.avatarFloor(), spot.z);
         avatar.rotation.y = Math.atan2(-avatar.position.x, -avatar.position.z);
         avatar.scale.setScalar(compact ? (near ? 1 : 0.93) : near ? 1.16 : 1.07);
       }
@@ -1060,7 +1069,7 @@ export class RenjuBoard {
     for (const color of ['black', 'white'] as const) {
       const rig = this.avatars[color];
       rig.character.rotation.z = 0;
-      rig.group.position.y = -0.08;
+      rig.group.position.y = this.avatarFloor();
       rig.group.rotation.x = 0;
       rig.group.rotation.y = Math.atan2(-rig.group.position.x, -rig.group.position.z);
       rig.activeHead.rotation.z = 0;

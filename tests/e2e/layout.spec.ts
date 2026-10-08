@@ -711,15 +711,15 @@ test.describe('Playroom animations stay active under reduced motion', () => {
     await expectCanvasMotion(page, '.canvas canvas');
   });
 
-  test('porcelain last-move ring keeps pulsing on the midnight board', async ({ page }) => {
+  test('porcelain last-move ring keeps pulsing on the lilac board', async ({ page }) => {
     await page.addInitScript(() => {
-      localStorage.setItem('omokmaru-appearance-v1', JSON.stringify({ board: 'ink' }));
+      localStorage.setItem('omokmaru-appearance-v1', JSON.stringify({ board: 'linen' }));
     });
     await page.goto('/playroom/omokmaru/solo/');
     await page.locator('#side-white').click();
     await page.locator('#start').click();
     await expect(page.locator('#status')).toHaveText('내 차례');
-    await expect(page.locator('#canvas')).toHaveAttribute('data-board-style', 'ink');
+    await expect(page.locator('#canvas')).toHaveAttribute('data-board-style', 'linen');
     await expect(page.locator('#canvas')).toHaveAttribute('data-rendered-moves', '1');
     await page.locator('#view').click();
     await page.mouse.move(0, 0);
@@ -920,8 +920,8 @@ test.describe('Playroom animations stay active under reduced motion', () => {
     expect(errors).toEqual([]);
   });
 
-  for (const board of ['celestial', 'imperial']) {
-    test(`${board} corner crystals keep moving under reduced motion`, async ({ page }) => {
+  for (const board of ['forest', 'beach']) {
+    test(`${board} edition scenery keeps moving under reduced motion`, async ({ page }) => {
       await page.setViewportSize({ width: 1440, height: 1000 });
       await page.goto('/playroom/omokmaru/wardrobe/?category=board');
       await page.locator(`[data-item-id="${board}"]`).click();
@@ -1099,7 +1099,7 @@ test('Omokmaru studio previews and saves a look', async ({ page }) => {
   await expect(page.locator('[data-item-id="encore"]')).toHaveAttribute('aria-pressed', 'true');
   await page.locator('[data-category="board"]').click();
   await expect(page.locator('#studio-canvas')).toHaveAttribute('data-focus', 'board');
-  await expect(page.locator('#studio-items .studio-item')).toHaveCount(10);
+  await expect(page.locator('#studio-items .studio-item')).toHaveCount(7);
   await expect(page.locator('[data-item-id="wood"]')).toHaveAttribute('aria-pressed', 'true');
   await page.locator('[data-item-id="walnut"]').click();
   await expect(page.locator('[data-category="victory"]')).toHaveCount(0);
@@ -1237,13 +1237,13 @@ test('Omokmaru wardrobe shows the complete catalog without classes or descriptio
 }) => {
   test.setTimeout(180_000);
   await page.goto('/playroom/omokmaru/wardrobe/');
-  const counts = { stone: 6, avatar: 8, motion: 7, board: 10 };
+  const counts = { stone: 6, avatar: 8, motion: 7, board: 7 };
   const categoryNames = { stone: '돌', avatar: '아바타', motion: '모션', board: '바둑판' };
   const itemIds = {
     stone: ['classic', 'rose', 'obsidian', 'opal', 'astral', 'sovereign'],
     avatar: ['petal', 'luna', 'apron', 'serin', 'sylvie', 'astra', 'seraphine', 'aurelia'],
     motion: ['signature', 'encore', 'ribbon', 'waltz', 'moonwalk', 'constellation', 'apotheosis'],
-    board: ['wood', 'oak', 'walnut', 'linen', 'ink', 'meadow', 'marble', 'moonstone', 'celestial', 'imperial'],
+    board: ['wood', 'walnut', 'linen', 'meadow', 'moonstone', 'forest', 'beach'],
   };
   await expect(page.locator('[data-tier-filter], .studio-tier-badge')).toHaveCount(0);
   for (const category of ['stone', 'avatar', 'motion', 'board'] as const) {
@@ -1268,7 +1268,7 @@ test('Omokmaru wardrobe shows the complete catalog without classes or descriptio
       )
       .toBe(true);
   }
-  await page.locator('[data-item-id="imperial"]').click();
+  await page.locator('[data-item-id="beach"]').click();
   await page.locator('.studio-tabs [data-category="stone"]').click();
   await expect(page.locator('#studio-items .studio-item')).toHaveCount(6);
   await page.locator('[data-item-id="sovereign"]').click();
@@ -1280,7 +1280,7 @@ test('Omokmaru wardrobe shows the complete catalog without classes or descriptio
   await expect(page.locator('#studio-canvas')).toHaveAttribute('data-avatar-black-motion', 'win');
   await page.reload();
   await expect(page.locator('#studio-canvas')).toHaveAttribute('data-stone-black', 'sovereign');
-  await expect(page.locator('#studio-canvas')).toHaveAttribute('data-board-style', 'imperial');
+  await expect(page.locator('#studio-canvas')).toHaveAttribute('data-board-style', 'beach');
   await expect(page.locator('#studio-canvas')).toHaveAttribute('data-avatar-black-dance', 'apotheosis');
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

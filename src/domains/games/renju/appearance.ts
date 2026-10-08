@@ -3,18 +3,7 @@ export type Tier = (typeof TIERS)[number];
 export const STONES = ['classic', 'rose', 'obsidian', 'opal', 'astral', 'sovereign'] as const;
 // The legacy rose ID remains valid on the wire; local and incoming selections migrate to Luna.
 export const AVATARS = ['petal', 'luna', 'apron', 'rose', 'serin', 'sylvie', 'astra', 'seraphine', 'aurelia'] as const;
-export const BOARDS = [
-  'wood',
-  'oak',
-  'walnut',
-  'linen',
-  'ink',
-  'meadow',
-  'marble',
-  'moonstone',
-  'celestial',
-  'imperial',
-] as const;
+export const BOARDS = ['wood', 'walnut', 'linen', 'meadow', 'moonstone', 'forest', 'beach'] as const;
 export const DANCES = ['signature', 'encore', 'ribbon', 'waltz', 'moonwalk', 'constellation', 'apotheosis'] as const;
 
 export type StoneStyle = (typeof STONES)[number];
@@ -295,14 +284,6 @@ export const APPEARANCE_OPTIONS = {
       colors: ['#d6ad72', '#886043'],
     },
     {
-      id: 'oak',
-      name: '크림',
-      tier: 'B',
-      collection: 'original',
-      detail: '따뜻한 크림빛 도자기와 로즈 테두리',
-      colors: ['#e9dfd9', '#c2afb5'],
-    },
-    {
       id: 'walnut',
       name: '로즈',
       tier: 'B',
@@ -319,28 +300,12 @@ export const APPEARANCE_OPTIONS = {
       colors: ['#cac5e0', '#9c93b8'],
     },
     {
-      id: 'ink',
-      name: '미드나이트',
-      tier: 'B',
-      collection: 'original',
-      detail: '밤하늘빛 도자기에 새긴 라일락 격자',
-      colors: ['#464d70', '#313752'],
-    },
-    {
       id: 'meadow',
       name: '세이지',
       tier: 'B',
       collection: 'original',
       detail: '차분한 연녹색 유약과 잎빛 테두리',
       colors: ['#c4d6ca', '#8faa9c'],
-    },
-    {
-      id: 'marble',
-      name: '대리석',
-      tier: 'A',
-      collection: 'tier',
-      detail: '깊이 있는 석맥과 금속 테두리',
-      colors: ['#ded8df', '#8e7b90'],
     },
     {
       id: 'moonstone',
@@ -351,20 +316,20 @@ export const APPEARANCE_OPTIONS = {
       colors: ['#d1d0ee', '#8684b4'],
     },
     {
-      id: 'celestial',
-      name: '성좌',
+      id: 'forest',
+      name: '반딧불 숲',
       tier: 'S',
       collection: 'tier',
-      detail: '빛나는 별의 궤도와 밤하늘의 판면',
-      colors: ['#344a72', '#8ecbe9'],
+      detail: '이끼 낀 숲속 빈터에 놓인 판 · 다람쥐와 반딧불이가 살아 움직입니다',
+      colors: ['#7f9a62', '#3f5a3a'],
     },
     {
-      id: 'imperial',
-      name: '천상의 회랑',
+      id: 'beach',
+      name: '노을 해변',
       tier: 'S+',
       collection: 'tier',
-      detail: '황금 기둥과 겹겹의 광채로 세운 천상의 판',
-      colors: ['#e8dcb7', '#b18b3d'],
+      detail: '노을 지는 바닷가 모래 위의 판 · 파도와 소라게, 갈매기가 함께합니다',
+      colors: ['#f1dcb8', '#3e9aa8'],
     },
   ],
 } as const;

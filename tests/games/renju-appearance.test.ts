@@ -53,8 +53,24 @@ describe('Omokmaru appearance values', () => {
     expect(normalizeAppearance({ stone: 'jade', board: 'retired' })).toEqual(DEFAULT_APPEARANCE);
   });
 
+  it('offers only the five kept boards plus the forest and beach editions, in wardrobe order', () => {
+    expect(BOARDS).toEqual(['wood', 'walnut', 'linen', 'meadow', 'moonstone', 'forest', 'beach']);
+    expect(APPEARANCE_OPTIONS.board.map((option) => [option.id, option.name])).toEqual([
+      ['wood', '기본 나무'],
+      ['walnut', '로즈'],
+      ['linen', '라일락'],
+      ['meadow', '세이지'],
+      ['moonstone', '월광석'],
+      ['forest', '반딧불 숲'],
+      ['beach', '노을 해변'],
+    ]);
+    for (const retired of ['oak', 'ink', 'marble', 'celestial', 'imperial']) {
+      expect(normalizeAppearance({ board: retired }).board).toBe('wood');
+    }
+  });
+
   it('preserves stored custom stones and boards when adding the base themes', () => {
-    for (const board of ['oak', 'walnut', 'linen', 'ink', 'meadow']) {
+    for (const board of ['walnut', 'linen', 'meadow', 'moonstone', 'forest', 'beach']) {
       const saved = { stone: 'rose', board, avatar: 'luna', dances: { luna: 'encore' } };
       expect(normalizeAppearance(JSON.parse(JSON.stringify(saved)))).toMatchObject(saved);
     }
@@ -138,7 +154,7 @@ describe('Omokmaru appearance values', () => {
     expect(AVATAR_TIERS).toMatchObject({ petal: 'C', luna: 'A+', apron: 'A', rose: 'A', serin: 'A' });
     expect(
       APPEARANCE_OPTIONS.board.filter(({ collection }) => collection === 'original').map(({ tier }) => tier),
-    ).toEqual(['C', 'B', 'B', 'B', 'B', 'B']);
+    ).toEqual(['C', 'B', 'B', 'B']);
     expect(
       APPEARANCE_OPTIONS.motion.filter(({ collection }) => collection === 'original').map(({ tier }) => tier),
     ).toEqual(['C', 'C']);
@@ -158,18 +174,21 @@ describe('Omokmaru appearance values', () => {
       stone: ['A', 'A+', 'S', 'S+'],
       avatar: ['B', 'S', 'S+', 'S+'],
       motion: ['B', 'A', 'A+', 'S', 'S+'],
-      board: ['A', 'A+', 'S', 'S+'],
+      board: ['A+', 'S', 'S+'],
     };
     let additions = 0;
     for (const category of Object.keys(APPEARANCE_OPTIONS) as (keyof typeof APPEARANCE_OPTIONS)[]) {
       const options = APPEARANCE_OPTIONS[category];
       const newOptions = options.filter(({ collection }) => collection === 'tier');
       expect(newOptions.map(({ tier }) => tier)).toEqual(expectedNewTiers[category]);
-      expect(new Set(options.map(({ tier }) => tier))).toEqual(new Set(TIERS));
+      // The trimmed board line-up keeps no A-tier board; every other category still spans all tiers.
+      expect(new Set(options.map(({ tier }) => tier))).toEqual(
+        new Set(category === 'board' ? TIERS.filter((tier) => tier !== 'A') : TIERS),
+      );
       expect(new Set(options.map(({ id }) => id)).size).toBe(options.length);
       additions += newOptions.length;
     }
-    expect(additions).toBe(17);
+    expect(additions).toBe(16);
     expect(APPEARANCE_OPTIONS.avatar.filter(({ tier }) => tier === 'S+').map(({ id }) => id)).toEqual([
       'seraphine',
       'aurelia',
@@ -185,7 +204,7 @@ describe('Omokmaru appearance values', () => {
         const selected = normalizeAppearance({
           avatar,
           stone: 'sovereign',
-          board: 'imperial',
+          board: 'beach',
           dances: { ...DEFAULT_APPEARANCE.dances, [avatar]: dance },
         });
         const restored = normalizeAppearance(JSON.parse(JSON.stringify(selected)));
