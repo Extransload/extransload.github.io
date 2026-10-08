@@ -1044,7 +1044,8 @@ test('Omokmaru sound setting persists between visits', async ({ page }) => {
 });
 
 test('Omokmaru studio previews and saves a look', async ({ page }) => {
-  test.setTimeout(60_000);
+  // The walkthrough loads two rigged avatars and visits four pages; CI's software renderer needs the headroom.
+  test.setTimeout(120_000);
   await page.goto('/playroom/omokmaru/wardrobe/');
   await expect(page.locator('#studio-canvas')).toHaveAttribute('data-rendered-moves', '8');
   await expect(page.locator('#studio-canvas')).toHaveAttribute('data-focus', 'stone');
