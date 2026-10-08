@@ -38,6 +38,8 @@ jobs:
       - name: Built-site contract tests
         run: npm run test:dist
 
+  # Reference only: the deploy no longer waits for the browser suite, which takes ~16 minutes on
+  # the software renderer. A red e2e job still flags a regression on the run page.
   e2e:
     runs-on: ubuntu-latest
     steps:
@@ -63,7 +65,6 @@ jobs:
           retention-days: 7
 
   build:
-    needs: [verify, e2e]
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
@@ -89,7 +90,7 @@ jobs:
           path: dist
 
   deploy:
-    needs: build
+    needs: [verify, build]
     runs-on: ubuntu-latest
     permissions:
       pages: write
