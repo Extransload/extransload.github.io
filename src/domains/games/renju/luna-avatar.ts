@@ -5,7 +5,6 @@ import { loadVroidSource } from './fashion-avatar';
 import { updateVroidGesture } from './avatar-gestures';
 import type { AvatarMotion } from './petal-avatar';
 import type { DanceStyle } from './appearance';
-import { repairLunaSkinTexture } from './luna-skin';
 
 export async function loadLunaAvatar() {
   return new LunaAvatar(await loadVroidSource('/models/omokmaru/luna.glb'));
@@ -71,14 +70,6 @@ export class LunaAvatar {
       if (!material || Array.isArray(material)) return;
       object.material = material.clone();
       object.material.toneMapped = false;
-      if (
-        material.name.includes('_Body_') &&
-        material.name.endsWith('_SKIN') &&
-        'map' in object.material &&
-        object.material.map instanceof THREE.Texture
-      ) {
-        object.material.map = repairLunaSkinTexture(object.material.map);
-      }
       if (!material.name.includes('HAIR')) return;
       const hair = object.material;
       hair.onBeforeCompile = (shader: THREE.WebGLProgramParametersWithUniforms) => {

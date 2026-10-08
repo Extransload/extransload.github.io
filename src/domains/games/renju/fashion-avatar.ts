@@ -7,7 +7,6 @@ import type { DanceStyle } from './appearance';
 import { TIER_AVATAR_LOOKS, TierAvatarAccessories, tailorTierGarment } from './tier-avatar';
 import { MALE_AVATARS, MALE_AVATAR_LOOKS, MaleAvatarWardrobe, isMaleAvatar, tailorMaleBase } from './male-avatar';
 import { AURELIA_LOOK, AureliaWardrobe, tailorAureliaBodice } from './aurelia-avatar';
-import { repairLunaSkinTexture } from './luna-skin';
 
 export const FASHION_AVATARS = [...MALE_AVATARS, 'seraphine', 'aurelia'] as const;
 export type FashionStyle = (typeof FASHION_AVATARS)[number];
@@ -143,18 +142,14 @@ export class FashionAvatar {
         };
         copy.customProgramCacheKey = () => `${style}-${name}-tint${style === 'aurelia' ? '-trimmed-hem' : ''}`;
       }
-      if ((style === 'aurelia' || style === 'seraphine') && name.endsWith('_SKIN')) {
-        if (name.includes('_Body_') && 'map' in copy && copy.map instanceof THREE.Texture) {
-          copy.map = repairLunaSkinTexture(copy.map);
-        } else if (style === 'aurelia') {
-          copy.onBeforeCompile = (shader: THREE.WebGLProgramParametersWithUniforms) => {
-            shader.fragmentShader = shader.fragmentShader.replace(
-              '#include <map_fragment>',
-              '#include <map_fragment>\n diffuseColor.rgb = mix(diffuseColor.rgb, vec3(1.0, 0.94, 0.91), 0.11);',
-            );
-          };
-          copy.customProgramCacheKey = () => 'aurelia-porcelain-face';
-        }
+      if (style === 'aurelia' && name.endsWith('_SKIN') && !name.includes('_Body_')) {
+        copy.onBeforeCompile = (shader: THREE.WebGLProgramParametersWithUniforms) => {
+          shader.fragmentShader = shader.fragmentShader.replace(
+            '#include <map_fragment>',
+            '#include <map_fragment>\n diffuseColor.rgb = mix(diffuseColor.rgb, vec3(1.0, 0.94, 0.91), 0.11);',
+          );
+        };
+        copy.customProgramCacheKey = () => 'aurelia-porcelain-face';
       }
       object.material = copy;
     });
