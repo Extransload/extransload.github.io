@@ -1589,7 +1589,7 @@ test('short pages fill at least the viewport height', async ({ page }) => {
   const shortPages = [
     { route: '/about/', container: '.main-space-page' },
     { route: '/blog/categories/', container: '.site-content' },
-    { route: '/guestbook/', container: '.site-content' },
+    { route: '/guestbook/', container: '.main-space-page' },
     { route: '/blog/posts/3/', container: '.site-content' },
   ];
 

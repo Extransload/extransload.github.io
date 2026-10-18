@@ -150,7 +150,9 @@ test('guestbook has a separate anonymous comment page', async ({ page }) => {
   await page.goto('/guestbook/');
 
   await expect(page).toHaveURL('/guestbook/');
-  await expect(page.getByRole('heading', { name: '방명록' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Guestbook' })).toBeVisible();
+  await expect(page.locator('.site-header')).toHaveCount(0);
+  await expect(page.getByRole('link', { name: '입구로 돌아가기' })).toHaveAttribute('href', '/');
   await expect(page.locator('[data-comments]')).toHaveAttribute('data-page', '/guestbook/');
   await expect(page.getByRole('button', { name: '완료', exact: true })).toBeVisible();
   await expect(page.locator('[data-post-like]')).toHaveCount(0);

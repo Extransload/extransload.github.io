@@ -1,12 +1,5 @@
 ---
-import SiteLayout from '../shared/layouts/SiteLayout.astro';
-import Comments from '../shared/components/Comments.astro';
+import GuestbookPage from '../domains/main/routes/guestbook.astro';
 ---
 
-<SiteLayout title="방명록 — Extransload" description="Extransload 방명록" canonicalPath="/guestbook/">
-  <main class="shell simple-page">
-    <p class="eyebrow">Guestbook</p>
-    <h1>방명록</h1>
-    <Comments page="/guestbook/" guestbook />
-  </main>
-</SiteLayout>
+<GuestbookPage />

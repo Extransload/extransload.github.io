@@ -8,7 +8,7 @@ const api = import.meta.env.PUBLIC_COMMENTS_API_URL?.trim() || 'https://extransl
 <section class="comments" data-comments data-api={api} data-page={page} data-pagefind-ignore aria-label={guestbook ? '방명록 남기기' : '댓글'}>
   {!guestbook && <div class="post-like-area"><button type="button" data-post-like aria-label="글 좋아요" aria-pressed="false"><span class="post-like-heart" aria-hidden="true"><img class="post-like-heart__empty" src="/images/heart-embroidered-empty.webp" alt="" width="256" height="256" /><img class="post-like-heart__filled" src="/images/heart-embroidered-filled.webp" alt="" width="256" height="256" /></span><span data-post-like-count>0</span></button><p data-post-like-status role="status"></p></div>}
   <div class="comments-heading">
-    <div><p class="comments-eyebrow">{guestbook ? 'GUESTBOOK' : 'MARGINALIA'}</p><h2>{guestbook ? '다녀간 자리' : '댓글'} <span data-count></span></h2></div>
+    <div>{!guestbook && <p class="comments-eyebrow">MARGINALIA</p>}<h2>{guestbook ? '다녀간 자리' : '댓글'} <span data-count></span></h2></div>
   </div>
   <p class="comment-status" data-list-status role="status" aria-live="polite">댓글을 불러오고 있습니다.</p>
   <div data-list></div>
