@@ -82,7 +82,7 @@ npm run test:e2e
 
 ## GitHub Pages 배포와 확인
 
-`.github/workflows/deploy.yml`은 `main` push 또는 수동 실행에서 `npm ci`, `npm run build`, Pages artifact 업로드, GitHub Pages 배포를 순서대로 수행합니다. Build 단계는 repository variables를 `PUBLIC_*` 환경 변수로 전달하며, deploy job에만 `pages: write`와 `id-token: write` 권한을 부여합니다.
+`.github/workflows/deploy.yml`은 `main` push 또는 수동 실행에서 `npm ci`, `npm run build`, Pages artifact 업로드, GitHub Pages 배포를 순서대로 수행합니다. Build 단계는 repository variables를 `PUBLIC_*` 환경 변수로 전달하며, deploy job에만 `pages: write`와 `id-token: write` 권한을 부여합니다. 브라우저 e2e 테스트는 `.github/workflows/e2e.yml`에서 따로 실행되므로 배포를 기다리게 하거나 배포 결과를 실패로 만들지 않습니다.
 
 GitHub repository의 **Settings → Pages**에서 source를 **GitHub Actions**로 설정합니다. 배포 후 `https://extransload.github.io/`에서 다음을 확인합니다.
 
