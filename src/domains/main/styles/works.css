@@ -135,6 +135,41 @@
   transform: translate(-50%, -50%);
 }
 
+/* The TablePeek mark is a dark monocle plate; the wordmark is set in HTML so it uses the site's serif. */
+.works-index__cover[data-project='tablepeek'] {
+  container-type: inline-size;
+  background: #1a1830;
+}
+
+.works-index__cover[data-project='tablepeek'] .works-index__logo {
+  width: 100%;
+  mix-blend-mode: normal;
+}
+
+/* Sized in container units so the two-line wordmark fits beside the lens at every cover width. */
+.works-index__cover[data-project='tablepeek'] .works-index__cover-wordmark {
+  position: absolute;
+  top: 50%;
+  left: 51%;
+  display: grid;
+  color: #f1ede4;
+  font-family: var(--font-western);
+  font-size: 15cqw;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 0.95;
+  transform: translateY(-50%);
+}
+
+/* Same blue-violet gradient as the TablePeek app's own wordmark. */
+.works-index__cover[data-project='tablepeek'] .works-index__cover-wordmark em {
+  background: linear-gradient(115deg, #4fa3ff 0%, #6e5bff 55%, #a35bff 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  font-style: italic;
+}
+
 .works-index__cover[data-project='notepane'] {
   background: #e8def6;
 }

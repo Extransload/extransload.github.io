@@ -94,9 +94,250 @@ const citewellTenure = formatTenure(CITEWELL_START);
 
 export const works: WorkProject[] = [
   {
+    slug: 'tablepeek',
+    logo: { src: '/images/works/logo-tablepeek.svg', alt: 'TablePeek 로고', width: 900, height: 506 },
+    folio: 'Folio 01',
+    title: 'TablePeek',
+    subtitle: '가볍게, 브라우저에서 바로 쓰는 데이터베이스 클라이언트',
+    period: '2026.10.17 — 현재',
+    role: '데이터베이스 클라이언트 · 제품 개발',
+    context: '개인 프로젝트',
+    summary:
+      '가볍고 디자인이 깔끔하면서, 어느 운영체제에서나 설치 부담 없이 바로 쓸 수 있는 데이터베이스 도구가 필요해서 만든 프로젝트. ' +
+      '접근이 가장 쉬운 웹에서 찾아봤지만, 디자인이 마음에 드는 도구는 설치가 필요했고 설치 없이 쓰는 도구는 조작이 직관적이지 않았음. ' +
+      '그래서 내 컴퓨터에서 Rust 엔진을 띄우고 화면은 브라우저로 쓰는 구조로 새로 만듦. ' +
+      'SQLite·PostgreSQL·MySQL/MariaDB·CockroachDB·SQL Server를 같은 화면에서 조회·편집하고, 가져오기·내보내기는 백그라운드 작업으로 처리. ' +
+      '필터·외래 키 탐색·글꼴·스크롤바·설정까지 데스크톱 앱처럼 다듬는 중.',
+    metrics: [
+      { label: '데이터베이스', value: '5종' },
+      { label: '실행', value: '로컬 엔진 + 브라우저' },
+      { label: '테마', value: '50종' },
+      { label: '플랫폼', value: 'macOS · Windows' },
+    ],
+    stack: 'Rust · axum · Arrow IPC · WebSocket · React · CodeMirror 6 · Canvas · MCP',
+    links: [
+      { label: 'GitHub', href: 'https://github.com/Extransload/TablePeek' },
+      { label: '구조 문서', href: 'https://github.com/Extransload/TablePeek/blob/main/docs/ARCHITECTURE.md' },
+    ],
+    gallery: [
+      {
+        src: '/images/works/tablepeek-grid.webp',
+        kind: 'wide',
+        alt: 'SQLite 데모 데이터베이스의 orders 표를 값의 타입별 색상으로 보여 주는 TablePeek 데이터 표 화면',
+        caption: '데이터 표 — 문자열·숫자·JSON·날짜를 타입별 색상으로 구분.',
+      },
+      {
+        src: '/images/works/tablepeek-quick-look.webp',
+        kind: 'wide',
+        alt: '셀에 담긴 JSON 값을 트리 구조로 펼쳐 보여 주는 TablePeek Quick Look 패널',
+        caption: 'Quick Look — 셀 값을 JSON 트리와 인코딩·HEX로 확인.',
+      },
+      {
+        src: '/images/works/tablepeek-settings.webp',
+        kind: 'wide',
+        alt: '테마 목록과 타입 색상 미리보기가 함께 있는 TablePeek 화면 설정',
+        caption: '화면 설정 — 테마와 타입 색상을 미리 보며 조정. (10.20 화면. 지금은 영역별로 나뉜 설정 화면.)',
+      },
+    ],
+    milestones: [],
+    chapters: [
+      {
+        n: '01',
+        period: '2026.10.17 — 10.20',
+        title: '왜 새로 만들었나: 웹 화면과 로컬 엔진',
+        lede:
+          '필요했던 도구의 조건은 가볍고, 디자인이 깔끔하고, 운영체제와 상관없이 바로 쓸 수 있는 것. ' +
+          '접근이 가장 쉬운 웹에서 찾았지만, 디자인이 마음에 드는 도구는 설치가 필요했고 설치 없이 쓰는 도구는 조작이 직관적이지 않았음. ' +
+          '두 조건을 함께 만족하는 도구가 없어 직접 만들기로 결정.',
+        requirements: [
+          { label: '가벼움', value: '무거운 데스크톱 앱 없이, 엔진 하나를 띄우고 브라우저로 사용' },
+          { label: '어디서나', value: 'macOS와 Windows에서 같은 화면, 같은 사용법' },
+          { label: '바로 쓰는 화면', value: '처음 써도 헤매지 않는 조작과 깔끔한 디자인' },
+        ],
+        build: [
+          {
+            head: '화면은 웹, 접속은 로컬 엔진',
+            decision: true,
+            body: [
+              '운영체제와 상관없이 같은 화면을 쓰려고 화면을 웹으로 구성',
+              '브라우저만으로는 데이터베이스에 직접 접속할 수 없어, 내 컴퓨터에서 실행하는 Rust 엔진이 접속과 쿼리 실행을 담당',
+              '엔진은 127.0.0.1에서만 열리고 실행할 때마다 새 접근 토큰을 발급해, 웹 화면이지만 외부 서버를 거치지 않음',
+            ],
+          },
+          {
+            head: '엔진과 서버의 역할 분리',
+            body: [
+              'tablepeek-engine이 드라이버·세션·쿼리 실행·취소·Arrow 직렬화를 담당',
+              'tablepeek-server(axum)가 루프백 리스너·인증·WebSocket 스트리밍·SSH 터널·접속 프로필을 담당',
+              '결과는 Arrow IPC로 받아 보이는 칸만 그리는 캔버스 표에 표시해, 큰 테이블도 구간별로 가볍게 표시',
+            ],
+          },
+          {
+            head: '값을 읽기 쉽게',
+            body: [
+              '문자열·정수·실수·큰 정수·불리언·JSON·날짜·NULL을 타입별 색상으로 구분',
+              '셀을 Quick Look으로 열어 JSON 트리, 인코딩·HEX 보기, NULL 저장 지원',
+              'AI 클라이언트용 MCP 서버를 읽기 전용 조회 도구로 제공',
+            ],
+          },
+        ],
+        hard: [],
+        outcome: [
+          '다섯 종류의 데이터베이스를 같은 표·편집기·스키마 화면으로 다루는 기본 구조 완성',
+          'cargo와 Node.js로 빌드해 바로 실행하는 경로 마련',
+        ],
+      },
+      {
+        n: '02',
+        period: '2026.10.21 — 10.23',
+        title: '접속 관리와 비밀번호 보관',
+        lede:
+          '여러 환경의 데이터베이스를 오가려면 접속 정보를 모아 두고 다른 컴퓨터로 안전하게 옮길 수 있어야 함. ' +
+          '접속 홈, 내보내기 파일 암호화, 비밀번호 보관 방식을 정리.',
+        requirements: [
+          { label: '접속 정리', value: '접속을 그룹으로 묶고 LOCAL·DEV·STAGE·PROD 배지로 구분' },
+          { label: '안전한 이동', value: '접속 목록을 파일로 내보내고 다른 컴퓨터에서 가져오기' },
+          { label: '비밀번호 보관', value: '설정 파일에 비밀번호를 남기지 않을 것' },
+        ],
+        build: [
+          {
+            head: '암호화된 접속 내보내기',
+            decision: true,
+            body: [
+              '내보내기 파일(.tablepeek)은 파일 비밀번호에서 Argon2id로 키를 만들고 AES-256-GCM으로 암호화',
+              '저장된 비밀번호는 선택했을 때만 서버가 키체인에서 읽어 암호문 안에 포함',
+              '가져오기는 모든 항목을 검증한 뒤 전부 저장하거나 하나도 저장하지 않음',
+            ],
+          },
+          {
+            head: '접속 홈과 작업 화면',
+            body: [
+              '접속을 그룹으로 정리하는 시작 화면, 연결 탭 색상과 환경 배지',
+              '쿼리 기록·안전 모드·패널 상태를 접속별로 유지',
+              '내장 테마 50종과 Base16·VS Code 테마 가져오기',
+            ],
+          },
+        ],
+        hard: [
+          {
+            head: '비밀번호 저장을 뺐다가 되돌림',
+            body: '내보내기 파일의 비밀번호와 접속 비밀번호를 같은 것으로 잘못 보고, 비밀번호 저장 기능을 한 번 제거. 같은 날 원인을 확인하고 되돌림.',
+            resolved:
+              '접속 비밀번호는 운영체제 키체인에 저장하는 것을 기본으로 하고, 원하면 접속할 때마다 입력하도록 선택. store.json에는 비밀번호를 남기지 않음.',
+          },
+        ],
+        outcome: [
+          '접속 정보는 파일에, 비밀번호는 키체인에 나눠 보관하는 구조 확정',
+          '접속 목록을 다른 컴퓨터로 옮길 때도 비밀번호가 평문으로 드러나지 않는 경로 마련',
+        ],
+      },
+      {
+        n: '03',
+        period: '2026.10.26',
+        title: '가져오기·내보내기와 백그라운드 작업',
+        lede:
+          '가져오기, SQL 덤프 복원, 내보내기를 백그라운드 작업으로 돌리면서 화면의 조회와 같은 데이터베이스 세션을 함께 쓰게 됨. ' +
+          '작업과 화면이 서로를 취소하지 않도록 세션을 쓰는 순서를 정리.',
+        requirements: [
+          { label: '가져오기', value: 'CSV·JSON·SQL 덤프를 미리 보고 인코딩을 골라 가져오기' },
+          { label: '내보내기', value: 'CSV·JSON·XML·SQL INSERT로 내보내고, 백업을 다시 불러올 수 있을 것' },
+          { label: '동시 작업', value: '가져오는 중에도 표를 열어 볼 수 있을 것' },
+        ],
+        build: [
+          {
+            head: '세션 하나를 나눠 쓰는 순서',
+            decision: true,
+            body: [
+              '접속마다 데이터베이스 세션이 하나라 화면 조회와 백그라운드 작업이 같은 세션을 사용',
+              '문장을 하나씩 통과시키는 관문을 접속마다 두고, 열린 트랜잭션이 화면 것인지 작업 것인지 매 문장 뒤에 판정',
+              '작업이 연 트랜잭션은 화면 조회가 취소하지 못하도록 서버에서 보호',
+            ],
+          },
+          {
+            head: '값을 바꾸지 않는 가져오기·내보내기',
+            body: [
+              'SQL 내보내기와 백업을 외래 키 순서(부모 테이블 먼저)로 작성',
+              'JSON의 큰 정수와 유효숫자가 많은 소수를 원문 그대로 유지',
+              'CSV 구분자·따옴표·인코딩(UTF-8, EUC-KR 등)을 고르고 한 트랜잭션으로 가져오기',
+            ],
+          },
+        ],
+        hard: [
+          {
+            head: '화면 조회와 백그라운드 작업의 상호 취소',
+            body: '새 조회가 같은 세션에서 실행 중인 문장을 취소하는 구조라, 가져오기 중에 표를 클릭하면 가져오기 일부가 끊기고 PostgreSQL에서는 트랜잭션이 중단됨. 내보내기도 화면 조회와 서로를 취소.',
+            resolved:
+              '접속마다 문장 순서를 정하는 관문과 트랜잭션 소유 판정을 추가해 작업과 화면이 서로 끊지 않도록 정리.',
+          },
+          {
+            head: 'JSON 큰 숫자의 정밀도 손실',
+            body: 'JSON 가져오기가 모든 숫자를 double로 읽어 1234567890123456789 같은 ID가 1234567890123456800으로 바뀐 채 BIGINT 열에 저장됨.',
+            resolved: 'double로 읽으면 값이 바뀌는 숫자는 원문 텍스트를 유지하는 값으로 읽어 그대로 저장.',
+          },
+        ],
+        outcome: [
+          '가져오기·복원·내보내기를 화면 작업과 동시에 실행할 수 있는 구조 마련',
+          '실패한 가져오기·복원은 멈춘 문장을 오류 위에 표시하고, 되돌릴 수 있는 범위에서는 모두 되돌림',
+        ],
+      },
+      {
+        n: '04',
+        period: '2026.10.27 — 현재',
+        title: '매일 쓰는 화면 다듬기',
+        lede:
+          '구조가 자리 잡힌 뒤에는 하루 종일 열어 두는 도구로서의 감각을 맞추는 일. ' +
+          '필터, 외래 키 탐색, 접속 홈, 글꼴, 스크롤바, 설정 화면을 데스크톱 클라이언트 수준으로 정리.',
+        requirements: [
+          { label: '필터', value: '조건을 하나씩, 또는 체크한 것을 모두 AND·OR로 적용' },
+          { label: '관계 탐색', value: '외래 키 셀에서 참조하는 행과 테이블을 바로 열기' },
+          { label: '손에 익은 감각', value: '글꼴·스크롤바·메뉴·설정이 웹 페이지가 아니라 앱처럼 동작' },
+        ],
+        build: [
+          {
+            head: '필터 바',
+            decision: true,
+            body: [
+              '포함·시작·끝·목록·범위 같은 연산자와 SQL 직접 입력을 조건 줄로 쌓고, 한 조건만 적용하거나 체크한 조건을 AND·OR로 함께 적용',
+              '마지막 조건을 지우면 필터 바가 닫히고, 정렬·페이지·필터가 바뀌어도 열 너비는 유지',
+              '바이너리 값은 HEX로 표시하고 HEX로 고쳐 쓰면 바이트로 저장',
+            ],
+          },
+          {
+            head: '외래 키 Quick Look',
+            body: [
+              '외래 키 셀의 Quick Look에 참조하는 행을 표시',
+              '참조하는 테이블을 그 키로 필터한 표로 열어, 관계를 따라가며 읽기',
+              '오른쪽 패널은 필드 검색을 유지하고 선택된 행이 없으면 그렇다고 알림',
+            ],
+          },
+          {
+            head: '접속 홈과 설정',
+            body: [
+              '접속 그룹을 끌어서 정렬하고, 데이터베이스 종류에서 새 접속을 시작하며, 연결 탭은 한 번 클릭으로 닫힘',
+              '설정을 일반·테마, SQL 편집기·데이터 표·사이드바, 가져오기·내보내기처럼 화면 영역별로 재구성하고 영역마다 미리보기',
+              'SQL 편집기·데이터 표·사이드바가 각각 설치된 글꼴 전체에서 글꼴을 고르고, 스크롤바는 앱이 직접 그려 얇게, 포인터 아래서만 한 단계 두껍게',
+            ],
+          },
+        ],
+        hard: [
+          {
+            head: '테스트용 데이터베이스가 비어 있음',
+            body: '엔진 테스트가 읽는 몇 줄만 들어 있어, 실제 서버에서 필터·관계 탐색·가져오기를 손으로 확인할 데이터가 없었음.',
+            resolved:
+              'Docker 테스트 서버 네 종류에 고객·상품·주문·리뷰로 이어진 샘플 shop 스키마(약 28,000행)를 심음. 자기 참조·복합 키·CASCADE·enum·JSON·배열·바이너리·기본 키 없는 테이블·한글과 이모지가 섞인 값까지 포함해, 어색한 경우를 모두 한 곳에서 확인.',
+          },
+        ],
+        outcome: [
+          '필터·관계 탐색·접속 관리가 데스크톱 클라이언트와 같은 흐름으로 동작',
+          '네 엔진의 테스트 서버를 엔진별로 띄우고 같은 샘플 데이터로 손으로 확인하는 경로 마련',
+        ],
+      },
+    ],
+  },
+  {
     slug: 'notepane',
     logo: { src: '/images/works/logo-notepane.png', alt: 'NotePane 로고', width: 1450, height: 400 },
-    folio: 'Folio 01',
+    folio: 'Folio 02',
     title: 'NotePane',
     subtitle: '한 창에 모아 쓰고, 바탕화면에 펼쳐 두는 블록 노트',
     period: '2026.07.24 — 현재',
@@ -255,7 +496,7 @@ export const works: WorkProject[] = [
   {
     slug: 'citewell',
     logo: { src: '/images/works/logo-citewell.webp', alt: 'CiteWell 로고' },
-    folio: 'Folio 02',
+    folio: 'Folio 03',
     title: 'CiteWell',
     subtitle: '의학 논문의 참고문헌을 검증하고 저널 형식으로 바꾸는 제품',
     period: '2023.12.11 — 현재',
@@ -823,7 +1064,7 @@ export const works: WorkProject[] = [
   {
     slug: 'degureure',
     logo: { src: '/images/works/logo-degureure.webp', alt: '데구르르 심볼과 글자 로고' },
-    folio: 'Folio 03',
+    folio: 'Folio 04',
     title: '데구르르',
     subtitle: '1:1 웃음 참기 화상 대결',
     period: '2023.07.10 — 2023.11.17',
@@ -1055,7 +1296,7 @@ export const works: WorkProject[] = [
   {
     slug: 'danchu',
     logo: { src: '/images/works/logo-danchu.webp', alt: 'DANCHU 로고' },
-    folio: 'Folio 04',
+    folio: 'Folio 05',
     title: 'DANCHU',
     subtitle: '지난 24시간의 뉴스를 단어 추측 게임으로 바꾸는 서비스',
     period: '2023.08.21 — 2023.10.06',

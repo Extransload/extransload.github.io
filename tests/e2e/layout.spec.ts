@@ -372,23 +372,26 @@ test('works presents a scannable contents page for every folio', async ({ page }
   await page.goto('/works/');
 
   const folios = page.locator('.works-index__item');
-  await expect(folios).toHaveCount(4);
+  await expect(folios).toHaveCount(works.length);
   // The contents page follows the archive's own order.
   await expect(page.locator('.works-index__name')).toHaveText(works.map((project) => project.title));
-  await expect(folios.first()).toContainText('2026.07.24 — 현재');
-  await expect(page.locator('.works-index__link').first()).toHaveAttribute('href', '/works/notepane/');
+  await expect(folios.first()).toContainText(works[0].period);
+  await expect(page.locator('.works-index__link').first()).toHaveAttribute('href', `/works/${works[0].slug}/`);
 
   const logos = page.locator('.works-index__logo');
-  await expect(logos).toHaveCount(4);
+  await expect(logos).toHaveCount(works.length);
   for (const logo of await logos.all()) {
     expect(await logo.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
     if (await logo.evaluate((image) => image.closest('[data-project]')?.getAttribute('data-project') === 'citewell')) {
       await expect(logo).toHaveAttribute('alt', '');
-      await expect(page.locator('.works-index__cover-wordmark')).toHaveText('CiteWell');
+      await expect(page.locator("[data-project='citewell'] .works-index__cover-wordmark")).toHaveText('CiteWell');
     } else {
       expect(await logo.getAttribute('alt')).toBeTruthy();
     }
   }
+
+  // TablePeek keeps its alt text; the HTML wordmark only supplies the serif the SVG mark cannot embed.
+  await expect(page.locator("[data-project='tablepeek'] .works-index__cover-wordmark")).toHaveText('TablePeek');
 
   await expect(page.locator('.works-patents__item')).toHaveCount(2);
 

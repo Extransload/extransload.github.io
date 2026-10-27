@@ -1,48 +1,49 @@
 ---
 import MainSpaceLayout from '../layouts/MainSpaceLayout.astro';
+import ChapterIsland from '../../../shared/components/ChapterIsland.astro';
 import WorkIcon from '../components/WorkIcon.astro';
 import { works, patents } from '../data/work-archive';
 
+import '../../../shared/styles/paper-page.css';
+import '../../../shared/styles/editorial-surfaces.css';
 import '../styles/works.css';
 ---
 
 <MainSpaceLayout title="Works — Extransload" description="문제를 제품으로 바꾸며 쌓아 온 Extransload의 작업 기록" canonicalPath="/works/">
-  <main class="main-space-page works-page" aria-labelledby="works-title" data-works-scroll data-works-view="index">
-    <a class="works-return" href="/">입구로 돌아가기</a>
-
-    <article class="works-leaf">
-      <header class="works-masthead" data-works-cover>
-        <div class="works-heading">
-          <p class="works-kicker">Liber II · A record of making</p>
-          <h1 id="works-title">
-            <img class="works-wordmark" src="/images/splash-works-embroidered.webp" alt="Works" width="1324" height="376" fetchpriority="high" />
-          </h1>
-        </div>
-        <div class="works-intro">
-          <p class="works-deck">문제를 읽고, 구조를 세우고, 실제로 작동하는 제품이 될 때까지. <span class="works-deck__count">{works.length}</span>편의 기록을 남깁니다.</p>
-        </div>
+  <ChapterIsland current="works" />
+  <main class="paper-page works-page" aria-labelledby="works-title" data-works-scroll data-works-view="index">
+    <div class="paper-page__column">
+      <header class="paper-page__intro">
+        <p class="paper-page__kicker works-kicker">Liber II · A record of making</p>
+        <h1 id="works-title" class="paper-page__lede"><span class="sr-only">Works — </span>그동안 진행한 프로젝트 {works.length}개를 정리했습니다.</h1>
+        <nav class="paper-page__jump" aria-label="이 페이지">
+          <a href="#works-contents-title">작업 목록</a>
+          <a href="#works-patents-title">출원 특허</a>
+        </nav>
       </header>
 
-      <section class="works-contents" aria-labelledby="works-contents-title">
-        <h2 id="works-contents-title" class="works-contents__title">작업 목록 <span class="works-contents__count">{String(works.length).padStart(2, '0')}</span></h2>
+      <section class="paper-page__section works-contents" aria-labelledby="works-contents-title">
+        <h2 id="works-contents-title" class="paper-page__section-title">작업 목록 · {String(works.length).padStart(2, '0')}</h2>
 
         <ol class="works-index">
           {works.map((project) => (
             <li class="works-index__item" data-works-card>
-              <a class="works-index__link" href={`/works/${project.slug}/`} aria-labelledby={`folio-${project.slug}`}>
-                <span class="works-index__mark">
-                  <span class="works-index__cover" data-project={project.slug}>
-                    <img class="works-index__logo" src={project.logo.src} alt={project.slug === 'citewell' ? '' : project.logo.alt} loading="lazy" decoding="async" width={project.logo.width ?? 900} height={project.logo.height ?? 506} />
-                    {project.slug === 'citewell' && <span class="works-index__cover-wordmark" aria-hidden="true">CiteWell</span>}
-                  </span>
-                  <span class="works-index__folio">{project.folio}</span>
+              <a class="works-index__link editorial-surface" href={`/works/${project.slug}/`} aria-labelledby={`folio-${project.slug}`}>
+                <span class="works-index__cover" data-project={project.slug}>
+                  <img class="works-index__logo" src={project.logo.src} alt={project.slug === 'citewell' ? '' : project.logo.alt} loading="lazy" decoding="async" width={project.logo.width ?? 900} height={project.logo.height ?? 506} />
+                  {project.slug === 'citewell' && <span class="works-index__cover-wordmark" aria-hidden="true">CiteWell</span>}
+                  {project.slug === 'tablepeek' && <span class="works-index__cover-wordmark works-index__cover-wordmark--tablepeek" aria-hidden="true">Table<em>Peek</em></span>}
                 </span>
                 <span class="works-index__body">
-                  <span class="works-index__heading">
-                    <span class="works-index__name" id={`folio-${project.slug}`}>{project.title}</span>
+                  <span class="paper-page__meta">
+                    <span class="paper-page__accent works-index__folio">{project.folio}</span>
+                    <span aria-hidden="true">·</span>
                     <span class="works-index__period">{project.period}</span>
                   </span>
-                  <span class="works-index__subtitle">{project.subtitle}</span>
+                  <span class="works-index__heading">
+                    <span class="works-index__name" id={`folio-${project.slug}`}>{project.title}</span>
+                    <span class="works-index__subtitle">{project.subtitle}</span>
+                  </span>
                   <span class="works-index__role">{project.context} · {project.role}</span>
                   <span class="works-index__metrics">
                     {project.metrics.map((metric) => (
