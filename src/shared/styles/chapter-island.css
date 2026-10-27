@@ -1,0 +1,257 @@
+/* Floating chapter navigation for spaces outside the journal shell; it stays a dark leather pill in both themes. */
+.chapter-island {
+  --island-gold: #c9ac66;
+  --island-gold-bright: #e0c77f;
+  --island-ink: #dddbdc;
+  --island-muted: #8b949e;
+  --island-closed-width: min(22rem, calc(100vw - 2rem));
+  --island-open-width: min(38rem, calc(100vw - 2rem));
+  /* Fallback curve for browsers without linear(); the sampled spring below replaces it where supported. */
+  --island-spring: cubic-bezier(0.22, 1, 0.36, 1);
+
+  position: fixed;
+  top: 1rem;
+  left: 50%;
+  z-index: 60;
+  display: grid;
+  grid-template-rows: auto 0fr;
+  box-sizing: border-box;
+  width: var(--island-closed-width);
+  padding: 0.375rem;
+  overflow: hidden;
+  isolation: isolate;
+  border: 1px solid rgb(201 172 102 / 36%);
+  border-radius: 1.75rem;
+  background: #07101c;
+  box-shadow:
+    0 1.125rem 2.5rem rgb(0 0 0 / 34%),
+    inset 0 1px 0 rgb(255 255 255 / 6%);
+  transform: translateX(-50%);
+  transition:
+    width 560ms var(--island-spring),
+    grid-template-rows 560ms var(--island-spring);
+}
+
+@supports (transition-timing-function: linear(0, 1)) {
+  .chapter-island {
+    /* A near-critically damped spring sampled into linear(). */
+    --island-spring: linear(
+      0,
+      0.024,
+      0.084,
+      0.167,
+      0.261,
+      0.358,
+      0.454,
+      0.543,
+      0.625,
+      0.698,
+      0.761,
+      0.815,
+      0.86,
+      0.897,
+      0.927,
+      0.951,
+      0.969,
+      0.983,
+      0.993,
+      1,
+      1.005,
+      1.009,
+      1.01,
+      1.011,
+      1.011,
+      1.011,
+      1.01,
+      1.009,
+      1.008,
+      1.007,
+      1.006,
+      1.005,
+      1.004,
+      1.003,
+      1.002,
+      1.002,
+      1
+    );
+  }
+}
+
+/* Closing waits for the chapter list to fade before the pill shrinks. */
+.chapter-island:not([data-open='true']) {
+  transition-delay: 90ms;
+}
+
+.chapter-island::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  content: '';
+  opacity: 0.9;
+  background: url('/works-leather-texture-v2.webp') center top / 36rem auto repeat;
+}
+
+.chapter-island[data-open='true'] {
+  width: var(--island-open-width);
+  grid-template-rows: auto 1fr;
+}
+
+.chapter-island__bar {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.chapter-island__entrance,
+.chapter-island__theme {
+  display: grid;
+  place-items: center;
+  flex: 0 0 2.75rem;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  color: var(--island-gold);
+  background: transparent;
+  cursor: pointer;
+}
+
+.chapter-island__toggle {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: 0 0.75rem;
+  overflow: hidden;
+  border: 0;
+  border-radius: 999px;
+  color: var(--island-gold);
+  background: transparent;
+  font-family: var(--font-western);
+  font-size: 1.25rem;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.chapter-island__slash {
+  color: var(--island-muted);
+}
+
+/* Narrow phones keep the chapter name readable by dropping the site name. */
+@media (max-width: 380px) {
+  .chapter-island__brand {
+    display: none;
+  }
+}
+
+.chapter-island__entrance:hover,
+.chapter-island__theme:hover,
+.chapter-island__toggle:hover {
+  background: rgb(201 172 102 / 12%);
+}
+
+.chapter-island__entrance:focus-visible,
+.chapter-island__theme:focus-visible,
+.chapter-island__toggle:focus-visible {
+  outline: 2px solid var(--island-gold);
+  outline-offset: -2px;
+}
+
+.chapter-island__theme img {
+  width: 1.75rem;
+  height: 1.75rem;
+  object-fit: contain;
+}
+
+.chapter-island [data-island-icon='moon'],
+[data-theme='light'] .chapter-island [data-island-icon='sun'] {
+  display: none;
+}
+
+[data-theme='light'] .chapter-island [data-island-icon='moon'] {
+  display: block;
+}
+
+.chapter-island__panel {
+  min-height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  transition: visibility 0s 650ms;
+}
+
+.chapter-island[data-open='true'] .chapter-island__panel {
+  visibility: visible;
+  transition-delay: 0s;
+}
+
+/* The list keeps its open width and columns while the pill grows around it, so items never reflow mid-motion. */
+.chapter-island__chapters {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.25rem;
+  box-sizing: border-box;
+  width: calc(var(--island-open-width) - 0.75rem - 2px);
+  margin: 0.375rem 0 0;
+  padding: 0.625rem 0.25rem 0.125rem;
+  border-top: 1px solid rgb(201 172 102 / 24%);
+  list-style: none;
+  opacity: 0;
+  transform: translateY(-0.375rem);
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease;
+}
+
+.chapter-island[data-open='true'] .chapter-island__chapters {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 260ms ease 140ms,
+    transform 480ms var(--island-spring) 100ms;
+}
+
+@media (max-width: 640px) {
+  .chapter-island__chapters {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.chapter-island__chapter {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: 1rem;
+  color: var(--island-ink);
+  text-decoration: none;
+}
+
+.chapter-island__chapter:hover {
+  background: rgb(201 172 102 / 12%);
+}
+
+.chapter-island__chapter:focus-visible {
+  outline: 2px solid var(--island-gold);
+  outline-offset: -2px;
+}
+
+.chapter-island__chapter[aria-current='page'] {
+  color: var(--island-gold-bright);
+  background: rgb(201 172 102 / 14%);
+}
+
+.chapter-island__number {
+  color: var(--island-muted);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  letter-spacing: 0.12em;
+}
+
+.chapter-island__name {
+  font-family: var(--font-western);
+  font-size: 1.1875rem;
+  font-weight: 500;
+}

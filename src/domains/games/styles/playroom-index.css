@@ -1,192 +1,143 @@
-:root {
-  font-family:
-    system-ui,
-    -apple-system,
-    'Noto Sans KR',
-    sans-serif;
-  color: #102333;
-  background: #f3eee3;
-  font-synthesis: none;
-}
+/* Playroom catalog on the journal paper surface. Every motion here stays on regardless of reduced motion (see AGENTS.md). */
 * {
   box-sizing: border-box;
 }
+
 body {
   margin: 0;
   min-height: 100svh;
+  background: var(--color-background);
 }
-a {
-  color: inherit;
-  text-decoration: none;
-}
-.playroom-top {
-  height: 56px;
-  padding: 0 clamp(20px, 3.8vw, 58px);
-  display: flex;
-  align-items: center;
-  background: #f3eee3;
-}
-.playroom-top a {
-  color: #6f644f;
-}
-.playroom-index {
-  min-height: calc(100svh - 56px);
-  padding: 8px clamp(24px, 6vw, 90px) 42px;
-  background: #f3eee3;
-}
-.playroom-intro,
-.game-list,
-.playroom-footnote {
-  max-width: 1130px;
-  margin-inline: auto;
-}
-.playroom-intro {
-  display: grid;
-  place-items: center;
-}
-.playroom-intro h1 {
-  margin: 0;
-  line-height: 0;
-}
-.playroom-intro h1 img {
-  width: 180px;
-  height: 60px;
-  object-fit: contain;
-}
+
 .game-list {
   display: grid;
-  gap: 18px;
-  margin-top: clamp(72px, 10vh, 100px);
+  gap: 1rem;
+  margin: 1.25rem 0 0;
+  padding: 0;
+  list-style: none;
 }
+
+/* Each game is a card on the same textured surface as comment forms and tables. */
 .game-card {
-  position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(290px, 0.86fr);
-  min-height: 360px;
-  overflow: hidden;
-  border: 1px solid #d8cbbb;
-  border-radius: 27px;
-  background: #fffcf5;
-  box-shadow: 0 16px 54px #25323b14;
-  transition:
-    transform 0.25s ease,
-    box-shadow 0.25s ease,
-    border-color 0.25s ease;
-}
-.game-card:hover,
-.game-card:focus-visible {
-  transform: translateY(-5px);
-  border-color: #b89660;
-  box-shadow: 0 26px 66px #25323b26;
-}
-.game-card:focus-visible {
-  outline: 3px solid #a3814c;
-  outline-offset: 4px;
-}
-.game-card-copy {
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  padding: clamp(27px, 4vw, 52px);
-}
-.game-card-number {
-  color: #9b8057;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.18em;
-}
-.game-card h2 {
-  margin: 25px 0 0;
-  color: #122a3a;
-  font-family: Georgia, serif;
-  font-size: clamp(46px, 5.3vw, 75px);
-  font-weight: 700;
-  letter-spacing: -0.06em;
-  line-height: 1;
-}
-.game-card-copy > strong {
-  margin-top: 17px;
-  font-size: 18px;
-  letter-spacing: -0.045em;
-}
-.game-card-copy > p {
-  margin: 9px 0 0;
-  color: #73796f;
-  font-size: 13px;
-  line-height: 1.7;
-}
-.game-card-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 7px;
-  margin-top: 17px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 5px;
+  transition:
+    border-color 0.25s ease,
+    transform 0.25s ease;
 }
-.game-card-tags span {
-  padding: 6px 10px;
-  border: 1px solid #e4dac9;
-  border-radius: 99px;
-  color: #63716e;
-  background: #f7f2e9;
-  font-size: 10px;
-  font-weight: 700;
+
+/* The textured card sits a shade darker than the paper, so its muted text darkens to keep 4.5:1. */
+[data-theme='light'] .game-card {
+  --color-text-muted: #5c574f;
 }
+
+.game-card:hover,
+.game-card:focus-visible {
+  border-color: color-mix(in srgb, var(--color-accent) 60%, var(--color-border));
+  transform: translateY(-2px);
+}
+
+.game-card:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 0.25rem;
+}
+
+.game-card-copy {
+  display: flex;
+  flex: 1 1 22rem;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.game-card-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.875rem;
+}
+
+.game-card-name {
+  margin: 0;
+  font-family: var(--font-prose);
+  font-size: 1.5rem;
+  font-weight: 600;
+  transition: color 0.25s ease;
+}
+
+.game-card:hover .game-card-name,
+.game-card:focus-visible .game-card-name {
+  color: var(--color-accent-strong);
+}
+
+.game-card-subtitle {
+  font-family: var(--font-prose);
+  font-size: 1.0625rem;
+}
+
+.game-card-description {
+  color: var(--color-text-muted);
+  font-family: var(--font-prose);
+  font-size: 0.9375rem;
+}
+
 .game-card-cta {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
-  margin-top: auto;
-  padding-top: 25px;
-  color: #1a4a52;
-  font-size: 13px;
-  font-weight: 800;
+  gap: 0.375rem;
+  margin-top: 0.375rem;
+  color: var(--color-signature-yellow);
+  font-size: 0.875rem;
+  font-weight: 500;
 }
+
+[data-theme='light'] .game-card-cta {
+  color: var(--color-accent-strong);
+}
+
 .game-card-cta span {
-  display: grid;
-  place-items: center;
-  width: 29px;
-  height: 29px;
-  border-radius: 50%;
-  background: #203f4a;
-  color: #fff7e8;
-  font-size: 16px;
+  display: inline-block;
   transition: transform 0.25s ease;
 }
-.game-card:hover .game-card-cta span {
+
+.game-card:hover .game-card-cta span,
+.game-card:focus-visible .game-card-cta span {
   transform: translate(3px, -3px);
 }
+
 .game-card-art {
-  position: relative;
   display: grid;
   place-items: center;
-  overflow: hidden;
-  background: radial-gradient(circle at 54% 46%, #365868, #1a3242 70%);
+  flex: 0 0 11rem;
+  height: 8.25rem;
 }
-.game-card-art::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  opacity: 0.42;
-  background-image: radial-gradient(#e8d6ae4c 1px, transparent 1px);
-  background-size: 18px 18px;
-}
+
 .game-card-board {
   position: relative;
-  width: min(76%, 305px);
+  width: 7.5rem;
   aspect-ratio: 1;
-  border: 8px solid #c79861;
-  border-bottom-width: 9px;
-  border-radius: 20px;
+  border: 5px solid #c79861;
+  border-bottom-width: 6px;
+  border-radius: 12px;
   background: repeating-linear-gradient(2deg, #e5bd84 0 5px, #dbb17a 6px, #e5bd84 7px 12px);
   box-shadow:
-    0 13px 0 #956d45,
-    0 27px 38px #05131bb0;
+    0 8px 0 #956d45,
+    0 18px 26px #05131b80;
   transform: perspective(650px) rotateX(24deg) rotateZ(-13deg);
   transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
-.game-card:hover .game-card-board {
+
+.game-card:hover .game-card-board,
+.game-card:focus-visible .game-card-board {
   transform: perspective(650px) rotateX(17deg) rotateZ(-9deg) scale(1.04);
 }
+
 .game-card-grid {
   position: absolute;
   inset: 8%;
@@ -196,95 +147,77 @@ a {
   border-right: 1px solid #71513288;
   border-bottom: 1px solid #71513288;
 }
+
 .mini-stone {
   position: absolute;
   display: block;
-  width: 9%;
+  width: 10%;
   aspect-ratio: 1;
   border-radius: 50%;
-  box-shadow: 2px 5px 5px #14242f5c;
+  box-shadow: 1px 3px 3px #14242f5c;
 }
+
 .mini-stone-black {
   background: radial-gradient(circle at 30% 24%, #676b70, #18191c 76%);
 }
+
 .mini-stone-white {
-  background: radial-gradient(circle at 30% 24%, #fff, #e8e6e1 80%);
   border: 1px solid #b8b6b0;
+  background: radial-gradient(circle at 30% 24%, #fff, #e8e6e1 80%);
 }
+
 .mini-stone.one {
-  left: 46%;
   top: 46%;
+  left: 46%;
 }
+
 .mini-stone.two {
-  left: 57%;
   top: 46%;
-}
-.mini-stone.three {
-  left: 46%;
-  top: 57%;
-}
-.mini-stone.four {
   left: 57%;
+}
+
+.mini-stone.three {
   top: 57%;
-}
-.mini-stone.five {
   left: 46%;
+}
+
+.mini-stone.four {
+  top: 57%;
+  left: 57%;
+}
+
+.mini-stone.five {
   top: 35%;
+  left: 46%;
   box-shadow:
-    0 0 0 5px #d1ad6f96,
-    2px 5px 5px #14242f5c;
+    0 0 0 3px #d1ad6f96,
+    1px 3px 3px #14242f5c;
 }
-.playroom-footnote {
-  margin-top: 24px;
-  color: #8c8a7f;
-  font-size: 11px;
-  text-align: right;
-}
-@media (max-width: 720px) {
-  .playroom-top {
-    height: 48px;
-    padding: 0 16px;
-  }
-  .playroom-intro h1 img {
-    width: 156px;
-    height: 52px;
-  }
-  .playroom-index {
-    min-height: calc(100svh - 48px);
-    padding: 4px 17px 38px;
-  }
-  .game-list {
-    margin-top: 56px;
-  }
-  .game-card {
-    grid-template-columns: 1fr;
-    min-height: 0;
-  }
-  .game-card-copy {
-    padding: 29px 27px 27px;
-  }
-  .game-card h2 {
-    margin-top: 20px;
-    font-size: 56px;
-  }
-  .game-card-cta {
-    padding-top: 24px;
-  }
-  .game-card-art {
-    min-height: 230px;
-  }
-  .game-card-board {
-    width: min(58%, 200px);
-  }
-  .playroom-footnote {
-    text-align: left;
-  }
-}
+
 .game-card-art-number {
-  position: relative;
-  color: #e6d2ab;
-  font-family: Georgia, serif;
-  font-size: clamp(110px, 14vw, 190px);
+  color: var(--color-signature-yellow);
+  font-family: var(--font-prose);
+  font-size: 4rem;
   line-height: 1;
-  text-shadow: 0 14px 34px #08192399;
+}
+
+/* The Playroom door sits inside the dark chapter island instead of on the ivory top bar. */
+.chapter-island .door-control {
+  flex-basis: 2.75rem;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 999px;
+}
+
+.chapter-island .door-control:hover,
+.chapter-island .door-control:focus-visible {
+  background: rgb(201 172 102 / 12%);
+}
+
+.chapter-island .door-frame {
+  border-color: var(--island-gold);
+}
+
+.chapter-island .door-floor {
+  background: var(--island-gold);
 }

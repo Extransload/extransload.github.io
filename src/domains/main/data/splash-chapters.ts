@@ -56,7 +56,7 @@ export const splashChapters: SplashChapter[] = [
     number: '03',
     label: 'Playroom',
     href: '/playroom/',
-    description: '쓸모를 잠시 내려놓고, 호기심을 따라.',
+    description: '직접 만든 작은 게임들을 모아 둔 곳.',
     invitation: '놀러 가기',
     wordmark: {
       src: '/images/splash-playroom-wordmark-v2.webp',

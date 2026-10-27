@@ -1,6 +1,8 @@
 ---
 import MainSpaceLayout from '../layouts/MainSpaceLayout.astro';
+import ChapterIsland from '../../../shared/components/ChapterIsland.astro';
 import { works, patents, type WorkProject } from '../data/work-archive';
+import '../../../shared/styles/paper-page.css';
 import '../styles/work-doc.css';
 
 interface Props {
@@ -27,7 +29,8 @@ const galleryGroups = [
   description={project.subtitle}
   canonicalPath={`/works/${project.slug}/`}
 >
-  <main class="work-doc" aria-labelledby="work-title" data-work-doc>
+  <ChapterIsland current="works" />
+  <main class="paper-page work-doc" aria-labelledby="work-title" data-work-doc>
     <div class="work-doc__shell">
       <nav class="work-doc__rail" aria-label="장 목차">
         <a class="work-doc__back" href="/works/">← 목차로 돌아가기</a>

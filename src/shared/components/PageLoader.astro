@@ -54,9 +54,9 @@
     background-color: #030d1d;
     background-image:
       linear-gradient(rgb(3 13 29 / 78%), rgb(3 13 29 / 78%)),
-      url('/splash-leather-cover-texture.webp');
+      url('/works-leather-texture-v2.webp');
     background-position: center, center;
-    background-size: auto, 28rem auto;
+    background-size: auto, 36rem auto;
     font-family: 'SFMono-Regular', Consolas, monospace;
   }
 
@@ -74,7 +74,7 @@
     animation: page-loader-pulse 1.2s ease-in-out infinite;
   }
 
-  body > :not([data-page-loader]):not(.site-frame):not(dialog) {
+  body > :not([data-page-loader]):not(.site-frame):not(dialog):not([data-chapter-island]) {
     animation: page-content-reveal 420ms ease both;
   }
 
@@ -93,7 +93,7 @@
     transition: opacity 420ms ease, visibility 420ms ease;
   }
 
-  html.page-ready body > :not([data-page-loader]):not(.site-frame):not(dialog),
+  html.page-ready body > :not([data-page-loader]):not(.site-frame):not(dialog):not([data-chapter-island]),
   html.page-ready .site-content {
     animation: page-content-reveal 420ms ease both;
   }
@@ -109,9 +109,9 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    body > :not([data-page-loader]):not(.site-frame):not(dialog),
+    body > :not([data-page-loader]):not(.site-frame):not(dialog):not([data-chapter-island]),
     .site-content,
-    html.page-ready body > :not([data-page-loader]):not(.site-frame):not(dialog),
+    html.page-ready body > :not([data-page-loader]):not(.site-frame):not(dialog):not([data-chapter-island]),
     html.page-ready .site-content {
       animation-duration: 240ms;
       animation-timing-function: ease-out;

@@ -1,19 +1,31 @@
 ---
 import SeoHead from '../../../shared/components/SeoHead.astro';
+import ChapterIsland from '../../../shared/components/ChapterIsland.astro';
+import { earlyThemeScript } from '../../../shared/scripts/theme-init';
 import { playroomGames } from '../data/playroom-games';
+import '../../../shared/styles/tokens.css';
+import '../../../shared/styles/scrollbars.css';
+import '../../../shared/themes/midnight.css';
+import '../../../shared/themes/light.css';
+import '../../../shared/styles/paper-page.css';
+import '../../../shared/styles/editorial-surfaces.css';
 import '../styles/playroom-index.css';
 import '../styles/door.css';
 import DoorIcon from '../components/DoorIcon.astro';
 ---
 
 <!doctype html>
-<html lang="ko">
+<html lang="ko" data-theme="midnight">
   <head>
+    <script is:inline set:html={earlyThemeScript}></script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#101e2d" />
     <title>Playroom — Extransload</title>
     <SeoHead title="Playroom — Extransload" description="Extransload Playroom의 게임 목록" canonicalPath="/playroom/" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Noto+Serif+KR:wght@400;500;600&display=swap" rel="stylesheet" />
     <link rel="icon" type="image/png" href="/favicon.png" />
     <script is:inline>
       if (new URLSearchParams(location.search).has('room'))
@@ -21,16 +33,38 @@ import DoorIcon from '../components/DoorIcon.astro';
     </script>
   </head>
   <body>
-    <header class="playroom-top"><a class="door-control playroom-home" href="/" aria-label="Home · Splash로 이동" title="Home"><DoorIcon /></a></header>
-    <main class="playroom-index">
-      <div class="playroom-intro"><h1><img src="/images/splash-playroom-wordmark-v2.webp" alt="Playroom" width="180" height="60" /></h1></div>
-      <section class="game-list" aria-label="Playroom 게임 목록">
-        {playroomGames.map((game) => <a class="game-card" href={game.href} aria-label={`${game.name} 플레이하기`}>
-          <div class="game-card-copy"><span class="game-card-number">{game.number} / PLAYROOM</span><h2>{game.name}</h2><strong>{game.subtitle}</strong><p>{game.description}</p><div class="game-card-tags">{game.meta.map((tag) => <span>{tag}</span>)}</div><span class="game-card-cta">플레이하기 <span aria-hidden="true">↗</span></span></div>
-          <div class="game-card-art" aria-hidden="true">{game.id === 'omokmaru' ? <div class="game-card-board"><div class="game-card-grid"></div><i class="mini-stone mini-stone-black one"></i><i class="mini-stone mini-stone-white two"></i><i class="mini-stone mini-stone-black three"></i><i class="mini-stone mini-stone-white four"></i><i class="mini-stone mini-stone-black five"></i></div> : <span class="game-card-art-number">{game.number}</span>}</div>
-        </a>)}
-      </section>
-      <p class="playroom-footnote">작은 놀이들이 이곳에 하나씩 쌓입니다.</p>
+    <ChapterIsland current="playroom" entranceClass="door-control playroom-home">
+      <DoorIcon slot="entrance" />
+    </ChapterIsland>
+    <main class="paper-page playroom-index" aria-labelledby="playroom-title">
+      <div class="paper-page__column">
+        <header class="paper-page__intro">
+          <p class="paper-page__kicker">Liber III</p>
+          <h1 id="playroom-title" class="paper-page__lede"><span class="sr-only">Playroom — </span>직접 만든 작은 게임들을 모아 둔 곳.</h1>
+        </header>
+
+        <section class="paper-page__section" aria-labelledby="playroom-games-title">
+          <h2 id="playroom-games-title" class="paper-page__section-title">놀이 목록 · {String(playroomGames.length).padStart(2, '0')}</h2>
+          <ol class="game-list">
+            {playroomGames.map((game) => (
+              <li>
+                <a class="game-card editorial-surface" href={game.href} aria-label={`${game.name} 플레이하기`}>
+                  <div class="game-card-copy">
+                    <span class="paper-page__meta"><span class="paper-page__accent">{game.number}</span><span aria-hidden="true">·</span><span>{game.meta.join(' · ')}</span></span>
+                    <div class="game-card-heading"><h3 class="game-card-name">{game.name}</h3><span class="game-card-subtitle">{game.subtitle}</span></div>
+                    <span class="game-card-description">{game.description}</span>
+                    <span class="game-card-cta">플레이하기 <span aria-hidden="true">↗</span></span>
+                  </div>
+                  <span class="game-card-art" aria-hidden="true">{game.id === 'omokmaru' ? <span class="game-card-board"><span class="game-card-grid"></span><i class="mini-stone mini-stone-black one"></i><i class="mini-stone mini-stone-white two"></i><i class="mini-stone mini-stone-black three"></i><i class="mini-stone mini-stone-white four"></i><i class="mini-stone mini-stone-black five"></i></span> : <span class="game-card-art-number">{game.number}</span>}</span>
+                </a>
+              </li>
+            ))}
+          </ol>
+          <p class="paper-page__note">작은 놀이들이 이곳에 하나씩 쌓입니다.</p>
+        </section>
+
+        <footer class="paper-page__footer">© {new Date().getFullYear()} Extransload</footer>
+      </div>
     </main>
   </body>
 </html>

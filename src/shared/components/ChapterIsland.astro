@@ -1,0 +1,116 @@
+---
+import '../styles/chapter-island.css';
+
+export type ChapterId = 'journal' | 'works' | 'playroom' | 'about' | 'guestbook';
+
+interface Props {
+  current: ChapterId;
+  entranceClass?: string;
+}
+
+const chapters: { id: ChapterId; number: string; label: string; href: string }[] = [
+  { id: 'journal', number: '01', label: 'Journal', href: '/blog/' },
+  { id: 'works', number: '02', label: 'Works', href: '/works/' },
+  { id: 'playroom', number: '03', label: 'Playroom', href: '/playroom/' },
+  { id: 'about', number: '04', label: 'About', href: '/about/' },
+  { id: 'guestbook', number: '05', label: 'Guestbook', href: '/guestbook/' },
+];
+
+const { current, entranceClass } = Astro.props;
+const label = chapters.find((chapter) => chapter.id === current)!.label;
+const panelId = `chapter-island-${current}`;
+---
+
+<nav class="chapter-island" aria-label="Extransload 장 이동" data-chapter-island data-open="false">
+  <div class="chapter-island__bar">
+    <a class:list={['chapter-island__entrance', entranceClass]} href="/" aria-label="입구로 돌아가기">
+      <slot name="entrance">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17"></path><path d="M3 21h18"></path><circle cx="14.5" cy="12.5" r="0.9"></circle></svg>
+      </slot>
+    </a>
+    <button class="chapter-island__toggle" type="button" aria-expanded="false" aria-controls={panelId} data-island-toggle>
+      <span class="chapter-island__brand">Extransload <span class="chapter-island__slash" aria-hidden="true">/</span> </span>{label}
+    </button>
+    <button class="chapter-island__theme" type="button" role="switch" aria-checked="false" aria-label="라이트 테마로 전환" data-island-theme>
+      <img data-island-icon="sun" src="/images/theme-sun.png" alt="" width="28" height="28" />
+      <img data-island-icon="moon" src="/images/theme-moon-dark.png" alt="" width="28" height="28" />
+    </button>
+  </div>
+  <div class="chapter-island__panel" id={panelId}>
+    <ul class="chapter-island__chapters">
+      {chapters.map((chapter) => (
+        <li>
+          <a class="chapter-island__chapter" href={chapter.href} aria-current={chapter.id === current ? 'page' : undefined}>
+            <span class="chapter-island__number">{chapter.number}</span>
+            <span class="chapter-island__name">{chapter.label}</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  </div>
+</nav>
+
+<script>
+  import { applyTheme, THEME_STORAGE_KEY } from '../scripts/theme-init';
+
+  for (const island of document.querySelectorAll<HTMLElement>('[data-chapter-island]')) {
+    const toggle = island.querySelector<HTMLButtonElement>('[data-island-toggle]')!;
+    const themeToggle = island.querySelector<HTMLButtonElement>('[data-island-theme]')!;
+
+    // A mouse hover opens the island while it stays inside; a click or key press pins it open until dismissed.
+    let pinned = false;
+    let hovering = false;
+    let leaveTimer = 0;
+    const render = () => {
+      const open = pinned || hovering;
+      island.dataset.open = String(open);
+      toggle.setAttribute('aria-expanded', String(open));
+    };
+    island.addEventListener('pointerenter', (event) => {
+      if (event.pointerType !== 'mouse') return;
+      window.clearTimeout(leaveTimer);
+      hovering = true;
+      render();
+    });
+    island.addEventListener('pointerleave', (event) => {
+      if (event.pointerType !== 'mouse') return;
+      leaveTimer = window.setTimeout(() => {
+        hovering = false;
+        render();
+      }, 160);
+    });
+    toggle.addEventListener('click', () => {
+      pinned = !pinned;
+      render();
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape' || island.dataset.open !== 'true') return;
+      pinned = false;
+      hovering = false;
+      render();
+      toggle.focus();
+    });
+    document.addEventListener('click', (event) => {
+      if (!pinned || island.contains(event.target as Node)) return;
+      pinned = false;
+      render();
+    });
+
+    const syncTheme = () => {
+      const isLight = document.documentElement.dataset.theme === 'light';
+      themeToggle.setAttribute('aria-checked', String(isLight));
+      themeToggle.setAttribute('aria-label', isLight ? '다크 테마로 전환' : '라이트 테마로 전환');
+    };
+    syncTheme();
+    themeToggle.addEventListener('click', () => {
+      const theme = applyTheme(document.documentElement.dataset.theme === 'light' ? 'midnight' : 'light');
+      try {
+        localStorage.setItem(THEME_STORAGE_KEY, theme.id);
+      } catch {
+        // Continue the current session when storage is unavailable.
+      }
+      window.dispatchEvent(new CustomEvent('themechange', { detail: theme }));
+      syncTheme();
+    });
+  }
+</script>

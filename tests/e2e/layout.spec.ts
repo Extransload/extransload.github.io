@@ -400,19 +400,20 @@ test('works opens a dedicated folio for each project', async ({ page }) => {
   await page.goto('/works/');
   await page.locator('.works-index__link').first().click();
 
-  await expect(page).toHaveURL(/\/works\/notepane\/$/);
-  await expect(page.getByRole('heading', { name: 'NotePane', exact: true, level: 1 })).toBeVisible();
+  const [first] = works;
+  await expect(page).toHaveURL(new RegExp(`/works/${first.slug}/$`));
+  await expect(page.getByRole('heading', { name: first.title, exact: true, level: 1 })).toBeVisible();
   await expect(page.getByRole('link', { name: 'GitHub', exact: false })).toHaveAttribute(
     'href',
-    'https://github.com/Extransload/NotePane',
+    first.links.find((link) => link.label === 'GitHub')!.href,
   );
 
   const chapters = page.locator('section[data-chapter]');
-  await expect(chapters).toHaveCount(3);
+  await expect(chapters).toHaveCount(first.chapters.length);
   await expect(chapters.first()).toContainText('요구사항');
   await expect(chapters.first()).toContainText('구현');
   await expect(chapters.first()).toContainText('남긴 것');
-  await expect(page.locator('.work-doc__rail a[data-rail-link]')).toHaveCount(3);
+  await expect(page.locator('.work-doc__rail a[data-rail-link]')).toHaveCount(first.chapters.length);
 
   await page.locator('.work-doc__nav a').last().click();
   // From the first folio the last nav link is the one that follows it.
@@ -440,11 +441,11 @@ test('folios with captured screens render them without broken images', async ({ 
   await expect(page.locator('.work-doc__shots figcaption').first()).not.toBeEmpty();
 });
 
-test('works keeps its project ledger readable on a manuscript surface in both themes', async ({ page }) => {
+test('works sits on the journal paper surface in both themes', async ({ page }) => {
   await page.goto('/works/');
 
   const readSurface = () =>
-    page.locator('.works-leaf').evaluate((element) => {
+    page.locator('.works-page').evaluate((element) => {
       const surface = getComputedStyle(element);
       const texture = getComputedStyle(element, '::before');
       return {
@@ -467,29 +468,46 @@ test('works keeps its project ledger readable on a manuscript surface in both th
   expect(lightSurface.textureOpacity).toBeGreaterThan(0);
 });
 
-test('works keeps the leather backdrop at a fixed texture scale', async ({ page }) => {
-  await page.goto('/works/');
+test('leather backdrops share the works texture at one fixed scale', async ({ page }) => {
+  const sizes = new Set<string>();
+  for (const [path, selector] of [
+    ['/', '.book-splash'],
+    ['/about/', '.main-space-page'],
+    ['/works/', '.chapter-island'],
+    ['/guestbook/', '.chapter-island'],
+  ]) {
+    await page.goto(path);
 
-  const backdrop = await page.locator('.works-page').evaluate((element) => {
-    const style = getComputedStyle(element, '::before');
-    return { image: style.backgroundImage, size: style.backgroundSize };
-  });
+    const backdrop = await page.locator(selector).evaluate((element) => {
+      const style = getComputedStyle(element, '::before');
+      return { image: style.backgroundImage, size: style.backgroundSize };
+    });
 
-  expect(backdrop.image).toContain('works-leather-texture-v2.webp');
-  expect(backdrop.size).not.toBe('cover');
+    expect(backdrop.image, path).toContain('works-leather-texture-v2.webp');
+    expect(backdrop.size, path).not.toBe('cover');
+    sizes.add(backdrop.size);
+  }
+  expect([...sizes]).toHaveLength(1);
 });
 
-test('works keeps the manuscript texture beneath the dark reading surface', async ({ page }) => {
-  await page.goto('/works/');
+// An unstyled root scrollbar reserves a classic 16px gutter in Chrome on macOS; a styled one overlays the page.
+test('main space pages share the journal scrollbar styling', async ({ page }) => {
+  const scrollbars = new Set<string>();
+  for (const path of ['/blog/', '/about/', '/guestbook/', '/works/', '/playroom/']) {
+    await page.goto(path);
 
-  const textureOpacity = await page
-    .locator('.works-leaf')
-    .evaluate((element) => Number(getComputedStyle(element, '::before').opacity));
+    const scrollbar = await page.evaluate(() => {
+      const style = getComputedStyle(document.documentElement);
+      return `${style.scrollbarWidth} ${style.scrollbarColor}`;
+    });
 
-  expect(textureOpacity).toBeLessThanOrEqual(0.1);
+    expect(scrollbar, path).toContain('thin');
+    scrollbars.add(scrollbar);
+  }
+  expect([...scrollbars]).toHaveLength(1);
 });
 
-test('works keeps small ledger text legible on the light manuscript', async ({ page }) => {
+test('works keeps small ledger text legible on the light paper', async ({ page }) => {
   await page.goto('/works/');
   await page.locator('html').evaluate((element) => element.setAttribute('data-theme', 'light'));
 
@@ -504,8 +522,6 @@ test('works keeps small ledger text legible on the light manuscript', async ({ p
         .map((channel) => channel / 255)
         .map((channel) => (channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4))
         .reduce((sum, channel, index) => sum + channel * [0.2126, 0.7152, 0.0722][index], 0);
-    const paper = getComputedStyle(document.querySelector('.works-leaf')!).backgroundColor;
-
     return [
       '.works-kicker',
       '.works-index__folio',
@@ -513,8 +529,12 @@ test('works keeps small ledger text legible on the light manuscript', async ({ p
       '.works-index__role',
       '.works-colophon',
     ].map((selector) => {
-      const foreground = getComputedStyle(document.querySelector(selector)!).color;
-      const [lighter, darker] = [luminance(foreground), luminance(paper)].sort((a, b) => b - a);
+      const element = document.querySelector(selector)!;
+      // Rows sit on a textured card that is darker than the open paper, so measure against whichever holds the text.
+      const surface = element.closest('.editorial-surface') ?? document.querySelector('.works-page')!;
+      const background = getComputedStyle(surface).backgroundColor;
+      const foreground = getComputedStyle(element).color;
+      const [lighter, darker] = [luminance(foreground), luminance(background)].sort((a, b) => b - a);
       return (lighter + 0.05) / (darker + 0.05);
     });
   });
@@ -522,20 +542,118 @@ test('works keeps small ledger text legible on the light manuscript', async ({ p
   for (const ratio of contrastRatios) expect(ratio).toBeGreaterThanOrEqual(4.5);
 });
 
-test('works manuscript stays inside narrow mobile viewports', async ({ page }) => {
+test('works and its chapter island stay inside narrow mobile viewports', async ({ page }) => {
   for (const width of [320, 390]) {
     await page.setViewportSize({ width, height: 844 });
     await page.goto('/works/');
+    await page.locator('[data-island-toggle]').click();
+    await expect(page.locator('.chapter-island')).toHaveAttribute('data-open', 'true');
 
     const dimensions = await page.evaluate(() => ({
       viewport: document.documentElement.clientWidth,
       page: document.documentElement.scrollWidth,
-      leaf: document.querySelector('.works-leaf')?.getBoundingClientRect().width,
+      column: document.querySelector('.works-page .paper-page__column')?.getBoundingClientRect().width,
+      island: document.querySelector('.chapter-island')?.getBoundingClientRect(),
     }));
 
     expect(dimensions.page).toBe(dimensions.viewport);
-    expect(dimensions.leaf).toBeLessThanOrEqual(dimensions.viewport);
+    expect(dimensions.column).toBeLessThanOrEqual(dimensions.viewport);
+    expect(dimensions.island!.left).toBeGreaterThanOrEqual(0);
+    expect(dimensions.island!.right).toBeLessThanOrEqual(dimensions.viewport);
   }
+});
+
+test('chapter spaces float one island in place of a large chapter title', async ({ page }) => {
+  for (const [path, label] of [
+    ['/works/', 'Works'],
+    ['/guestbook/', 'Guestbook'],
+    ['/playroom/', 'Playroom'],
+  ]) {
+    await page.goto(path);
+
+    const island = page.locator('[data-chapter-island]');
+    const toggle = island.locator('[data-island-toggle]');
+    await expect(island).toHaveCSS('position', 'fixed');
+    await expect(island.getByRole('link', { name: '입구로 돌아가기' })).toHaveAttribute('href', '/');
+    await expect(toggle).toHaveText(`Extransload / ${label}`);
+    await expect(toggle).toHaveAccessibleName(`Extransload ${label}`);
+    await expect(page.locator('main h1 img')).toHaveCount(0);
+    await expect(page.getByRole('heading', { level: 1 })).toContainText(label);
+
+    const current = island.locator('a[aria-current="page"]');
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await expect(current).toBeHidden();
+    await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    await expect(island.locator('.chapter-island__chapter')).toHaveCount(5);
+    await expect(current).toBeVisible();
+    await expect(current).toHaveAttribute('href', path);
+    await page.keyboard.press('Escape');
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await expect(toggle).toBeFocused();
+  }
+});
+
+test('the chapter island stays still on page load and opens smoothly while the mouse is over it', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.mouse.move(20, 700);
+  await page.goto('/works/');
+  const island = page.locator('[data-chapter-island]');
+  const toggle = island.locator('[data-island-toggle]');
+
+  // Moving between chapters must not replay any entrance motion; the island only moves on hover.
+  const motion = await island.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return { animation: style.animationName, transitions: style.transitionProperty };
+  });
+  expect(motion).toEqual({ animation: 'none', transitions: 'width, grid-template-rows' });
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+
+  // A hover right after load must widen the island gradually instead of snapping open later.
+  // The mouse moves by coordinates because locator.hover() would wait for the landing transform to settle.
+  await page.evaluate(() => {
+    const element = document.querySelector('[data-chapter-island]')!;
+    const widths: number[] = [];
+    Object.assign(window, { islandWidths: widths });
+    const start = performance.now();
+    const sample = () => {
+      widths.push(element.getBoundingClientRect().width);
+      if (performance.now() - start < 700) requestAnimationFrame(sample);
+    };
+    requestAnimationFrame(sample);
+  });
+  await page.mouse.move(720, 44);
+  await page.waitForTimeout(800);
+  const widths = await page.evaluate(() => (window as unknown as { islandWidths: number[] }).islandWidths);
+  expect(widths.some((width) => width > 360 && width < 600)).toBe(true);
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  await expect(island.locator('a[aria-current="page"]')).toBeVisible();
+  await page.mouse.move(20, 700);
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+
+  // A click pins it open even after the mouse leaves.
+  await toggle.click();
+  await page.mouse.move(20, 700);
+  await page.waitForTimeout(300);
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  await page.mouse.click(20, 700);
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+});
+
+test('the chapter island switches and remembers the theme', async ({ page }) => {
+  await page.goto('/works/');
+  const themeToggle = page.locator('[data-island-theme]');
+
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'midnight');
+  await expect(themeToggle).toHaveAttribute('aria-checked', 'false');
+  await themeToggle.click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await expect(themeToggle).toHaveAttribute('aria-checked', 'true');
+  await expect(themeToggle).toHaveAttribute('aria-label', '다크 테마로 전환');
+
+  await page.goto('/playroom/');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await expect(page.locator('[data-island-theme]')).toHaveAttribute('aria-checked', 'true');
 });
 
 test('works tracks the chapter being read in the folio rail', async ({ page }) => {
@@ -587,6 +705,53 @@ test('the folio rail stays in view on desktop', async ({ page }) => {
   await expect(page.locator('.work-doc__rail')).toHaveCSS('position', 'sticky');
 });
 
+test('work folios sit on the journal paper under the chapter island in both themes', async ({ page }) => {
+  await page.goto('/works/citewell/');
+  await expect(page.locator('[data-chapter-island] a[aria-current="page"]')).toHaveAttribute('href', '/works/');
+
+  const readSurface = () =>
+    page.locator('.work-doc').evaluate((element) => ({
+      background: getComputedStyle(element).backgroundColor,
+      color: getComputedStyle(element).color,
+      texture: getComputedStyle(element, '::before').backgroundImage,
+    }));
+  const dark = await readSurface();
+  expect(dark.texture).toContain('article-manuscript-paper-texture.webp');
+
+  // Load the light theme fresh: rail links ease their colour, so a live switch would be measured mid-transition.
+  await page.evaluate(() => localStorage.setItem('extransload-theme', 'light'));
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  const light = await readSurface();
+  expect(light.texture).toContain('article-manuscript-paper-texture.webp');
+  expect(light.background).not.toBe(dark.background);
+  expect(light.color).not.toBe(dark.color);
+
+  const contrastRatios = await page.evaluate(() => {
+    const luminance = (value: string) =>
+      value
+        .match(/\d+(?:\.\d+)?/g)!
+        .slice(0, 3)
+        .map((channel) => Number(channel) / 255)
+        .map((channel) => (channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4))
+        .reduce((sum, channel, index) => sum + channel * [0.2126, 0.7152, 0.0722][index], 0);
+    const paper = luminance(getComputedStyle(document.querySelector('.work-doc')!).backgroundColor);
+    return [
+      '.work-doc__eyebrow',
+      '.work-doc__back',
+      '.work-doc__links a',
+      '.work-doc__facts dt',
+      '[data-rail-link]',
+    ].map((selector) => {
+      const [lighter, darker] = [luminance(getComputedStyle(document.querySelector(selector)!).color), paper].sort(
+        (a, b) => b - a,
+      );
+      return (lighter + 0.05) / (darker + 0.05);
+    });
+  });
+  for (const ratio of contrastRatios) expect(ratio).toBeGreaterThanOrEqual(4.5);
+});
+
 test('sidebar reading icons show collapse-style tooltips on hover and focus', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/blog/');
@@ -617,9 +782,8 @@ test('sidebar reading icons show collapse-style tooltips on hover and focus', as
 test('playroom lists Omokmaru, opens its board, and About remains standalone', async ({ page }) => {
   await page.goto('/playroom/');
   await expect(page.locator('.game-list')).toBeVisible();
-  await expect(page.locator('.playroom-intro h1 img')).toHaveAttribute('alt', 'Playroom');
-  await expect(page.locator('.playroom-home')).toHaveAttribute('href', '/');
-  const homeDoor = await page.locator('.playroom-home').boundingBox();
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Playroom');
+  await expect(page.locator('.chapter-island .playroom-home')).toHaveAttribute('href', '/');
   const door = page.locator('.door-leaf');
   const closed = await door.evaluate((element) => getComputedStyle(element).transform);
   await page.locator('.playroom-home').hover();
@@ -632,9 +796,6 @@ test('playroom lists Omokmaru, opens its board, and About remains standalone', a
   await page.locator('#name-input').fill('MaruPlayer');
   await page.locator('#name-submit').click();
   await expect(page.locator('#lobby-nav .door-control')).toHaveAttribute('href', '/playroom/');
-  const lobbyDoor = await page.locator('#lobby-nav .door-control').boundingBox();
-  expect(Math.abs(lobbyDoor!.x - homeDoor!.x)).toBeLessThan(1);
-  expect(Math.abs(lobbyDoor!.y - homeDoor!.y)).toBeLessThan(1);
   await expect(page.locator('.lobby-heading h1')).toHaveText('Omokmaru');
   await expect(page.locator('#lobby')).toBeVisible();
   await expect(page.locator('#game')).toBeHidden();
@@ -676,7 +837,14 @@ test.describe('Playroom animations stay active under reduced motion', () => {
   test('catalog and lobby keep their UI motion', async ({ page }) => {
     await page.goto('/playroom/');
     expect(await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches)).toBe(true);
-    for (const selector of ['.door-leaf', '.door-light', '.game-card', '.game-card-board', '.game-card-cta span']) {
+    for (const selector of [
+      '.door-leaf',
+      '.door-light',
+      '.chapter-island',
+      '.game-card',
+      '.game-card-board',
+      '.game-card-cta span',
+    ]) {
       expect(
         await page
           .locator(selector)
@@ -943,14 +1111,10 @@ test.describe('Playroom animations stay active under reduced motion', () => {
 });
 
 test('solo match replaces start with resign until the match ends', async ({ page }) => {
-  await page.goto('/playroom/');
-  const homeDoor = await page.locator('.playroom-home').boundingBox();
   await page.goto('/playroom/omokmaru/solo/');
   await expect(page.locator('.top')).toHaveCount(0);
   await expect(page.locator('.stage-mast .door-control')).toHaveAttribute('href', '/playroom/omokmaru/');
   const soloDoor = await page.locator('.stage-mast .door-control').boundingBox();
-  expect(Math.abs(soloDoor!.x - homeDoor!.x)).toBeLessThan(1);
-  expect(Math.abs(soloDoor!.y - homeDoor!.y)).toBeLessThan(1);
   await expect(page.locator('.stage-mast h1')).toHaveCount(0);
   await expect(page.locator('.side > .side-title')).toHaveText('Omokmaru');
   const side = await page.locator('.side').boundingBox();
@@ -1589,7 +1753,7 @@ test('short pages fill at least the viewport height', async ({ page }) => {
   const shortPages = [
     { route: '/about/', container: '.main-space-page' },
     { route: '/blog/categories/', container: '.site-content' },
-    { route: '/guestbook/', container: '.main-space-page' },
+    { route: '/guestbook/', container: '.paper-page' },
     { route: '/blog/posts/3/', container: '.site-content' },
   ];
 

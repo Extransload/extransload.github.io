@@ -1,49 +1,33 @@
-/* 상세 폴리오 — 기술 문서 레이아웃. 목차 페이지의 고서 톤과 의도적으로 분리 */
-
-.main-space-layout:has(.work-doc) {
-  background: #0d1117;
-}
-
-[data-theme='light'] .main-space-layout:has(.work-doc) {
-  background: #fff;
-}
+/* 상세 폴리오 — journal 종이 지면 위의 기술 문서. 읽고 판단하는 문서라 본문은 산세리프를 유지하고 제목만 명조로 맞춘다 */
 
 .work-doc {
-  --doc-bg: #0d1117;
-  --doc-panel: #161b22;
-  --doc-fg: #e6edf3;
-  --doc-fg2: #c3ccd6;
-  --doc-muted: #8b949e;
-  --doc-line: #26303b;
-  --doc-acc: #4ea1ff;
-  --doc-warn: #e3b341;
-  --doc-code: #0b0f14;
-  --doc-hover: #1c232c;
-  --doc-note: #11243a;
+  --doc-bg: var(--color-background);
+  --doc-panel: color-mix(in srgb, var(--color-surface) 72%, transparent);
+  --doc-fg: var(--color-text);
+  --doc-fg2: color-mix(in srgb, var(--color-text) 80%, var(--color-text-muted));
+  --doc-muted: var(--color-text-muted);
+  --doc-line: var(--color-border);
+  --doc-acc: var(--color-accent);
+  --doc-warn: var(--color-signature-yellow);
+  --doc-code: color-mix(in srgb, var(--color-background) 72%, #000);
+  --doc-hover: color-mix(in srgb, var(--color-text) 5%, transparent);
+  --doc-note: color-mix(in srgb, var(--color-accent) 10%, transparent);
 
   box-sizing: border-box;
   min-height: 100svh;
-  padding: clamp(1.5rem, 4vw, 3.5rem) clamp(1rem, 4vw, 2rem) clamp(4rem, 9vw, 7rem);
+  padding: clamp(7rem, 12vw, 8.5rem) clamp(1rem, 4vw, 2rem) clamp(4rem, 9vw, 7rem);
   color: var(--doc-fg);
-  background: var(--doc-bg);
   font-family: var(--font-ui);
   font-size: 1rem;
   line-height: 1.75;
   text-align: left;
 }
 
+/* On the ivory paper the lighter accents fall under 4.5:1, so small text uses the strong accent. */
 [data-theme='light'] .work-doc {
-  --doc-bg: #fff;
-  --doc-panel: #fff;
-  --doc-fg: #14171a;
-  --doc-fg2: #2b3138;
-  --doc-muted: #5b646e;
-  --doc-line: #e3e7eb;
-  --doc-acc: #0b5cff;
-  --doc-warn: #8a6100;
-  --doc-code: #f6f8fa;
-  --doc-hover: #fafbfc;
-  --doc-note: #f7f9ff;
+  --doc-acc: var(--color-accent-strong);
+  --doc-warn: var(--color-accent-strong);
+  --doc-code: color-mix(in srgb, var(--color-background) 90%, var(--color-text-muted));
 }
 
 .work-doc *,
@@ -142,7 +126,7 @@
 
 .work-doc h1 {
   margin: 0.8rem 0 0.9rem;
-  font-family: var(--font-ui);
+  font-family: var(--font-prose);
   font-size: clamp(1.9rem, 5vw, 2.6rem);
   font-weight: 600;
   letter-spacing: -0.01em;
@@ -213,6 +197,7 @@
   color: var(--doc-acc);
   font-family: var(--font-mono);
   font-size: 0.86rem;
+  text-decoration: underline;
   text-underline-offset: 0.3rem;
 }
 
@@ -223,7 +208,7 @@
   padding-bottom: 0.65rem;
   border-bottom: 1px solid var(--doc-line);
   color: var(--doc-fg);
-  font-family: var(--font-ui);
+  font-family: var(--font-prose);
   font-size: 1.35rem;
   font-weight: 600;
   letter-spacing: -0.005em;

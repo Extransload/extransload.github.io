@@ -40,7 +40,7 @@
 }
 .book-splash::before {
   z-index: -2;
-  background: url('/splash-leather-cover-texture.webp') center / cover;
+  background: url('/works-leather-texture-v2.webp') center top / 36rem auto repeat;
 }
 .book-splash::after {
   z-index: -1;

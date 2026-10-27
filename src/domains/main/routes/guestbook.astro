@@ -1,24 +1,24 @@
 ---
 import MainSpaceLayout from '../layouts/MainSpaceLayout.astro';
+import ChapterIsland from '../../../shared/components/ChapterIsland.astro';
 import Comments from '../../../shared/components/Comments.astro';
 
+import '../../../shared/styles/paper-page.css';
 import '../styles/guestbook.css';
 ---
 
 <MainSpaceLayout title="방명록 — Extransload" description="Extransload 방명록" canonicalPath="/guestbook/">
-  <main class="main-space-page guestbook-page" aria-labelledby="guestbook-title">
-    <a class="guestbook-return" href="/">입구로 돌아가기</a>
-
-    <article class="guestbook-leaf">
-      <header class="guestbook-masthead">
-        <p class="guestbook-kicker">Liber V · Signed by passing guests</p>
-        <h1 id="guestbook-title">
-          <img class="guestbook-wordmark" src="/images/splash-guestbook-embroidered.webp" alt="Guestbook" width="2080" height="387" fetchpriority="high" />
-        </h1>
-        <p class="guestbook-deck">다녀간 자리에는, 짧은 인사 한 줄.</p>
+  <ChapterIsland current="guestbook" />
+  <main class="paper-page guestbook-page" aria-labelledby="guestbook-title">
+    <div class="paper-page__column">
+      <header class="paper-page__intro">
+        <p class="paper-page__kicker">Liber V · Signed by passing guests</p>
+        <h1 id="guestbook-title" class="paper-page__lede"><span class="sr-only">Guestbook — </span>다녀간 자리에는, 짧은 인사 한 줄.</h1>
       </header>
 
       <Comments page="/guestbook/" guestbook />
-    </article>
+
+      <footer class="paper-page__footer">© {new Date().getFullYear()} Extransload</footer>
+    </div>
   </main>
 </MainSpaceLayout>

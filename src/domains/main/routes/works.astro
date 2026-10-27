@@ -50,20 +50,19 @@ import '../styles/works.css';
                     ))}
                   </span>
                 </span>
-                <span class="works-index__enter" aria-hidden="true">자세히 보기 →</span>
               </a>
             </li>
           ))}
         </ol>
       </section>
 
-      <section class="works-patents" aria-labelledby="works-patents-title">
-        <h2 id="works-patents-title" class="works-contents__title">출원 특허</h2>
-        <p class="works-patents__note">국내에 같은 기능의 제품이 없어, 두 프로그램을 각각 별도 출원했습니다.</p>
+      <section class="paper-page__section works-patents" aria-labelledby="works-patents-title">
+        <h2 id="works-patents-title" class="paper-page__section-title">출원 특허 · {String(patents.length).padStart(2, '0')}</h2>
+        <p class="paper-page__note">국내에 같은 기능의 제품이 없어, 두 프로그램을 각각 별도 출원했습니다.</p>
         <ul class="works-patents__list">
           {patents.map((patent) => (
-            <li class="works-patents__item">
-              <p class="works-patents__scope"><WorkIcon name="patent" />{patent.scope}</p>
+            <li class="works-patents__item editorial-surface">
+              <p class="paper-page__meta works-patents__scope"><WorkIcon name="patent" /><span class="paper-page__accent">특허 · {patent.scope}</span></p>
               <p class="works-patents__title">{patent.title}</p>
               <p class="works-patents__detail">{patent.note}</p>
             </li>
@@ -71,8 +70,10 @@ import '../styles/works.css';
         </ul>
       </section>
 
-      <p class="works-colophon">프로젝트 기간과 기능 연대기는 업무 기록, 각 프로젝트 저장소의 커밋과 문서를 바탕으로 정리했습니다.</p>
-    </article>
+      <p class="paper-page__note works-colophon">프로젝트 기간과 기능 연대기는 업무 기록, 각 프로젝트 저장소의 커밋과 문서를 바탕으로 정리했습니다.</p>
+
+      <footer class="paper-page__footer">© {new Date().getFullYear()} Extransload</footer>
+    </div>
   </main>
 </MainSpaceLayout>
 

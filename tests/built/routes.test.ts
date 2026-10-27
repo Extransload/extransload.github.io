@@ -54,7 +54,7 @@ describe('published routes', () => {
   it('renders the guestbook as its own space without the blog sidebar', () => {
     const guestbook = loadRoute('/guestbook/');
 
-    expect(byClass(guestbook, 'main-space-page')).toHaveLength(1);
+    expect(byClass(guestbook, 'guestbook-page')).toHaveLength(1);
     expect(byClass(guestbook, 'site-header')).toHaveLength(0);
     expect(byClass(guestbook, 'site-content')).toHaveLength(0);
   });
