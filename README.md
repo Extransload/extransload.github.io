@@ -72,6 +72,7 @@ npm run test:e2e
 | `PUBLIC_COMMENTS_API_URL` | 댓글 Worker의 origin. 기본값은 기존 관리자 Worker 주소입니다. |
 | `PUBLIC_RENJU_API_URL` | 실시간 렌주 Worker의 origin. 비워 두면 대국 생성 대신 설정 안내가 표시됩니다. |
 | `PUBLIC_ADMIN_URL` | 별도 관리자 Worker의 HTTPS 주소입니다. 비워 두면 `/admin/` 설정 안내가 표시됩니다. |
+| `PUBLIC_NAVER_SITE_VERIFICATION` | 네이버 서치어드바이저 HTML 태그 인증 코드(`content` 값). 비워 두면 `/`에 인증 태그를 넣지 않습니다. |
 
 ## 관리자 기반
 

@@ -84,6 +84,7 @@ jobs:
           PUBLIC_COMMENTS_API_URL: ${{ vars.PUBLIC_COMMENTS_API_URL }}
           PUBLIC_RENJU_API_URL: ${{ vars.PUBLIC_RENJU_API_URL }}
           PUBLIC_ADMIN_URL: ${{ vars.PUBLIC_ADMIN_URL }}
+          PUBLIC_NAVER_SITE_VERIFICATION: ${{ vars.PUBLIC_NAVER_SITE_VERIFICATION }}
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
