@@ -107,7 +107,7 @@ export const works: WorkProject[] = [
       '접근이 가장 쉬운 웹에서 찾아봤지만, 디자인이 마음에 드는 도구는 설치가 필요했고 설치 없이 쓰는 도구는 조작이 직관적이지 않았음. ' +
       '그래서 내 컴퓨터에서 Rust 엔진을 띄우고 화면은 브라우저로 쓰는 구조로 새로 만듦. ' +
       'SQLite·PostgreSQL·MySQL/MariaDB·CockroachDB·SQL Server를 같은 화면에서 조회·편집하고, 가져오기·내보내기는 백그라운드 작업으로 처리. ' +
-      '필터·외래 키 탐색·글꼴·스크롤바·설정까지 데스크톱 앱처럼 다듬는 중.',
+      '스키마와 외래 키를 아는 SQL 자동완성, ER 다이어그램, 결과 차트·피벗까지 더해 데스크톱 앱처럼 다듬는 중.',
     metrics: [
       { label: '데이터베이스', value: '5종' },
       { label: '실행', value: '로컬 엔진 + 브라우저' },
@@ -123,20 +123,39 @@ export const works: WorkProject[] = [
       {
         src: '/images/works/tablepeek-grid.webp',
         kind: 'wide',
-        alt: 'SQLite 데모 데이터베이스의 orders 표를 값의 타입별 색상으로 보여 주는 TablePeek 데이터 표 화면',
-        caption: '데이터 표 — 문자열·숫자·JSON·날짜를 타입별 색상으로 구분.',
+        alt: 'Catppuccin Mocha 테마에서 PostgreSQL shop.products 표의 숫자·한글 문자열·배열·JSON·바이너리·NULL을 타입별 색상으로 보여 주는 TablePeek 데이터 표 화면',
+        caption: '데이터 표 — 숫자·문자열·배열·JSON·바이너리·NULL을 타입별 색상으로 구분. (Catppuccin Mocha 테마)',
       },
       {
         src: '/images/works/tablepeek-quick-look.webp',
         kind: 'wide',
-        alt: '셀에 담긴 JSON 값을 트리 구조로 펼쳐 보여 주는 TablePeek Quick Look 패널',
-        caption: 'Quick Look — 셀 값을 JSON 트리와 인코딩·HEX로 확인.',
+        alt: '상품 attributes JSON 셀을 color·weight_g·dimensions 트리로 펼치고 오른쪽에 각 값을 보여 주는 TablePeek Quick Look 패널',
+        caption: 'Quick Look — 셀 값을 JSON 트리로 펼쳐 보고, 인코딩·HEX로도 확인.',
       },
       {
         src: '/images/works/tablepeek-settings.webp',
         kind: 'wide',
-        alt: '테마 목록과 타입 색상 미리보기가 함께 있는 TablePeek 화면 설정',
-        caption: '화면 설정 — 테마와 타입 색상을 미리 보며 조정. (10.20 화면. 지금은 영역별로 나뉜 설정 화면.)',
+        alt: '강조 색, SQL 편집기 색, 미리보기, 테마 카드가 함께 있는 TablePeek 설정의 테마 화면',
+        caption: '설정 · 테마 — 강조 색과 SQL 편집기 색을 미리 보며 조정하고, 내장 테마 50종에서 고르기.',
+      },
+      {
+        src: '/images/works/tablepeek-completion.webp',
+        kind: 'wide',
+        alt: 'JOIN 다음에 외래 키로 이어진 테이블 다섯 개를 ON 조건과 함께 제안하고, 옆 패널에 shop.order_items.order_id에서 shop.orders.id로 가는 외래 키를 보여 주는 TablePeek SQL 자동완성',
+        caption:
+          'SQL 자동완성 — JOIN 다음에 외래 키로 이어진 테이블을 별칭과 ON 조건까지 제안하고, 옆 패널에 근거가 된 외래 키를 표시.',
+      },
+      {
+        src: '/images/works/tablepeek-er.webp',
+        kind: 'wide',
+        alt: 'shop 스키마의 테이블 14개를 외래 키 선으로 이어 배치하고, shop.orders와 연결된 테이블만 밝게 강조한 TablePeek ER 다이어그램',
+        caption: 'ER 다이어그램 — 테이블과 외래 키를 자동으로 배치하고, 고른 테이블과 이어진 관계만 밝게 표시.',
+      },
+      {
+        src: '/images/works/tablepeek-chart.webp',
+        kind: 'wide',
+        alt: '주문 합계를 월 단위로 묶은 막대 차트와 2025-07 막대 위에 합계 866,892.3과 행 수 480을 보여 주는 TablePeek 결과 차트',
+        caption: '결과 차트 — 쿼리 결과를 월 단위로 묶은 막대 차트. 막대에 올리면 정확한 값과 행 수.',
       },
     ],
     milestones: [],
@@ -293,7 +312,7 @@ export const works: WorkProject[] = [
       },
       {
         n: '04',
-        period: '2026.10.27 — 현재',
+        period: '2026.10.27',
         title: '매일 쓰는 화면 다듬기',
         lede:
           '구조가 자리 잡힌 뒤에는 하루 종일 열어 두는 도구로서의 감각을 맞추는 일. ' +
@@ -341,6 +360,74 @@ export const works: WorkProject[] = [
         outcome: [
           '필터·관계 탐색·접속 관리가 데스크톱 클라이언트와 같은 흐름으로 동작',
           '네 엔진의 테스트 서버를 엔진별로 띄우고 같은 샘플 데이터로 손으로 확인하는 경로 마련',
+        ],
+      },
+      {
+        n: '05',
+        period: '2026.10.28 — 현재',
+        title: '쿼리를 쓰고 구조를 읽는 화면: 자동완성, ER 다이어그램, 차트',
+        lede:
+          '편집기 자동완성은 컬럼 이름만 알았고, 외래 키는 테이블 상세를 열 때 테이블 하나씩만 읽었음. ' +
+          'JOIN 조건을 쓰려면 테이블 구조를 직접 열어 확인해야 했고, 테이블 사이의 관계를 한눈에 볼 방법도 없었음. ' +
+          '연결의 스키마와 외래 키를 한 번에 읽어 자동완성과 ER 다이어그램에 쓰고, 결과는 차트·피벗으로 바로 읽도록 정리.',
+        requirements: [
+          { label: '자동완성', value: '컬럼 이름만이 아니라 타입·키·JOIN 조건까지 제안' },
+          { label: '구조 파악', value: '테이블과 외래 키를 한 장의 그림으로' },
+          { label: '결과 읽기', value: '쿼리 결과를 표에서 바로 차트와 피벗으로' },
+        ],
+        build: [
+          {
+            head: '외래 키를 한 번에 읽는 API',
+            decision: true,
+            body: [
+              'JOIN 제안과 다이어그램에는 연결 전체의 외래 키가 한 번에 필요해, 테이블 단위가 아니라 연결 단위로 읽는 API를 추가',
+              '엔진마다 카탈로그 쿼리 하나로 모든 외래 키를 읽음: PostgreSQL·CockroachDB는 pg_constraint, MySQL은 information_schema.KEY_COLUMN_USAGE, SQL Server는 sys.foreign_keys, SQLite는 테이블마다 pragma_foreign_key_list',
+              '테이블 이름은 스키마 목록과 같은 규칙(public·dbo는 이름만, 나머지는 schema.table)으로 맞춰, 자동완성과 다이어그램이 같은 이름으로 찾음. 다섯 엔진 모두 Docker 테스트 서버에서 복합 키까지 확인',
+            ],
+          },
+          {
+            head: 'SQL 자동완성',
+            body: [
+              '목록에 종류 표시(컬럼·테이블·조인·함수·키워드)와 컬럼 타입을 붙이고, 옆 패널에 타입·기본 키·NOT NULL·참조 대상을 보여 줌',
+              'JOIN 다음에는 외래 키로 이어진 테이블을 별칭과 ON 조건까지 제안(shop.order_items oi ON oi.order_id = o.id), ON 다음에는 조건만. 외래 키가 없으면 orders.user_id와 users.id처럼 이름으로 추정하고 추정이라고 표시',
+              '엔진별로 쓸 수 있는 함수 약 40개를 사용법과 함께, 문장 맨 앞에서는 SELECT·INSERT·UPDATE·DELETE 틀을 넣고 Tab으로 다음 칸으로 이동',
+              'enum 컬럼과 비교하는 문자열 안에서는 그 값들을, 이름은 글자 순서만 맞아도(usnm → user_name) 찾고, 자주 고른 항목을 위로',
+            ],
+          },
+          {
+            head: 'ER 다이어그램',
+            body: [
+              '참조되는 테이블을 왼쪽, 참조하는 테이블을 오른쪽에 층으로 놓고 선이 덜 엇갈리도록 순서를 고르는 배치를 라이브러리 없이 직접 작성. 관계가 없는 테이블은 아래에 격자로',
+              '테이블 300개·관계 391개에서 배치까지 약 0.27초, 화면 이동은 한 층을 CSS transform으로만 움직여 프레임당 약 17ms',
+              '카드를 끌어 옮기면 연결별로 기억하고, 테이블을 고르면 이어진 관계만 밝게, 더블클릭하면 그 테이블의 데이터를 엶. 위쪽 막대의 다이어그램 버튼으로 바로 열림',
+            ],
+          },
+          {
+            head: '결과 차트와 피벗',
+            body: [
+              '결과 막대에 데이터·차트·피벗을 두고 설정은 탭마다 기억. 막대·선·영역·원·산점도를 SVG로 직접 그려, 산점도 1만 점도 시리즈 하나를 path 하나로 그림',
+              '날짜는 일·주·월 단위로 묶고, 합계·평균 같은 집계와 상위 N개 + 기타. 기타의 평균은 접힌 행들로 다시 계산해 평균의 평균이 되지 않게 함',
+              '피벗은 행·열 기준과 합계를 표로 보여 주고 TSV로 복사. 테이블 탭에서는 지금 보이는 페이지가 아니라 필터를 적용한 테이블 전체(최대 5만 행)를 기준으로',
+            ],
+          },
+        ],
+        hard: [
+          {
+            head: '참조 컬럼이 비어 있는 SQLite 외래 키',
+            body: 'SQLite는 REFERENCES parent처럼 대상 컬럼을 적지 않은 외래 키를 허용하고, 이때 pragma_foreign_key_list는 대상 컬럼을 비워 돌려줌. 그대로 쓰면 다이어그램의 선이 어느 줄에도 닿지 않고 JOIN 조건도 만들 수 없음.',
+            resolved:
+              '대상 컬럼이 비어 있으면 SQLite가 실제로 쓰는 규칙대로 부모 테이블의 기본 키 컬럼을 키 순서대로 채움. 복합 기본 키를 가리키는 경우까지 테스트로 고정.',
+          },
+          {
+            head: 'Enter를 눌렀더니 문장 틀이 들어감',
+            body: '문장 틀을 키워드보다 앞에 두었더니, sel을 치고 Enter를 누르면 select 대신 "select * from …" 틀이 통째로 들어감. 키워드만 치려던 손에는 방해였음.',
+            resolved: '같은 정도로 맞으면 키워드를 먼저, 문장 틀은 바로 아래에 두도록 순서를 바꿈.',
+          },
+        ],
+        outcome: [
+          '스키마와 외래 키만으로 JOIN 조건까지 이어서 쓰는 자동완성',
+          '연결의 모든 관계를 한 장으로 보는 ER 다이어그램과 결과를 바로 읽는 차트·피벗',
+          '손으로 조절한 열 너비를 테이블별로 기억해, 다시 열거나 앱을 껐다 켜도 유지',
         ],
       },
     ],
